@@ -5,6 +5,753 @@ import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Squ
 import * as THREE from 'three';
 import './App.css';
 
+// Realistic comparison object component
+function RealisticComparisonObject({ type, position, dimensions, color }) {
+  const { width, length } = dimensions;
+  
+  // Border component for each object
+  const ObjectBorder = () => (
+    <Line
+      points={[
+        [-width/2, 0.001, -length/2], [width/2, 0.001, -length/2],
+        [width/2, 0.001, length/2], [-width/2, 0.001, length/2],
+        [-width/2, 0.001, -length/2]
+      ]}
+      color="#000000"
+      lineWidth={4}
+    />
+  );
+  
+  switch (type) {
+    case 'soccerField':
+      return (
+        <group position={position}>
+          <ObjectBorder />
+          {/* Grass field */}
+          <Plane
+            args={[width, length]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.01, 0]}
+          >
+            <meshLambertMaterial color="#2d5a2d" />
+          </Plane>
+          
+          {/* Center circle */}
+          <Line
+            points={Array.from({ length: 33 }, (_, i) => {
+              const angle = (i / 32) * Math.PI * 2;
+              const radius = 9.15;
+              return [Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
+            })}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Center line */}
+          <Line
+            points={[[0, 0.02, -length/2], [0, 0.02, length/2]]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Penalty areas (16.5m x 40.32m) */}
+          <Line
+            points={[
+              [-width/2, 0.02, -16.5], [-width/2 + 16.5, 0.02, -16.5],
+              [-width/2 + 16.5, 0.02, 16.5], [-width/2, 0.02, 16.5],
+              [-width/2, 0.02, -16.5]
+            ]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          <Line
+            points={[
+              [width/2, 0.02, -16.5], [width/2 - 16.5, 0.02, -16.5],
+              [width/2 - 16.5, 0.02, 16.5], [width/2, 0.02, 16.5],
+              [width/2, 0.02, -16.5]
+            ]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Goal areas (5.5m x 18.32m) */}
+          <Line
+            points={[
+              [-width/2, 0.02, -5.5], [-width/2 + 5.5, 0.02, -5.5],
+              [-width/2 + 5.5, 0.02, 5.5], [-width/2, 0.02, 5.5],
+              [-width/2, 0.02, -5.5]
+            ]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          <Line
+            points={[
+              [width/2, 0.02, -5.5], [width/2 - 5.5, 0.02, -5.5],
+              [width/2 - 5.5, 0.02, 5.5], [width/2, 0.02, 5.5],
+              [width/2, 0.02, -5.5]
+            ]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Corner arcs */}
+          {Array.from({ length: 4 }, (_, i) => {
+            const cornerX = i < 2 ? -width/2 : width/2;
+            const cornerZ = i % 2 === 0 ? -length/2 : length/2;
+            const startAngle = i * Math.PI / 2;
+            
+            return (
+              <Line
+                key={i}
+                points={Array.from({ length: 17 }, (_, j) => {
+                  const angle = startAngle + (j / 16) * (Math.PI / 2);
+                  const radius = 1;
+                  return [
+                    cornerX + Math.cos(angle) * radius * (i < 2 ? 1 : -1),
+                    0.02,
+                    cornerZ + Math.sin(angle) * radius * (i % 2 === 0 ? 1 : -1)
+                  ];
+                })}
+                color="#ffffff"
+                lineWidth={2}
+              />
+            );
+          })}
+          
+          {/* Penalty arcs */}
+          <Line
+            points={Array.from({ length: 17 }, (_, i) => {
+              const angle = -Math.PI/2 + (i / 16) * Math.PI; // Mirror the arc
+              const radius = 9.15;
+              const centerX = -width/2 + 16.5; // Position at edge of penalty area
+              return [centerX + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
+            })}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          <Line
+            points={Array.from({ length: 17 }, (_, i) => {
+              const angle = Math.PI/2 + (i / 16) * Math.PI; // Mirror the arc
+              const radius = 9.15;
+              const centerX = width/2 - 16.5; // Position at edge of penalty area
+              return [centerX + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
+            })}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Goals */}
+          <Box args={[0.5, 2.44, 7.32]} position={[-width/2, 1.22, 0]} >
+            <meshLambertMaterial color="#ffffff" />
+          </Box>
+          <Box args={[0.5, 2.44, 7.32]} position={[width/2, 1.22, 0]} >
+            <meshLambertMaterial color="#ffffff" />
+          </Box>
+        </group>
+      );
+      
+    case 'basketballCourt':
+      return (
+        <group position={position}>
+          <ObjectBorder />
+          {/* Court surface */}
+          <Plane
+            args={[width, length]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.01, 0]}
+          >
+            <meshLambertMaterial color="#B8860B" />
+          </Plane>
+          
+          {/* Center circle */}
+          <Line
+            points={Array.from({ length: 33 }, (_, i) => {
+              const angle = (i / 32) * Math.PI * 2;
+              const radius = 1.8;
+              return [Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
+            })}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Center line */}
+          <Line
+            points={[[0, 0.02, -length/2], [0, 0.02, length/2]]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Free throw circles */}
+          <Line
+            points={Array.from({ length: 33 }, (_, i) => {
+              const angle = (i / 32) * Math.PI * 2;
+              const radius = 1.8;
+              return [-width/2 + 5.8 + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
+            })}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          <Line
+            points={Array.from({ length: 33 }, (_, i) => {
+              const angle = (i / 32) * Math.PI * 2;
+              const radius = 1.8;
+              return [width/2 - 5.8 + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
+            })}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Free throw lanes (painted areas) */}
+          <Plane
+            args={[5.8, 4.9]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[-width/2 + 2.9, 0.015, 0]}
+          >
+            <meshLambertMaterial color="#FF6B35" />
+          </Plane>
+          <Plane
+            args={[5.8, 4.9]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[width/2 - 2.9, 0.015, 0]}
+          >
+            <meshLambertMaterial color="#FF6B35" />
+          </Plane>
+          
+          {/* Free throw lines */}
+          <Line
+            points={[[-width/2 + 5.8, 0.02, -2.45], [-width/2 + 5.8, 0.02, 2.45]]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          <Line
+            points={[[width/2 - 5.8, 0.02, -2.45], [width/2 - 5.8, 0.02, 2.45]]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Three-point arcs */}
+          <Line
+            points={Array.from({ length: 25 }, (_, i) => {
+              const angle = -Math.PI/2 + (i / 24) * Math.PI;
+              const radius = 7.24;
+              return [-width/2 + 1.575 + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
+            })}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          <Line
+            points={Array.from({ length: 25 }, (_, i) => {
+              const angle = Math.PI/2 + (i / 24) * Math.PI;
+              const radius = 7.24;
+              return [width/2 - 1.575 + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
+            })}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Baskets with hoops */}
+          <Box args={[0.2, 3.05, 1.8]} position={[-width/2 + 1.2, 1.5, 0]} >
+            <meshLambertMaterial color="#FF6B35" />
+          </Box>
+          <Box args={[0.2, 3.05, 1.8]} position={[width/2 - 1.2, 1.5, 0]} >
+            <meshLambertMaterial color="#FF6B35" />
+          </Box>
+          
+          {/* Basketball hoops */}
+          <Line
+            points={Array.from({ length: 17 }, (_, i) => {
+              const angle = (i / 16) * Math.PI * 2;
+              const radius = 0.225;
+              return [-width/2 + 1.575 + Math.cos(angle) * radius, 3.05, Math.sin(angle) * radius];
+            })}
+            color="#FFA500"
+            lineWidth={3}
+          />
+          <Line
+            points={Array.from({ length: 17 }, (_, i) => {
+              const angle = (i / 16) * Math.PI * 2;
+              const radius = 0.225;
+              return [width/2 - 1.575 + Math.cos(angle) * radius, 3.05, Math.sin(angle) * radius];
+            })}
+            color="#FFA500"
+            lineWidth={3}
+          />
+        </group>
+      );
+      
+    case 'tennisCourt':
+      return (
+        <group position={position}>
+          <ObjectBorder />
+          {/* Court surface */}
+          <Plane
+            args={[width, length]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.01, 0]}
+          >
+            <meshLambertMaterial color="#2E7D32" />
+          </Plane>
+          
+          {/* Singles court markings */}
+          <Line
+            points={[
+              [-8.23, 0.02, -length/2], [-8.23, 0.02, length/2],
+              [8.23, 0.02, length/2], [8.23, 0.02, -length/2],
+              [-8.23, 0.02, -length/2]
+            ]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Doubles court markings */}
+          <Line
+            points={[
+              [-width/2, 0.02, -length/2], [-width/2, 0.02, length/2],
+              [width/2, 0.02, length/2], [width/2, 0.02, -length/2],
+              [-width/2, 0.02, -length/2]
+            ]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Service boxes */}
+          <Line
+            points={[
+              [-8.23, 0.02, -6.4], [8.23, 0.02, -6.4],
+              [8.23, 0.02, 6.4], [-8.23, 0.02, 6.4],
+              [-8.23, 0.02, -6.4]
+            ]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Service line (center) */}
+          <Line
+            points={[[0, 0.02, -6.4], [0, 0.02, 6.4]]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Center service line */}
+          <Line
+            points={[[-8.23, 0.02, 0], [8.23, 0.02, 0]]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          
+          {/* Net */}
+          <Box args={[0.1, 0.91, length + 2]} position={[0, 0.45, 0]} >
+            <meshLambertMaterial color="#ffffff" wireframe />
+          </Box>
+          
+          {/* Net posts */}
+          <Box args={[0.1, 1.07, 0.1]} position={[0, 0.535, -length/2 - 0.5]} >
+            <meshLambertMaterial color="#8B4513" />
+          </Box>
+          <Box args={[0.1, 1.07, 0.1]} position={[0, 0.535, length/2 + 0.5]} >
+            <meshLambertMaterial color="#8B4513" />
+          </Box>
+          
+          {/* Baseline center marks */}
+          <Line
+            points={[[0, 0.02, -length/2], [0, 0.02, -length/2 + 0.1]]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+          <Line
+            points={[[0, 0.02, length/2], [0, 0.02, length/2 - 0.1]]}
+            color="#ffffff"
+            lineWidth={2}
+          />
+        </group>
+      );
+      
+    case 'swimmingPool':
+      return (
+        <group position={position}>
+          <ObjectBorder />
+          {/* Pool deck */}
+          <Plane
+            args={[width + 4, length + 4]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.01, 0]}
+          >
+            <meshLambertMaterial color="#e2e8f0" />
+          </Plane>
+          
+          {/* Pool water */}
+          <Plane
+            args={[width, length]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, -0.5, 0]}
+          >
+            <meshLambertMaterial color="#1e90ff" transparent opacity={0.8} />
+          </Plane>
+          
+          {/* Pool edge/coping */}
+          <Line
+            points={[
+              [-width/2, 0.02, -length/2], [width/2, 0.02, -length/2],
+              [width/2, 0.02, length/2], [-width/2, 0.02, length/2],
+              [-width/2, 0.02, -length/2]
+            ]}
+            color="#4a5568"
+            lineWidth={4}
+          />
+          
+          {/* Lane ropes */}
+          {Array.from({ length: 7 }, (_, i) => (
+            <Line
+              key={i}
+              points={[
+                [(-width/2) + ((i + 1) * width/8), -0.3, -length/2],
+                [(-width/2) + ((i + 1) * width/8), -0.3, length/2]
+              ]}
+              color="#ff0000"
+              lineWidth={2}
+            />
+          ))}
+          
+          {/* Lane markers on pool bottom */}
+          {Array.from({ length: 8 }, (_, i) => (
+            <Line
+              key={i}
+              points={[
+                [(-width/2) + (i * width/7), -0.48, -length/2],
+                [(-width/2) + (i * width/7), -0.48, length/2]
+              ]}
+              color="#000000"
+              lineWidth={1}
+            />
+          ))}
+          
+          {/* Starting blocks */}
+          {Array.from({ length: 8 }, (_, i) => (
+            <Box
+              key={i}
+              args={[1, 0.8, 1]}
+              position={[(-width/2) + (i * width/7), 0.4, -length/2 + 0.5]}
+            >
+              <meshLambertMaterial color="#0066cc" />
+            </Box>
+          ))}
+          
+          {/* Pool ladders */}
+          <Box args={[0.1, 1.5, 0.5]} position={[width/2 - 0.1, 0.25, length/2 - 1]} >
+            <meshLambertMaterial color="#c0c0c0" />
+          </Box>
+          <Box args={[0.1, 1.5, 0.5]} position={[-width/2 + 0.1, 0.25, length/2 - 1]} >
+            <meshLambertMaterial color="#c0c0c0" />
+          </Box>
+          
+          {/* Diving board */}
+          <Box args={[0.5, 0.1, 3]} position={[width/4, 1, length/2 - 1.5]} >
+            <meshLambertMaterial color="#8B4513" />
+          </Box>
+          <Box args={[0.2, 1.5, 0.2]} position={[width/4, 0.75, length/2 - 3]} >
+            <meshLambertMaterial color="#8B4513" />
+          </Box>
+        </group>
+      );
+      
+    case 'house':
+      return (
+        <group position={position}>
+          <ObjectBorder />
+          {/* Foundation/Lot */}
+          <Plane
+            args={[width, length]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.01, 0]}
+          >
+            <meshLambertMaterial color="#2d5a2d" />
+          </Plane>
+          
+          {/* Driveway */}
+          <Plane
+            args={[3, length/3]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[width/3, 0.015, -length/4]}
+          >
+            <meshLambertMaterial color="#4a5568" />
+          </Plane>
+          
+          {/* House base */}
+          <Box args={[width * 0.7, 3, length * 0.6]} position={[0, 1.5, 0]} >
+            <meshLambertMaterial color="#dc2626" />
+          </Box>
+          
+          {/* Roof */}
+          <Box args={[width * 0.75, 1.5, length * 0.65]} position={[0, 3.75, 0]} >
+            <meshLambertMaterial color="#7c2d12" />
+          </Box>
+          
+          {/* Chimney */}
+          <Box args={[1, 2, 1]} position={[width * 0.2, 5, length * 0.1]} >
+            <meshLambertMaterial color="#7c2d12" />
+          </Box>
+          
+          {/* Front door */}
+          <Box args={[1, 2, 0.1]} position={[0, 1, length * 0.3 + 0.05]} >
+            <meshLambertMaterial color="#7c2d12" />
+          </Box>
+          
+          {/* Door frame */}
+          <Box args={[1.2, 2.2, 0.05]} position={[0, 1.1, length * 0.3 + 0.08]} >
+            <meshLambertMaterial color="#ffffff" />
+          </Box>
+          
+          {/* Windows */}
+          <Box args={[1.2, 1.2, 0.05]} position={[-width * 0.2, 2, length * 0.3 + 0.05]} >
+            <meshLambertMaterial color="#87ceeb" />
+          </Box>
+          <Box args={[1.2, 1.2, 0.05]} position={[width * 0.2, 2, length * 0.3 + 0.05]} >
+            <meshLambertMaterial color="#87ceeb" />
+          </Box>
+          
+          {/* Window frames */}
+          <Box args={[1.4, 1.4, 0.02]} position={[-width * 0.2, 2, length * 0.3 + 0.08]} >
+            <meshLambertMaterial color="#ffffff" />
+          </Box>
+          <Box args={[1.4, 1.4, 0.02]} position={[width * 0.2, 2, length * 0.3 + 0.08]} >
+            <meshLambertMaterial color="#ffffff" />
+          </Box>
+          
+          {/* Garage */}
+          <Box args={[width * 0.4, 2.5, length * 0.4]} position={[width * 0.25, 1.25, -length * 0.15]} >
+            <meshLambertMaterial color="#dc2626" />
+          </Box>
+          
+          {/* Garage door */}
+          <Box args={[width * 0.35, 2, 0.05]} position={[width * 0.25, 1, -length * 0.15 + length * 0.2]} >
+            <meshLambertMaterial color="#4a5568" />
+          </Box>
+          
+          {/* Walkway */}
+          <Plane
+            args={[1.5, length * 0.4]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.02, length * 0.15]}
+          >
+            <meshLambertMaterial color="#e5e7eb" />
+          </Plane>
+          
+          {/* Landscaping */}
+          <Box args={[2, 0.5, 2]} position={[-width * 0.3, 0.25, length * 0.2]} >
+            <meshLambertMaterial color="#16a34a" />
+          </Box>
+          <Box args={[2, 0.5, 2]} position={[width * 0.3, 0.25, length * 0.2]} >
+            <meshLambertMaterial color="#16a34a" />
+          </Box>
+        </group>
+      );
+      
+    case 'parkingSpace':
+      return (
+        <group position={position}>
+          <ObjectBorder />
+          {/* Car body */}
+          <Box args={[width * 0.8, 0.6, length * 0.9]} position={[0, 0.3, 0]} >
+            <meshLambertMaterial color="#1f2937" />
+          </Box>
+          
+          {/* Car hood */}
+          <Box args={[width * 0.75, 0.4, length * 0.3]} position={[0, 0.7, length * 0.25]} >
+            <meshLambertMaterial color="#1f2937" />
+          </Box>
+          
+          {/* Car windshield */}
+          <Box args={[width * 0.7, 0.5, length * 0.15]} position={[0, 1.0, length * 0.1]} >
+            <meshLambertMaterial color="#87ceeb" transparent opacity={0.7} />
+          </Box>
+          
+          {/* Car rear window */}
+          <Box args={[width * 0.7, 0.4, length * 0.1]} position={[0, 0.9, -length * 0.2]} >
+            <meshLambertMaterial color="#87ceeb" transparent opacity={0.7} />
+          </Box>
+          
+          {/* Car side windows */}
+          <Box args={[width * 0.05, 0.4, length * 0.4]} position={[width * 0.375, 0.9, 0]} >
+            <meshLambertMaterial color="#87ceeb" transparent opacity={0.7} />
+          </Box>
+          <Box args={[width * 0.05, 0.4, length * 0.4]} position={[-width * 0.375, 0.9, 0]} >
+            <meshLambertMaterial color="#87ceeb" transparent opacity={0.7} />
+          </Box>
+          
+          {/* Car tires */}
+          <Box args={[width * 0.15, 0.4, width * 0.15]} position={[width * 0.25, 0.2, length * 0.28]} >
+            <meshLambertMaterial color="#000000" />
+          </Box>
+          <Box args={[width * 0.15, 0.4, width * 0.15]} position={[-width * 0.25, 0.2, length * 0.28]} >
+            <meshLambertMaterial color="#000000" />
+          </Box>
+          <Box args={[width * 0.15, 0.4, width * 0.15]} position={[width * 0.25, 0.2, -length * 0.28]} >
+            <meshLambertMaterial color="#000000" />
+          </Box>
+          <Box args={[width * 0.15, 0.4, width * 0.15]} position={[-width * 0.25, 0.2, -length * 0.28]} >
+            <meshLambertMaterial color="#000000" />
+          </Box>
+          
+          {/* Headlights */}
+          <Box args={[width * 0.12, 0.2, 0.1]} position={[width * 0.25, 0.6, length * 0.45]} >
+            <meshLambertMaterial color="#ffffff" />
+          </Box>
+          <Box args={[width * 0.12, 0.2, 0.1]} position={[-width * 0.25, 0.6, length * 0.45]} >
+            <meshLambertMaterial color="#ffffff" />
+          </Box>
+          
+          {/* Taillights */}
+          <Box args={[width * 0.1, 0.15, 0.08]} position={[width * 0.3, 0.5, -length * 0.45]} >
+            <meshLambertMaterial color="#ff0000" />
+          </Box>
+          <Box args={[width * 0.1, 0.15, 0.08]} position={[-width * 0.3, 0.5, -length * 0.45]} >
+            <meshLambertMaterial color="#ff0000" />
+          </Box>
+          
+          {/* Car grille */}
+          <Box args={[width * 0.6, 0.3, 0.05]} position={[0, 0.6, length * 0.45]} >
+            <meshLambertMaterial color="#333333" />
+          </Box>
+          
+          {/* Car bumpers */}
+          <Box args={[width * 0.8, 0.2, 0.1]} position={[0, 0.3, length * 0.45]} >
+            <meshLambertMaterial color="#1f2937" />
+          </Box>
+          <Box args={[width * 0.8, 0.2, 0.1]} position={[0, 0.3, -length * 0.45]} >
+            <meshLambertMaterial color="#1f2937" />
+          </Box>
+        </group>
+      );
+      
+    case 'olympicPool':
+      return (
+        <group position={position}>
+          <ObjectBorder />
+          {/* Pool deck */}
+          <Plane
+            args={[width + 10, length + 10]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.01, 0]}
+          >
+            <meshLambertMaterial color="#e2e8f0" />
+          </Plane>
+          
+          {/* Pool water */}
+          <Plane
+            args={[width, length]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, -1.2, 0]}
+          >
+            <meshLambertMaterial color="#1e90ff" transparent opacity={0.8} />
+          </Plane>
+          
+          {/* Pool edge/coping */}
+          <Line
+            points={[
+              [-width/2, 0.02, -length/2], [width/2, 0.02, -length/2],
+              [width/2, 0.02, length/2], [-width/2, 0.02, length/2],
+              [-width/2, 0.02, -length/2]
+            ]}
+            color="#4a5568"
+            lineWidth={5}
+          />
+          
+          {/* Lane ropes */}
+          {Array.from({ length: 9 }, (_, i) => (
+            <Line
+              key={i}
+              points={[
+                [(-width/2) + ((i + 1) * width/10), -0.5, -length/2],
+                [(-width/2) + ((i + 1) * width/10), -0.5, length/2]
+              ]}
+              color="#ff0000"
+              lineWidth={3}
+            />
+          ))}
+          
+          {/* Lane markers on pool bottom */}
+          {Array.from({ length: 10 }, (_, i) => (
+            <Line
+              key={i}
+              points={[
+                [(-width/2) + (i * width/9), -1.15, -length/2],
+                [(-width/2) + (i * width/9), -1.15, length/2]
+              ]}
+              color="#000000"
+              lineWidth={2}
+            />
+          ))}
+          
+          {/* 25m markers on pool bottom */}
+          <Line
+            points={[
+              [-width/2, -1.15, 0], [width/2, -1.15, 0]
+            ]}
+            color="#000000"
+            lineWidth={3}
+          />
+          
+          {/* Starting blocks */}
+          {Array.from({ length: 10 }, (_, i) => (
+            <Box
+              key={i}
+              args={[1.5, 1, 2]}
+              position={[(-width/2) + 2.5 + (i * width/10), 0.5, -length/2 + 1]}
+            >
+              <meshLambertMaterial color="#0066cc" />
+            </Box>
+          ))}
+          
+          {/* Timing touchpads */}
+          {Array.from({ length: 10 }, (_, i) => (
+            <Box
+              key={i}
+              args={[1.2, 0.8, 0.1]}
+              position={[(-width/2) + 2.5 + (i * width/10), -0.4, length/2 - 0.1]}
+            >
+              <meshLambertMaterial color="#ffd700" />
+            </Box>
+          ))}
+          
+          {/* Spectator stands */}
+          <Box args={[width + 20, 8, 10]} position={[0, 4, length/2 + 10]} >
+            <meshLambertMaterial color="#4a5568" />
+          </Box>
+          
+          {/* Diving platforms */}
+          <Box args={[3, 0.5, 3]} position={[width/3, 10, -length/3]} >
+            <meshLambertMaterial color="#8B4513" />
+          </Box>
+          <Box args={[0.5, 10, 0.5]} position={[width/3, 5, -length/3]} >
+            <meshLambertMaterial color="#8B4513" />
+          </Box>
+          
+          {/* Pool ladders */}
+          <Box args={[0.2, 2, 1]} position={[width/2 - 0.1, 0.5, length/2 - 2]} >
+            <meshLambertMaterial color="#c0c0c0" />
+          </Box>
+          <Box args={[0.2, 2, 1]} position={[-width/2 + 0.1, 0.5, length/2 - 2]} >
+            <meshLambertMaterial color="#c0c0c0" />
+          </Box>
+        </group>
+      );
+      
+    default:
+      return (
+        <group position={position}>
+          <ObjectBorder />
+          <Plane
+            args={[width, length]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.01, 0]}
+          >
+            <meshLambertMaterial color={color} transparent opacity={0.6} />
+          </Plane>
+        </group>
+      );
+  }
+}
+
 // Editable corner point component
 function EditableCornerPoint({ position, index, onDrag, isActive, onSelect, onDragStart, onDragEnd, drawingMode, isDragging, onPointerMove }) {
   const [hovered, setHovered] = useState(false);
@@ -52,16 +799,28 @@ function EditableCornerPoint({ position, index, onDrag, isActive, onSelect, onDr
 // Dimension label component
 function DimensionLabel({ start, end, position, distance }) {
   return (
-    <Text
-      position={[position.x, 6, position.z]}
-      rotation={[-Math.PI / 2, 0, 0]}
-      fontSize={3}
-      color="#333333"
-      anchorX="center"
-      anchorY="middle"
-    >
-      {distance.toFixed(1)}m
-    </Text>
+    <group>
+      {/* Background for better visibility */}
+      <Plane
+        args={[distance.toFixed(1).length * 2 + 4, 4]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[position.x, 5.5, position.z]}
+      >
+        <meshBasicMaterial color="#ffffff" transparent opacity={0.9} />
+      </Plane>
+      <Text
+        position={[position.x, 6, position.z]}
+        rotation={[-Math.PI / 2, 0, 0]}
+        fontSize={4}
+        color="#000000"
+        anchorX="center"
+        anchorY="middle"
+        outlineWidth={0.5}
+        outlineColor="#ffffff"
+      >
+        {distance.toFixed(1)}m
+      </Text>
+    </group>
   );
 }
 
@@ -615,7 +1374,7 @@ function Subdivision({ subdivision, onDelete, onEdit, isSelected, onSelect, onMo
 
 function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, totalAreaInSqM, drawingMode, subdivisions, setSubdivisions, isDraggingCorner, onDragStateChange, onAddPolylinePoint, polylinePoints, selectedSubdivision, onSubdivisionSelect, onSubdivisionMove, onUpdateSubdivision, isDraggingSubdivisionCorner, onSubdivisionCornerDragStateChange }) {
   const comparisonOptions = [
-    { id: 'soccerField', name: 'Soccer Field', area: 7140, color: '#10b981', dimensions: { width: 100, length: 70 } },
+    { id: 'soccerField', name: 'Soccer Field', area: 7140, color: '#10b981', dimensions: { width: 105, length: 68 } },
     { id: 'basketballCourt', name: 'Basketball Court', area: 420, color: '#f59e0b', dimensions: { width: 28, length: 15 } },
     { id: 'tennisCourt', name: 'Tennis Court', area: 260.87, color: '#0ea5e9', dimensions: { width: 23.77, length: 10.97 } },
     { id: 'swimmingPool', name: 'Swimming Pool', area: 163, color: '#06b6d4', dimensions: { width: 25, length: 6.5 } },
@@ -710,28 +1469,33 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
         const numObjects = Math.floor(totalAreaInSqM / comparison.area);
         const objectsToShow = Math.min(numObjects, 20);
         const itemsPerRow = Math.ceil(Math.sqrt(objectsToShow));
-        const spacing = Math.max(comparison.dimensions.width, comparison.dimensions.length) * 1.2;
-        const gridWidth = (itemsPerRow - 1) * spacing;
+        const itemsPerCol = Math.ceil(objectsToShow / itemsPerRow);
+        
+        // Use exact dimensions for spacing - no gaps
+        const spacingX = comparison.dimensions.width;
+        const spacingZ = comparison.dimensions.length;
+        
+        const gridWidth = (itemsPerRow - 1) * spacingX;
+        const gridHeight = (itemsPerCol - 1) * spacingZ;
         const startX = -gridWidth / 2;
-        const startZ = -gridWidth / 2;
+        const startZ = -gridHeight / 2;
         
         const objects = [];
         
         for (let i = 0; i < objectsToShow; i++) {
           const row = Math.floor(i / itemsPerRow);
           const col = i % itemsPerRow;
-          const xPos = startX + col * spacing;
-          const zPos = startZ + row * spacing;
+          const xPos = startX + col * spacingX;
+          const zPos = startZ + row * spacingZ;
           
           objects.push(
-            <Plane 
+            <RealisticComparisonObject
               key={i}
-              args={[comparison.dimensions.width, comparison.dimensions.length]} 
-              rotation={[-Math.PI / 2, 0, 0]} 
-              position={[xPos, 0.03, zPos]}
-            >
-              <meshLambertMaterial color={comparison.color} transparent opacity={0.6} />
-            </Plane>
+              type={comparison.id}
+              position={[xPos, 0, zPos]}
+              dimensions={comparison.dimensions}
+              color={comparison.color}
+            />
           );
         }
         
@@ -885,7 +1649,7 @@ const LandVisualizer = () => {
 
   // Comparison data
   const comparisonOptions = [
-    { id: 'soccerField', name: 'Soccer Field', area: 7140, icon: '⚽', color: 'emerald', dimensions: { width: 100, length: 70 } },
+    { id: 'soccerField', name: 'Soccer Field', area: 7140, icon: '⚽', color: 'emerald', dimensions: { width: 105, length: 68 } },
     { id: 'basketballCourt', name: 'Basketball Court', area: 420, icon: '🏀', color: 'amber', dimensions: { width: 28, length: 15 } },
     { id: 'tennisCourt', name: 'Tennis Court', area: 260.87, icon: '🎾', color: 'sky', dimensions: { width: 23.77, length: 10.97 } },
     { id: 'swimmingPool', name: 'Swimming Pool', area: 163, icon: '🏊', color: 'cyan', dimensions: { width: 25, length: 6.5 } },
