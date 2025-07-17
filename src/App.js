@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Plane, Box, Text, Line } from '@react-three/drei';
-import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X } from 'lucide-react';
+import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X, RotateCcw, RotateCw, Moon, Sun } from 'lucide-react';
 import * as THREE from 'three';
 import './App.css';
 
@@ -797,7 +797,7 @@ function EditableCornerPoint({ position, index, onDrag, isActive, onSelect, onDr
 }
 
 // Dimension label component
-function DimensionLabel({ start, end, position, distance }) {
+function DimensionLabel({ start, end, position, distance, darkMode }) {
   return (
     <group>
       {/* Background for better visibility */}
@@ -806,17 +806,17 @@ function DimensionLabel({ start, end, position, distance }) {
         rotation={[-Math.PI / 2, 0, 0]}
         position={[position.x, 5.5, position.z]}
       >
-        <meshBasicMaterial color="#ffffff" transparent opacity={0.9} />
+        <meshBasicMaterial color={darkMode ? "#374151" : "#ffffff"} transparent opacity={0.9} />
       </Plane>
       <Text
         position={[position.x, 6, position.z]}
         rotation={[-Math.PI / 2, 0, 0]}
         fontSize={4}
-        color="#000000"
+        color={darkMode ? "#ffffff" : "#000000"}
         anchorX="center"
         anchorY="middle"
         outlineWidth={0.5}
-        outlineColor="#ffffff"
+        outlineColor={darkMode ? "#000000" : "#ffffff"}
       >
         {distance.toFixed(1)}m
       </Text>
@@ -825,7 +825,7 @@ function DimensionLabel({ start, end, position, distance }) {
 }
 
 // Editable land shape component
-function EditableLandShape({ landShape, onUpdateShape, drawingMode, onDragStateChange }) {
+function EditableLandShape({ landShape, onUpdateShape, drawingMode, onDragStateChange, darkMode }) {
   const [selectedCorner, setSelectedCorner] = useState(null);
   const [draggingCorner, setDraggingCorner] = useState(null);
   
@@ -917,6 +917,7 @@ function EditableLandShape({ landShape, onUpdateShape, drawingMode, onDragStateC
             end={nextCorner}
             position={midpoint}
             distance={distance}
+            darkMode={darkMode}
           />
         );
       })}
@@ -1062,6 +1063,161 @@ function DrawingPlane({ landShape, onAddSubdivision, drawingMode, subdivisions, 
           )}
         </group>
       )}
+    </>
+  );
+}
+
+// Measurement tools component
+function MeasurementPlane({ measurementMode, measurementPoints, onMeasurementPoint, measurements, onClearMeasurements, darkMode }) {
+  const handlePointerDown = (event) => {
+    if (!measurementMode) return;
+    
+    const point = event.point;
+    const worldPoint = { x: point.x, z: point.z };
+    
+    if (measurementMode === 'distance') {
+      if (measurementPoints.length === 0) {
+        onMeasurementPoint([worldPoint]);
+      } else if (measurementPoints.length === 1) {
+        onMeasurementPoint([measurementPoints[0], worldPoint]);
+      } else {
+        // Start new measurement
+        onMeasurementPoint([worldPoint]);
+      }
+    } else if (measurementMode === 'area') {
+      onMeasurementPoint([...measurementPoints, worldPoint]);
+    }
+  };
+  
+  return (
+    <>
+      {/* Invisible plane for measurement clicks */}
+      <Plane 
+        args={[400, 400]} 
+        rotation={[-Math.PI / 2, 0, 0]} 
+        position={[0, 0.001, 0]}
+        onPointerDown={handlePointerDown}
+      >
+        <meshBasicMaterial transparent opacity={0} />
+      </Plane>
+      
+      {/* Render measurement points */}
+      {measurementPoints.map((point, index) => (
+        <group key={index}>
+          <Box
+            args={[2, 2, 2]}
+            position={[point.x, 1, point.z]}
+          >
+            <meshBasicMaterial color="#ff6b6b" />
+          </Box>
+        </group>
+      ))}
+      
+      {/* Render distance line */}
+      {measurementMode === 'distance' && measurementPoints.length === 2 && (
+        <Line
+          points={[
+            [measurementPoints[0].x, 0.5, measurementPoints[0].z],
+            [measurementPoints[1].x, 0.5, measurementPoints[1].z]
+          ]}
+          color="#ff6b6b"
+          lineWidth={3}
+        />
+      )}
+      
+      {/* Render area polygon */}
+      {measurementMode === 'area' && measurementPoints.length >= 3 && (
+        <Line
+          points={[
+            ...measurementPoints.map(p => [p.x, 0.5, p.z]),
+            [measurementPoints[0].x, 0.5, measurementPoints[0].z] // Close the polygon
+          ]}
+          color="#ff6b6b"
+          lineWidth={3}
+        />
+      )}
+      
+      {/* Render saved measurements */}
+      {measurements.map((measurement, index) => (
+        <group key={index}>
+          {measurement.type === 'distance' && (
+            <>
+              <Line
+                points={[
+                  [measurement.points[0].x, 0.3, measurement.points[0].z],
+                  [measurement.points[1].x, 0.3, measurement.points[1].z]
+                ]}
+                color="#4ecdc4"
+                lineWidth={2}
+              />
+              {/* Background for text */}
+              <Plane
+                args={[6, 2]}
+                position={[
+                  (measurement.points[0].x + measurement.points[1].x) / 2,
+                  2.8,
+                  (measurement.points[0].z + measurement.points[1].z) / 2
+                ]}
+                rotation={[-Math.PI / 2, 0, 0]}
+              >
+                <meshLambertMaterial color={darkMode ? "#374151" : "white"} transparent opacity={0.9} />
+              </Plane>
+              <Text
+                position={[
+                  (measurement.points[0].x + measurement.points[1].x) / 2,
+                  3,
+                  (measurement.points[0].z + measurement.points[1].z) / 2
+                ]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                fontSize={2}
+                color={darkMode ? "white" : "black"}
+                anchorX="center"
+                anchorY="middle"
+              >
+                {measurement.distance.toFixed(2)}m
+              </Text>
+            </>
+          )}
+          {measurement.type === 'area' && (
+            <>
+              <Line
+                points={[
+                  ...measurement.points.map(p => [p.x, 0.3, p.z]),
+                  [measurement.points[0].x, 0.3, measurement.points[0].z]
+                ]}
+                color="#4ecdc4"
+                lineWidth={2}
+              />
+              {/* Background for text */}
+              <Plane
+                args={[8, 2]}
+                position={[
+                  measurement.points.reduce((sum, p) => sum + p.x, 0) / measurement.points.length,
+                  2.8,
+                  measurement.points.reduce((sum, p) => sum + p.z, 0) / measurement.points.length
+                ]}
+                rotation={[-Math.PI / 2, 0, 0]}
+              >
+                <meshLambertMaterial color={darkMode ? "#374151" : "white"} transparent opacity={0.9} />
+              </Plane>
+              <Text
+                position={[
+                  measurement.points.reduce((sum, p) => sum + p.x, 0) / measurement.points.length,
+                  3,
+                  measurement.points.reduce((sum, p) => sum + p.z, 0) / measurement.points.length
+                ]}
+                rotation={[-Math.PI / 2, 0, 0]}
+                fontSize={2}
+                color={darkMode ? "white" : "black"}
+                anchorX="center"
+                anchorY="middle"
+              >
+                {measurement.area.toFixed(2)}m²
+              </Text>
+            </>
+          )}
+        </group>
+      ))}
     </>
   );
 }
@@ -1372,7 +1528,7 @@ function Subdivision({ subdivision, onDelete, onEdit, isSelected, onSelect, onMo
   );
 }
 
-function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, totalAreaInSqM, drawingMode, subdivisions, setSubdivisions, isDraggingCorner, onDragStateChange, onAddPolylinePoint, polylinePoints, selectedSubdivision, onSubdivisionSelect, onSubdivisionMove, onUpdateSubdivision, isDraggingSubdivisionCorner, onSubdivisionCornerDragStateChange }) {
+function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, totalAreaInSqM, drawingMode, subdivisions, setSubdivisions, isDraggingCorner, onDragStateChange, onAddPolylinePoint, polylinePoints, selectedSubdivision, onSubdivisionSelect, onSubdivisionMove, onUpdateSubdivision, isDraggingSubdivisionCorner, onSubdivisionCornerDragStateChange, measurementMode, measurementPoints, onMeasurementPoint, measurements, onClearMeasurements, darkMode }) {
   const comparisonOptions = [
     { id: 'soccerField', name: 'Soccer Field', area: 7140, color: '#10b981', dimensions: { width: 105, length: 68 } },
     { id: 'basketballCourt', name: 'Basketball Court', area: 420, color: '#f59e0b', dimensions: { width: 28, length: 15 } },
@@ -1386,7 +1542,9 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
   const comparison = selectedComparison ? comparisonOptions.find(c => c.id === selectedComparison) : null;
   
   const handleAddSubdivision = (subdivision) => {
-    setSubdivisions([...subdivisions, subdivision]);
+    const newSubdivisions = [...subdivisions, subdivision];
+    setSubdivisions(newSubdivisions);
+    // Note: History is saved by the parent component, not here
   };
 
   const handleDeleteSubdivision = (id) => {
@@ -1402,9 +1560,9 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
   return (
     <>
       {/* Lighting */}
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[100, 100, 50]} intensity={0.8} castShadow />
-      <directionalLight position={[-50, 50, -50]} intensity={0.3} />
+      <ambientLight intensity={darkMode ? 0.6 : 0.4} />
+      <directionalLight position={[100, 100, 50]} intensity={darkMode ? 1.0 : 0.8} castShadow />
+      <directionalLight position={[-50, 50, -50]} intensity={darkMode ? 0.5 : 0.3} />
       
       {/* Ground */}
       <Plane 
@@ -1412,7 +1570,7 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
         rotation={[-Math.PI / 2, 0, 0]} 
         position={[0, 0, 0]}
       >
-        <meshLambertMaterial color="#4a7c59" />
+        <meshLambertMaterial color={darkMode ? "#2d3748" : "#4a7c59"} />
       </Plane>
       
       {/* Grid */}
@@ -1420,10 +1578,10 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
         args={[400, 400]} 
         cellSize={5} 
         cellThickness={0.5} 
-        cellColor="#888888" 
+        cellColor={darkMode ? "#4a5568" : "#888888"} 
         sectionSize={25} 
         sectionThickness={1} 
-        sectionColor="#cccccc" 
+        sectionColor={darkMode ? "#6b7280" : "#cccccc"} 
         fadeDistance={200} 
         infiniteGrid={false}
         position={[0, 0.001, 0]}
@@ -1435,6 +1593,7 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
         onUpdateShape={onUpdateLandShape}
         drawingMode={drawingMode}
         onDragStateChange={onDragStateChange}
+        darkMode={darkMode}
       />
       
       {/* Drawing plane for subdivisions */}
@@ -1467,8 +1626,17 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
       {/* Comparison objects - only show if not in drawing mode */}
       {!drawingMode && comparison && (() => {
         const numObjects = Math.floor(totalAreaInSqM / comparison.area);
-        const objectsToShow = Math.min(numObjects, 20);
-        const itemsPerRow = Math.ceil(Math.sqrt(objectsToShow));
+        
+        // Calculate land dimensions
+        const landSideLength = Math.sqrt(totalAreaInSqM);
+        
+        // Calculate how many objects can actually fit in each dimension
+        const objectsPerRowMax = Math.floor(landSideLength / comparison.dimensions.width);
+        const objectsPerColMax = Math.floor(landSideLength / comparison.dimensions.length);
+        const maxObjectsFit = objectsPerRowMax * objectsPerColMax;
+        
+        const objectsToShow = Math.min(numObjects, maxObjectsFit, 500);
+        const itemsPerRow = Math.min(Math.ceil(Math.sqrt(objectsToShow)), objectsPerRowMax);
         const itemsPerCol = Math.ceil(objectsToShow / itemsPerRow);
         
         // Use exact dimensions for spacing - no gaps
@@ -1502,6 +1670,16 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
         return objects;
       })()}
       
+      {/* Measurement plane */}
+      <MeasurementPlane
+        measurementMode={measurementMode}
+        measurementPoints={measurementPoints}
+        onMeasurementPoint={onMeasurementPoint}
+        measurements={measurements}
+        onClearMeasurements={onClearMeasurements}
+        darkMode={darkMode}
+      />
+      
       {/* OrbitControls */}
       <OrbitControls 
         enableDamping 
@@ -1509,7 +1687,7 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
         minDistance={10}
         maxDistance={200}
         maxPolarAngle={Math.PI / 2}
-        enabled={drawingMode !== 'rectangle' && drawingMode !== 'select' && drawingMode !== 'polyline' && !isDraggingCorner && !isDraggingSubdivisionCorner}
+        enabled={drawingMode !== 'rectangle' && drawingMode !== 'select' && drawingMode !== 'polyline' && !isDraggingCorner && !isDraggingSubdivisionCorner && !measurementMode}
       />
     </>
   );
@@ -1537,6 +1715,205 @@ const LandVisualizer = () => {
   const [isUpdatingFromShape, setIsUpdatingFromShape] = useState(false);
   const [isDraggingCorner, setIsDraggingCorner] = useState(false);
   const [hasManuallyEditedShape, setHasManuallyEditedShape] = useState(false);
+  const [darkMode, setDarkMode] = useState(() => {
+    const saved = localStorage.getItem('landVisualizer-darkMode');
+    return saved ? JSON.parse(saved) : false;
+  });
+  
+  // History management for undo/redo
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  
+  // Save initial state to history on component mount
+  useEffect(() => {
+    if (history.length === 0) {
+      const initialState = {
+        timestamp: Date.now(),
+        action: 'Initial State',
+        state: {
+          units: units,
+          subdivisions: subdivisions,
+          landShape: landShape,
+          hasManuallyEditedShape: hasManuallyEditedShape,
+          measurements: measurements
+        }
+      };
+      setHistory([initialState]);
+      setHistoryIndex(0);
+    }
+  }, []);
+  const [measurementMode, setMeasurementMode] = useState(null); // 'distance' or 'area'
+  const [measurementPoints, setMeasurementPoints] = useState([]);
+  const [measurements, setMeasurements] = useState([]);
+  
+  // Save state to history
+  const saveToHistory = (action, newState) => {
+    const historyEntry = {
+      timestamp: Date.now(),
+      action,
+      state: {
+        units: newState.units || units,
+        subdivisions: newState.subdivisions || subdivisions,
+        landShape: newState.landShape || landShape,
+        hasManuallyEditedShape: newState.hasManuallyEditedShape !== undefined ? newState.hasManuallyEditedShape : hasManuallyEditedShape,
+        measurements: newState.measurements || measurements
+      }
+    };
+    
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(historyEntry);
+    
+    // Limit history to last 50 actions
+    if (newHistory.length > 50) {
+      newHistory.shift();
+    }
+    
+    setHistory(newHistory);
+    setHistoryIndex(newHistory.length - 1);
+  };
+  
+  // Undo function
+  const undo = () => {
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1].state;
+      setUnits(prevState.units);
+      setSubdivisions(prevState.subdivisions);
+      setLandShape(prevState.landShape);
+      setHasManuallyEditedShape(prevState.hasManuallyEditedShape);
+      if (prevState.measurements) {
+        setMeasurements(prevState.measurements);
+      }
+      setHistoryIndex(historyIndex - 1);
+    }
+  };
+  
+  // Redo function
+  const redo = () => {
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1].state;
+      setUnits(nextState.units);
+      setSubdivisions(nextState.subdivisions);
+      setLandShape(nextState.landShape);
+      setHasManuallyEditedShape(nextState.hasManuallyEditedShape);
+      if (nextState.measurements) {
+        setMeasurements(nextState.measurements);
+      }
+      setHistoryIndex(historyIndex + 1);
+    }
+  };
+
+  // Dark mode toggle
+  const toggleDarkMode = () => {
+    setDarkMode(!darkMode);
+  };
+
+  // Persist dark mode preference
+  useEffect(() => {
+    localStorage.setItem('landVisualizer-darkMode', JSON.stringify(darkMode));
+  }, [darkMode]);
+  
+  // Delete subdivision function for keyboard shortcut
+  const deleteSubdivision = (subdivisionId) => {
+    const newSubdivisions = subdivisions.filter(s => s.id !== subdivisionId);
+    setSubdivisions(newSubdivisions);
+    saveToHistory('Delete Subdivision', { subdivisions: newSubdivisions });
+    setEditingSubdivision(null);
+  };
+  
+  // Distance calculation
+  const calculateDistance = (point1, point2) => {
+    const dx = point2.x - point1.x;
+    const dz = point2.z - point1.z;
+    return Math.sqrt(dx * dx + dz * dz);
+  };
+  
+  // Area calculation for measurement polygon
+  const calculateMeasurementArea = (points) => {
+    if (points.length < 3) return 0;
+    
+    let area = 0;
+    for (let i = 0; i < points.length; i++) {
+      const j = (i + 1) % points.length;
+      area += points[i].x * points[j].z;
+      area -= points[j].x * points[i].z;
+    }
+    return Math.abs(area) / 2;
+  };
+  
+  // Handle measurement point selection
+  const handleMeasurementPoint = (points) => {
+    if (measurementMode === 'distance' && points.length === 2) {
+      const distance = calculateDistance(points[0], points[1]);
+      const measurement = {
+        id: Date.now(),
+        type: 'distance',
+        points: points,
+        distance: distance
+      };
+      const newMeasurements = [...measurements, measurement];
+      setMeasurements(newMeasurements);
+      setMeasurementPoints([]);
+      
+      // Save to history
+      saveToHistory('Add Distance Measurement', { measurements: newMeasurements });
+    } else if (measurementMode === 'area' && points.length >= 3) {
+      setMeasurementPoints(points);
+    } else {
+      setMeasurementPoints(points);
+    }
+  };
+  
+  // Complete area measurement
+  const completeAreaMeasurement = () => {
+    if (measurementPoints.length >= 3) {
+      const area = calculateMeasurementArea(measurementPoints);
+      const measurement = {
+        id: Date.now(),
+        type: 'area',
+        points: measurementPoints,
+        area: area
+      };
+      const newMeasurements = [...measurements, measurement];
+      setMeasurements(newMeasurements);
+      setMeasurementPoints([]);
+      
+      // Save to history
+      saveToHistory('Add Area Measurement', { measurements: newMeasurements });
+    }
+  };
+  
+  // Clear all measurements
+  const clearMeasurements = () => {
+    setMeasurements([]);
+    setMeasurementPoints([]);
+    
+    // Save to history
+    saveToHistory('Clear Measurements', { measurements: [] });
+  };
+  
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (e.ctrlKey && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault();
+        redo();
+      } else if (e.key === 'Escape') {
+        setDrawingMode(null);
+        setMeasurementMode(null);
+        setMeasurementPoints([]);
+      } else if (e.key === 'Delete' && editingSubdivision) {
+        deleteSubdivision(editingSubdivision);
+      } else if (e.key === 'Enter' && measurementMode === 'area' && measurementPoints.length >= 3) {
+        completeAreaMeasurement();
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [historyIndex, history, drawingMode, editingSubdivision, measurementMode, measurementPoints, completeAreaMeasurement, deleteSubdivision, redo, undo]);
   const [selectedSubdivision, setSelectedSubdivision] = useState(null);
   const [isDraggingSubdivisionCorner, setIsDraggingSubdivisionCorner] = useState(false);
 
@@ -1659,13 +2036,16 @@ const LandVisualizer = () => {
   ];
 
   const addUnit = () => {
-    setUnits([...units, { value: 0, unit: 'm²' }]);
-    // Don't reset the shape when adding a new unit with value 0
+    const newUnits = [...units, { value: 0, unit: 'm²' }];
+    setUnits(newUnits);
+    saveToHistory('Add Unit', { units: newUnits });
   };
 
   const removeUnit = (index) => {
     if (units.length > 1) {
-      setUnits(units.filter((_, i) => i !== index));
+      const newUnits = units.filter((_, i) => i !== index);
+      setUnits(newUnits);
+      saveToHistory('Remove Unit', { units: newUnits });
       // Reset manual edit flag when removing a unit changes the total area
       setHasManuallyEditedShape(false);
     }
@@ -1687,7 +2067,9 @@ const LandVisualizer = () => {
   };
 
   const handleDeleteSubdivision = (id) => {
-    setSubdivisions(subdivisions.filter(s => s.id !== id));
+    const newSubdivisions = subdivisions.filter(s => s.id !== id);
+    setSubdivisions(newSubdivisions);
+    saveToHistory('Delete Subdivision', { subdivisions: newSubdivisions });
   };
 
   const handleStartEdit = (subdivision) => {
@@ -1696,9 +2078,11 @@ const LandVisualizer = () => {
   };
 
   const handleSaveEdit = (id) => {
-    setSubdivisions(subdivisions.map(s => 
+    const newSubdivisions = subdivisions.map(s => 
       s.id === id ? { ...s, label: editingLabel } : s
-    ));
+    );
+    setSubdivisions(newSubdivisions);
+    saveToHistory('Edit Subdivision Label', { subdivisions: newSubdivisions });
     setEditingSubdivision(null);
     setEditingLabel('');
   };
@@ -1710,6 +2094,7 @@ const LandVisualizer = () => {
 
   const clearAllSubdivisions = () => {
     setSubdivisions([]);
+    saveToHistory('Clear All Subdivisions', { subdivisions: [] });
     setDrawingMode(null);
   };
 
@@ -1732,7 +2117,16 @@ const LandVisualizer = () => {
     const newArea = calculateShapeArea();
     if (newArea > 0) {
       setIsUpdatingFromShape(true);
-      setUnits([{ value: newArea, unit: 'm²' }]);
+      const newUnits = [{ value: newArea, unit: 'm²' }];
+      setUnits(newUnits);
+      
+      // Save to history
+      saveToHistory('Update Land Shape', { 
+        landShape: newShape, 
+        hasManuallyEditedShape: true,
+        units: newUnits
+      });
+      
       setTimeout(() => setIsUpdatingFromShape(false), 100);
     }
   };
@@ -1752,6 +2146,12 @@ const LandVisualizer = () => {
     const newShape = [...landShape, newCorner];
     setLandShape(newShape);
     setHasManuallyEditedShape(true);
+    
+    // Save to history
+    saveToHistory('Add Corner', { 
+      landShape: newShape, 
+      hasManuallyEditedShape: true
+    });
   };
 
   const removeCorner = () => {
@@ -1759,6 +2159,12 @@ const LandVisualizer = () => {
       const newShape = landShape.slice(0, -1);
       setLandShape(newShape);
       setHasManuallyEditedShape(true);
+      
+      // Save to history
+      saveToHistory('Remove Corner', { 
+        landShape: newShape, 
+        hasManuallyEditedShape: true
+      });
     }
   };
 
@@ -1788,7 +2194,11 @@ const LandVisualizer = () => {
         type: 'polyline'
       };
       
-      setSubdivisions([...subdivisions, newSubdivision]);
+      const newSubdivisions = [...subdivisions, newSubdivision];
+      setSubdivisions(newSubdivisions);
+      
+      // Save to history
+      saveToHistory('Add Polyline Subdivision', { subdivisions: newSubdivisions });
     }
     setPolylinePoints([]);
     setDrawingMode(null);
@@ -1829,7 +2239,12 @@ const LandVisualizer = () => {
         color: `hsl(${Math.random() * 360}, 70%, 50%)`
       };
       
-      setSubdivisions([...subdivisions, newSubdivision]);
+      const newSubdivisions = [...subdivisions, newSubdivision];
+      setSubdivisions(newSubdivisions);
+      
+      // Save to history
+      saveToHistory('Add Manual Subdivision', { subdivisions: newSubdivisions });
+      
       setManualDimensions({ width: '', length: '', label: '' });
       setShowManualInput(false);
     }
@@ -1902,9 +2317,9 @@ const LandVisualizer = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-slate-50'}`}>
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-slate-200">
+      <div className={`shadow-sm border-b ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="py-4">
             <div className="flex items-center justify-between">
@@ -1913,11 +2328,22 @@ const LandVisualizer = () => {
                   <Ruler className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-slate-900">Professional Land Visualizer</h1>
-                  <p className="text-sm text-slate-600">Advanced 3D land measurement and analysis tool</p>
+                  <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Professional Land Visualizer</h1>
+                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>Advanced 3D land measurement and analysis tool</p>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
+                <button
+                  onClick={toggleDarkMode}
+                  className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm ${
+                    darkMode 
+                      ? 'bg-gray-700 hover:bg-gray-600 text-gray-200' 
+                      : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                  }`}
+                >
+                  {darkMode ? <Sun size={16} className="mr-2" /> : <Moon size={16} className="mr-2" />}
+                  {darkMode ? 'Light' : 'Dark'}
+                </button>
                 <button
                   onClick={() => setShowShareModal(true)}
                   className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
@@ -1927,18 +2353,18 @@ const LandVisualizer = () => {
                 </button>
                 <div className="hidden lg:flex items-center space-x-6">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-slate-900">{formatNumber(totalAreaInSqM)}</div>
-                    <div className="text-xs text-slate-500 uppercase tracking-wide">Square Meters</div>
+                    <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{formatNumber(totalAreaInSqM)}</div>
+                    <div className={`text-xs uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>Square Meters</div>
                   </div>
-                  <div className="h-12 w-px bg-slate-200"></div>
+                  <div className={`h-12 w-px ${darkMode ? 'bg-gray-600' : 'bg-slate-200'}`}></div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-slate-900">{formatNumber(totalHectares)}</div>
-                    <div className="text-xs text-slate-500 uppercase tracking-wide">Hectares</div>
+                    <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{formatNumber(totalHectares)}</div>
+                    <div className={`text-xs uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>Hectares</div>
                   </div>
-                  <div className="h-12 w-px bg-slate-200"></div>
+                  <div className={`h-12 w-px ${darkMode ? 'bg-gray-600' : 'bg-slate-200'}`}></div>
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-slate-900">{formatNumber(totalAcres)}</div>
-                    <div className="text-xs text-slate-500 uppercase tracking-wide">Acres</div>
+                    <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{formatNumber(totalAcres)}</div>
+                    <div className={`text-xs uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>Acres</div>
                   </div>
                 </div>
               </div>
@@ -1950,10 +2376,10 @@ const LandVisualizer = () => {
       {/* Share Modal */}
       {showShareModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+          <div className={`rounded-xl shadow-xl max-w-md w-full mx-4 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Share Your Land Configuration</h3>
-              <p className="text-sm text-slate-600 mb-4">
+              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Share Your Land Configuration</h3>
+              <p className={`text-sm mb-4 ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>
                 Copy this link to share your current land configuration with others:
               </p>
               <div className="flex items-center space-x-2">
@@ -1961,7 +2387,11 @@ const LandVisualizer = () => {
                   type="text"
                   value={generateShareURL()}
                   readOnly
-                  className="flex-1 px-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm"
+                  className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600 text-gray-200' 
+                      : 'bg-slate-50 border-slate-300 text-slate-900'
+                  }`}
                 />
                 <button
                   onClick={copyToClipboard}
@@ -1987,7 +2417,11 @@ const LandVisualizer = () => {
               <div className="mt-4 flex justify-end">
                 <button
                   onClick={() => setShowShareModal(false)}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900"
+                  className={`px-4 py-2 text-sm font-medium ${
+                    darkMode 
+                      ? 'text-gray-300 hover:text-white' 
+                      : 'text-slate-700 hover:text-slate-900'
+                  }`}
                 >
                   Close
                 </button>
@@ -2000,12 +2434,12 @@ const LandVisualizer = () => {
       {/* Manual Input Modal */}
       {showManualInput && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-xl max-w-md w-full mx-4">
+          <div className={`rounded-xl shadow-xl max-w-md w-full mx-4 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
             <div className="p-6">
-              <h3 className="text-lg font-semibold text-slate-900 mb-4">Add Subdivision by Dimensions</h3>
+              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Add Subdivision by Dimensions</h3>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-slate-700'}`}>
                     Label (optional)
                   </label>
                   <input
@@ -2013,12 +2447,16 @@ const LandVisualizer = () => {
                     value={manualDimensions.label}
                     onChange={(e) => setManualDimensions({...manualDimensions, label: e.target.value})}
                     placeholder={`Area ${subdivisions.length + 1}`}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                      darkMode 
+                        ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' 
+                        : 'bg-white border-slate-300 text-slate-900'
+                    }`}
                   />
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-slate-700'}`}>
                       Width (m)
                     </label>
                     <input
@@ -2028,11 +2466,15 @@ const LandVisualizer = () => {
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' 
+                          : 'bg-white border-slate-300 text-slate-900'
+                      }`}
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-1">
+                    <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-slate-700'}`}>
                       Length (m)
                     </label>
                     <input
@@ -2042,12 +2484,16 @@ const LandVisualizer = () => {
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' 
+                          : 'bg-white border-slate-300 text-slate-900'
+                      }`}
                     />
                   </div>
                 </div>
                 {manualDimensions.width && manualDimensions.length && (
-                  <div className="text-sm text-slate-600">
+                  <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>
                     Area: {formatNumber(parseFloat(manualDimensions.width) * parseFloat(manualDimensions.length))} m²
                   </div>
                 )}
@@ -2058,7 +2504,11 @@ const LandVisualizer = () => {
                     setShowManualInput(false);
                     setManualDimensions({ width: '', length: '', label: '' });
                   }}
-                  className="px-4 py-2 text-sm font-medium text-slate-700 hover:text-slate-900"
+                  className={`px-4 py-2 text-sm font-medium ${
+                    darkMode 
+                      ? 'text-gray-300 hover:text-white' 
+                      : 'text-slate-700 hover:text-slate-900'
+                  }`}
                 >
                   Cancel
                 </button>
@@ -2077,11 +2527,11 @@ const LandVisualizer = () => {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         {/* Control Panel */}
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 mb-6">
+        <div className={`rounded-xl shadow-sm border mb-6 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-slate-900 flex items-center">
-                <Activity className="w-5 h-5 mr-2 text-slate-600" />
+              <h2 className={`text-lg font-semibold flex items-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                <Activity className={`w-5 h-5 mr-2 ${darkMode ? 'text-gray-400' : 'text-slate-600'}`} />
                 Area Configuration
               </h2>
               <button
@@ -2096,17 +2546,27 @@ const LandVisualizer = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {units.map((unitItem, index) => (
                 <div key={index} className="relative group">
-                  <div className="bg-slate-50 rounded-lg p-4 border border-slate-200 hover:border-slate-300 transition-colors">
+                  <div className={`rounded-lg p-4 border hover:border-slate-300 transition-colors ${
+                    darkMode 
+                      ? 'bg-gray-700 border-gray-600 hover:border-gray-500' 
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
                     <div className="flex items-center space-x-3">
                       <div className="flex-1">
-                        <label htmlFor={`area-value-${index}`} className="block text-xs font-medium text-slate-700 mb-1">
+                        <label htmlFor={`area-value-${index}`} className={`block text-xs font-medium mb-1 ${
+                          darkMode ? 'text-gray-300' : 'text-slate-700'
+                        }`}>
                           Area Value
                         </label>
                         <input
                           type="number"
                           value={unitItem.value}
                           onChange={(e) => updateUnit(index, 'value', e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                          className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                            darkMode 
+                              ? 'bg-gray-600 border-gray-500 text-gray-200 placeholder-gray-400' 
+                              : 'bg-white border-slate-300 text-slate-900'
+                          }`}
                           min="0"
                           step="0.01"
                           placeholder="0.00"
@@ -2115,13 +2575,19 @@ const LandVisualizer = () => {
                         />
                       </div>
                       <div className="flex-1">
-                        <label htmlFor={`unit-type-${index}`} className="block text-xs font-medium text-slate-700 mb-1">
+                        <label htmlFor={`unit-type-${index}`} className={`block text-xs font-medium mb-1 ${
+                          darkMode ? 'text-gray-300' : 'text-slate-700'
+                        }`}>
                           Unit Type
                         </label>
                         <select
                           value={unitItem.unit}
                           onChange={(e) => updateUnit(index, 'unit', e.target.value)}
-                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                          className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none ${
+                            darkMode 
+                              ? 'bg-gray-600 border-gray-500 text-gray-200' 
+                              : 'bg-white border-slate-300 text-slate-900'
+                          }`}
                           id={`unit-type-${index}`}
                           name={`unit-type-${index}`}
                         >
@@ -2137,13 +2603,15 @@ const LandVisualizer = () => {
                       {units.length > 1 && (
                         <button
                           onClick={() => removeUnit(index)}
-                          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all opacity-0 group-hover:opacity-100"
+                          className={`p-2 text-red-500 hover:text-red-700 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${
+                            darkMode ? 'hover:bg-red-900/20' : 'hover:bg-red-50'
+                          }`}
                         >
                           <Minus size={18} />
                         </button>
                       )}
                     </div>
-                    <div className="mt-2 text-xs text-slate-500">
+                    <div className={`mt-2 text-xs ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>
                       = {formatNumber(unitItem.value * unitConversions[unitItem.unit])} m²
                     </div>
                   </div>
@@ -2170,19 +2638,27 @@ const LandVisualizer = () => {
             </div>
             
             {/* Traditional Units Info */}
-            <div className="mt-6 pt-6 border-t border-slate-200">
+            <div className={`mt-6 pt-6 border-t ${darkMode ? 'border-gray-600' : 'border-slate-200'}`}>
               <button
                 onClick={() => setShowTraditionalInfo(!showTraditionalInfo)}
-                className="flex items-center text-sm font-medium text-slate-700 hover:text-slate-900 transition-colors"
+                className={`flex items-center text-sm font-medium transition-colors ${
+                  darkMode 
+                    ? 'text-gray-300 hover:text-white' 
+                    : 'text-slate-700 hover:text-slate-900'
+                }`}
               >
                 <Info size={16} className="mr-2" />
                Traditional Units Information
              </button>
              
              {showTraditionalInfo && (
-               <div className="mt-3 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                 <h4 className="font-semibold text-slate-900 mb-2">Traditional Units:</h4>
-                 <ul className="space-y-2 text-sm text-slate-700">
+               <div className={`mt-3 p-4 rounded-lg border ${
+                 darkMode 
+                   ? 'bg-blue-900/20 border-blue-700' 
+                   : 'bg-blue-50 border-blue-200'
+               }`}>
+                 <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Traditional Units:</h4>
+                 <ul className={`space-y-2 text-sm ${darkMode ? 'text-gray-300' : 'text-slate-700'}`}>
                    <li>
                      <strong>Arpent:</strong> French colonial unit, varies by region (Louisiana ≈ 0.84 acres)
                    </li>
@@ -2197,7 +2673,7 @@ const LandVisualizer = () => {
              )}
              
              <div className="mt-4 flex items-center justify-between">
-               <span className="text-sm text-slate-600">
+               <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>
                  <Maximize2 size={16} className="inline mr-1" />
                  Total land area: {totalAreaInSqM.toFixed(1)} m²
                </span>
@@ -2209,12 +2685,18 @@ const LandVisualizer = () => {
        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
          {/* 3D Visualization */}
          <div className="xl:col-span-3">
-           <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-             <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 border-b border-slate-200">
+           <div className={`rounded-xl shadow-sm border overflow-hidden ${
+             darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'
+           }`}>
+             <div className={`p-4 border-b ${
+               darkMode 
+                 ? 'bg-gradient-to-r from-gray-700 to-gray-800 border-gray-600' 
+                 : 'bg-gradient-to-r from-slate-50 to-slate-100 border-slate-200'
+             }`}>
                <div className="flex items-center justify-between">
                  <div>
-                   <h2 className="text-lg font-semibold text-slate-900">3D Visualization</h2>
-                   <p className="text-sm text-slate-600 mt-1">
+                   <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>3D Visualization</h2>
+                   <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>
                      {drawingMode === 'rectangle' 
                        ? 'Click and drag to draw subdivisions'
                        : 'Drag to rotate • Scroll to zoom • Outdoor environment'
@@ -2223,7 +2705,7 @@ const LandVisualizer = () => {
                  </div>
                </div>
              </div>
-             <div style={{ width: '100%', height: '500px', backgroundColor: '#f8fafc' }}>
+             <div style={{ width: '100%', height: '500px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc' }}>
                <Canvas camera={{ position: [50, 50, 50], fov: 75 }}>
                  <Scene 
                    landShape={landShape}
@@ -2232,6 +2714,7 @@ const LandVisualizer = () => {
                    selectedComparison={selectedComparison}
                    totalAreaInSqM={totalAreaInSqM}
                    drawingMode={drawingMode}
+                   darkMode={darkMode}
                    subdivisions={subdivisions}
                    setSubdivisions={setSubdivisions}
                    isDraggingCorner={isDraggingCorner}
@@ -2244,25 +2727,58 @@ const LandVisualizer = () => {
                    onUpdateSubdivision={handleUpdateSubdivision}
                    isDraggingSubdivisionCorner={isDraggingSubdivisionCorner}
                    onSubdivisionCornerDragStateChange={handleSubdivisionCornerDragStateChange}
+                   measurementMode={measurementMode}
+                   measurementPoints={measurementPoints}
+                   onMeasurementPoint={handleMeasurementPoint}
+                   measurements={measurements}
+                   onClearMeasurements={clearMeasurements}
                  />
                </Canvas>
              </div>
            </div>
            
            {/* Drawing Tools */}
-           <div className="bg-white rounded-xl shadow-sm border border-slate-200 mt-4">
-             <div className="p-4 border-b border-slate-200">
+           <div className={`rounded-xl shadow-sm border mt-4 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
+             <div className={`p-4 border-b ${darkMode ? 'border-gray-600' : 'border-slate-200'}`}>
                <div className="flex items-center justify-between">
-                 <h3 className="text-lg font-semibold text-slate-900">Drawing Tools</h3>
-                 {subdivisions.length > 0 && (
+                 <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Drawing Tools</h3>
+                 <div className="flex items-center space-x-2">
                    <button
-                     onClick={clearAllSubdivisions}
-                     className="text-sm text-red-600 hover:text-red-700 flex items-center"
+                     onClick={undo}
+                     disabled={historyIndex <= 0}
+                     className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ${
+                       historyIndex <= 0
+                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                     }`}
+                     title="Undo (Ctrl+Z)"
                    >
-                     <Trash2 size={14} className="mr-1" />
-                     Clear All
+                     <RotateCcw size={16} />
                    </button>
-                 )}
+                   
+                   <button
+                     onClick={redo}
+                     disabled={historyIndex >= history.length - 1}
+                     className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ${
+                       historyIndex >= history.length - 1
+                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                     }`}
+                     title="Redo (Ctrl+Y)"
+                   >
+                     <RotateCw size={16} />
+                   </button>
+                   
+                   {subdivisions.length > 0 && (
+                     <button
+                       onClick={clearAllSubdivisions}
+                       className="text-sm text-red-600 hover:text-red-700 flex items-center"
+                     >
+                       <Trash2 size={14} className="mr-1" />
+                       Clear All
+                     </button>
+                   )}
+                 </div>
                </div>
              </div>
              <div className="p-4">
@@ -2313,6 +2829,68 @@ const LandVisualizer = () => {
                    <Edit3 size={16} className="mr-2" />
                    Enter Dimensions
                  </button>
+               </div>
+               
+               {/* Measurement Tools */}
+               <div className="mt-4 pt-4 border-t border-slate-200">
+                 <h4 className="text-sm font-medium text-slate-700 mb-3">Measurement Tools</h4>
+                 <div className="grid grid-cols-3 gap-2">
+                   <button
+                     onClick={() => setMeasurementMode(measurementMode === 'distance' ? null : 'distance')}
+                     className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                       measurementMode === 'distance'
+                         ? 'bg-green-600 text-white'
+                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                     }`}
+                   >
+                     <Ruler size={16} className="mr-2" />
+                     Distance
+                   </button>
+                   
+                   <button
+                     onClick={() => setMeasurementMode(measurementMode === 'area' ? null : 'area')}
+                     className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                       measurementMode === 'area'
+                         ? 'bg-green-600 text-white'
+                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                     }`}
+                   >
+                     <SquareIcon size={16} className="mr-2" />
+                     Area
+                   </button>
+                   
+                   <button
+                     onClick={clearMeasurements}
+                     className="inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all bg-red-200 hover:bg-red-300 text-red-700"
+                   >
+                     <Trash2 size={16} className="mr-2" />
+                     Clear
+                   </button>
+                 </div>
+                 
+                 {measurementMode === 'distance' && (
+                   <div className="mt-3 p-3 bg-green-50 rounded-lg">
+                     <p className="text-sm text-green-800">
+                       Click two points to measure distance
+                     </p>
+                   </div>
+                 )}
+                 
+                 {measurementMode === 'area' && (
+                   <div className="mt-3 p-3 bg-green-50 rounded-lg">
+                     <p className="text-sm text-green-800">
+                       Click points to create polygon. Press Enter to complete.
+                     </p>
+                     {measurementPoints.length >= 3 && (
+                       <button
+                         onClick={completeAreaMeasurement}
+                         className="mt-2 inline-flex items-center px-3 py-1 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
+                       >
+                         Complete Area
+                       </button>
+                     )}
+                   </div>
+                 )}
                </div>
                
                {/* Corner Controls - Available for rectangle, polyline, and dimensions modes */}
