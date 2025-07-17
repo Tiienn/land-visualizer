@@ -3,7 +3,9 @@
     "allow": [
       "Bash(pkill:*)",
       "Bash(true)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(git push:*)",
+      "Bash(npm start)"
     ],
     "deny": []
   }
