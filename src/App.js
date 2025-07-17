@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Plane, Box, Text, Line } from '@react-three/drei';
 import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X, RotateCcw, RotateCw, Moon, Sun } from 'lucide-react';
@@ -1720,6 +1720,11 @@ const LandVisualizer = () => {
     return saved ? JSON.parse(saved) : false;
   });
   
+  // Measurement state
+  const [measurementMode, setMeasurementMode] = useState(null); // 'distance' or 'area'
+  const [measurementPoints, setMeasurementPoints] = useState([]);
+  const [measurements, setMeasurements] = useState([]);
+  
   // History management for undo/redo
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -1741,13 +1746,10 @@ const LandVisualizer = () => {
       setHistory([initialState]);
       setHistoryIndex(0);
     }
-  }, []);
-  const [measurementMode, setMeasurementMode] = useState(null); // 'distance' or 'area'
-  const [measurementPoints, setMeasurementPoints] = useState([]);
-  const [measurements, setMeasurements] = useState([]);
+  }, [history.length, units, subdivisions, landShape, hasManuallyEditedShape, measurements]);
   
   // Save state to history
-  const saveToHistory = (action, newState) => {
+  const saveToHistory = useCallback((action, newState) => {
     const historyEntry = {
       timestamp: Date.now(),
       action,
@@ -1770,10 +1772,10 @@ const LandVisualizer = () => {
     
     setHistory(newHistory);
     setHistoryIndex(newHistory.length - 1);
-  };
+  }, [history, historyIndex, units, subdivisions, landShape, hasManuallyEditedShape, measurements]);
   
   // Undo function
-  const undo = () => {
+  const undo = useCallback(() => {
     if (historyIndex > 0) {
       const prevState = history[historyIndex - 1].state;
       setUnits(prevState.units);
@@ -1785,10 +1787,10 @@ const LandVisualizer = () => {
       }
       setHistoryIndex(historyIndex - 1);
     }
-  };
+  }, [historyIndex, history]);
   
   // Redo function
-  const redo = () => {
+  const redo = useCallback(() => {
     if (historyIndex < history.length - 1) {
       const nextState = history[historyIndex + 1].state;
       setUnits(nextState.units);
@@ -1800,7 +1802,7 @@ const LandVisualizer = () => {
       }
       setHistoryIndex(historyIndex + 1);
     }
-  };
+  }, [historyIndex, history]);
 
   // Dark mode toggle
   const toggleDarkMode = () => {
@@ -1813,12 +1815,12 @@ const LandVisualizer = () => {
   }, [darkMode]);
   
   // Delete subdivision function for keyboard shortcut
-  const deleteSubdivision = (subdivisionId) => {
+  const deleteSubdivision = useCallback((subdivisionId) => {
     const newSubdivisions = subdivisions.filter(s => s.id !== subdivisionId);
     setSubdivisions(newSubdivisions);
     saveToHistory('Delete Subdivision', { subdivisions: newSubdivisions });
     setEditingSubdivision(null);
-  };
+  }, [subdivisions, saveToHistory]);
   
   // Distance calculation
   const calculateDistance = (point1, point2) => {
@@ -1864,7 +1866,7 @@ const LandVisualizer = () => {
   };
   
   // Complete area measurement
-  const completeAreaMeasurement = () => {
+  const completeAreaMeasurement = useCallback(() => {
     if (measurementPoints.length >= 3) {
       const area = calculateMeasurementArea(measurementPoints);
       const measurement = {
@@ -1880,7 +1882,7 @@ const LandVisualizer = () => {
       // Save to history
       saveToHistory('Add Area Measurement', { measurements: newMeasurements });
     }
-  };
+  }, [measurementPoints, measurements, saveToHistory]);
   
   // Clear all measurements
   const clearMeasurements = () => {
