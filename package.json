@@ -2,7 +2,7 @@
   "name": "land-visualizer",
   "version": "0.1.0",
   "private": true,
-  "homepage": "https://tiienn.github.io/land-visualizer",
+  "homepage": "https://landvisualizer.com",
   "dependencies": {
     "@react-three/drei": "^10.4.4",
     "@react-three/fiber": "^9.2.0",
@@ -19,7 +19,8 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "react-scripts build && npm run postbuild",
+    "postbuild": "echo 'Build completed for landvisualizer.com'",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
     "predeploy": "npm run build",
