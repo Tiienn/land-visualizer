@@ -2273,7 +2273,7 @@ const LandVisualizer = () => {
                   <Ruler className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Professional Land Visualizer</h1>
+                  <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Land Visualizer</h1>
                   <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>Advanced 3D land measurement and analysis tool</p>
                 </div>
               </div>
