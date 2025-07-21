@@ -1422,7 +1422,7 @@ function Subdivision({ subdivision, onDelete, onEdit, isSelected, onSelect, onMo
           position={[centroid.x, 0.5, centroid.z]}
           rotation={[-Math.PI / 2, 0, 0]}
           fontSize={2}
-          color="black"
+          color={darkMode ? "white" : "black"}
           anchorX="center"
           anchorY="middle"
         >
@@ -1490,7 +1490,7 @@ function Subdivision({ subdivision, onDelete, onEdit, isSelected, onSelect, onMo
         position={[subdivision.x, 0.5, subdivision.z]}
         rotation={[-Math.PI / 2, 0, 0]}
         fontSize={2}
-        color="black"
+        color={darkMode ? "white" : "black"}
         anchorX="center"
         anchorY="middle"
       >
@@ -2943,8 +2943,12 @@ const LandVisualizer = () => {
                
                {/* Corner Controls - Available for rectangle, polyline, and dimensions modes */}
                {(drawingMode === 'rectangle' || drawingMode === 'polyline' || drawingMode === null) && (
-                 <div className="mt-4 pt-4 border-t border-slate-200">
-                   <h4 className="text-sm font-medium text-slate-700 mb-3">Corner Controls</h4>
+                 <div className={`mt-4 pt-4 border-t ${
+                   darkMode ? 'border-gray-600' : 'border-slate-200'
+                 }`}>
+                   <h4 className={`text-sm font-medium mb-3 ${
+                     darkMode ? 'text-white' : 'text-slate-700'
+                   }`}>Corner Controls</h4>
                    <div className="flex items-center gap-2">
                      <button
                        onClick={addCorner}
@@ -3000,8 +3004,12 @@ const LandVisualizer = () => {
                )}
                
                {drawingMode === 'rectangle' && (
-                 <div className="mt-4 pt-4 border-t border-slate-200">
-                   <span className="text-sm text-slate-600">
+                 <div className={`mt-4 pt-4 border-t ${
+                   darkMode ? 'border-gray-600' : 'border-slate-200'
+                 }`}>
+                   <span className={`text-sm ${
+                     darkMode ? 'text-gray-300' : 'text-slate-600'
+                   }`}>
                      Click and drag on the land to draw a subdivision
                    </span>
                  </div>
@@ -3011,10 +3019,18 @@ const LandVisualizer = () => {
            
            {/* Subdivisions List */}
            {subdivisions.length > 0 && (
-             <div className="bg-white rounded-xl shadow-sm border border-slate-200 mt-4">
-               <div className="p-4 border-b border-slate-200">
-                 <h3 className="text-lg font-semibold text-slate-900">Subdivisions</h3>
-                 <p className="text-sm text-slate-600 mt-1">
+             <div className={`rounded-xl shadow-sm border mt-4 ${
+               darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-slate-200'
+             }`}>
+               <div className={`p-4 border-b ${
+                 darkMode ? 'border-gray-600' : 'border-slate-200'
+               }`}>
+                 <h3 className={`text-lg font-semibold ${
+                   darkMode ? 'text-white' : 'text-slate-900'
+                 }`}>Subdivisions</h3>
+                 <p className={`text-sm mt-1 ${
+                   darkMode ? 'text-gray-300' : 'text-slate-600'
+                 }`}>
                    Total subdivided: {formatNumber(subdivisionsTotal)} m² • 
                    Remaining: {formatNumber(remainingArea)} m²
                  </p>
@@ -3024,7 +3040,11 @@ const LandVisualizer = () => {
                    {subdivisions.map((subdivision) => (
                      <div
                        key={subdivision.id}
-                       className="bg-slate-50 rounded-lg p-3 border border-slate-200 hover:border-slate-300 transition-colors"
+                       className={`rounded-lg p-3 border transition-colors ${
+                         darkMode 
+                           ? 'bg-gray-700 border-gray-600 hover:border-gray-500' 
+                           : 'bg-slate-50 border-slate-200 hover:border-slate-300'
+                       }`}
                      >
                        <div className="flex items-center justify-between mb-2">
                          <div 
@@ -3037,7 +3057,11 @@ const LandVisualizer = () => {
                                type="text"
                                value={editingLabel}
                                onChange={(e) => setEditingLabel(e.target.value)}
-                               className="flex-1 px-2 py-1 text-sm bg-white border border-slate-300 rounded"
+                               className={`flex-1 px-2 py-1 text-sm border rounded ${
+                                 darkMode 
+                                   ? 'bg-gray-600 border-gray-500 text-white' 
+                                   : 'bg-white border-slate-300 text-slate-900'
+                               }`}
                                autoFocus
                              />
                              <button
@@ -3054,7 +3078,9 @@ const LandVisualizer = () => {
                              </button>
                            </div>
                          ) : (
-                           <span className="flex-1 mx-2 font-medium text-slate-900">
+                           <span className={`flex-1 mx-2 font-medium ${
+                             darkMode ? 'text-white' : 'text-slate-900'
+                           }`}>
                              {subdivision.label}
                            </span>
                          )}
@@ -3062,23 +3088,35 @@ const LandVisualizer = () => {
                            <div className="flex items-center gap-1">
                              <button
                                onClick={() => handleStartEdit(subdivision)}
-                               className="p-1 text-slate-600 hover:text-slate-900"
+                               className={`p-1 ${
+                                 darkMode 
+                                   ? 'text-gray-400 hover:text-white' 
+                                   : 'text-slate-600 hover:text-slate-900'
+                               }`}
                              >
                                <Edit3 size={14} />
                              </button>
                              <button
                                onClick={() => handleDeleteSubdivision(subdivision.id)}
-                               className="p-1 text-red-600 hover:text-red-700"
+                               className={`p-1 ${
+                                 darkMode 
+                                   ? 'text-red-400 hover:text-red-300' 
+                                   : 'text-red-600 hover:text-red-700'
+                               }`}
                              >
                                <Trash2 size={14} />
                              </button>
                            </div>
                          )}
                        </div>
-                       <div className="text-sm text-slate-600">
+                       <div className={`text-sm ${
+                         darkMode ? 'text-gray-300' : 'text-slate-600'
+                       }`}>
                          Area: {formatNumber(subdivision.area)} m²
                        </div>
-                       <div className="text-xs text-slate-500 mt-1">
+                       <div className={`text-xs mt-1 ${
+                         darkMode ? 'text-gray-400' : 'text-slate-500'
+                       }`}>
                          {subdivision.type === 'polyline' 
                            ? `Polyline (${subdivision.points.length} points)`
                            : `${subdivision.width.toFixed(1)}m × ${subdivision.length.toFixed(1)}m`
@@ -3175,30 +3213,52 @@ const LandVisualizer = () => {
            
            {/* Area Summary */}
            {subdivisions.length > 0 && (
-             <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-               <div className="p-4 border-b border-slate-200">
-                 <h3 className="text-lg font-semibold text-slate-900">Area Summary</h3>
+             <div className={`rounded-xl shadow-sm border ${
+               darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-slate-200'
+             }`}>
+               <div className={`p-4 border-b ${
+                 darkMode ? 'border-gray-600' : 'border-slate-200'
+               }`}>
+                 <h3 className={`text-lg font-semibold ${
+                   darkMode ? 'text-white' : 'text-slate-900'
+                 }`}>Area Summary</h3>
                </div>
                <div className="p-4 space-y-3">
                  <div className="flex justify-between items-center">
-                   <span className="text-sm font-medium text-slate-700">Total Area</span>
-                   <span className="text-sm font-mono text-slate-900">
+                   <span className={`text-sm font-medium ${
+                     darkMode ? 'text-gray-300' : 'text-slate-700'
+                   }`}>Total Area</span>
+                   <span className={`text-sm font-mono ${
+                     darkMode ? 'text-white' : 'text-slate-900'
+                   }`}>
                      {formatNumber(totalAreaInSqM)} m²
                    </span>
                  </div>
                  <div className="flex justify-between items-center">
-                   <span className="text-sm font-medium text-slate-700">Subdivided</span>
-                   <span className="text-sm font-mono text-green-600">
+                   <span className={`text-sm font-medium ${
+                     darkMode ? 'text-gray-300' : 'text-slate-700'
+                   }`}>Subdivided</span>
+                   <span className={`text-sm font-mono ${
+                     darkMode ? 'text-green-400' : 'text-green-600'
+                   }`}>
                      {formatNumber(subdivisionsTotal)} m²
                    </span>
                  </div>
-                 <div className="flex justify-between items-center pt-2 border-t">
-                   <span className="text-sm font-medium text-slate-700">Remaining</span>
-                   <span className="text-sm font-mono text-blue-600">
+                 <div className={`flex justify-between items-center pt-2 border-t ${
+                   darkMode ? 'border-gray-600' : 'border-slate-200'
+                 }`}>
+                   <span className={`text-sm font-medium ${
+                     darkMode ? 'text-gray-300' : 'text-slate-700'
+                   }`}>Remaining</span>
+                   <span className={`text-sm font-mono ${
+                     darkMode ? 'text-blue-400' : 'text-blue-600'
+                   }`}>
                      {formatNumber(remainingArea)} m²
                    </span>
                  </div>
-                 <div className="text-xs text-slate-500 mt-2">
+                 <div className={`text-xs mt-2 ${
+                   darkMode ? 'text-gray-400' : 'text-slate-500'
+                 }`}>
                    {((subdivisionsTotal / totalAreaInSqM) * 100).toFixed(1)}% subdivided
                  </div>
                </div>
