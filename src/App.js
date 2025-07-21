@@ -1266,7 +1266,7 @@ function SubdivisionCornerPoint({ position, index, subdivisionId, onDrag, isActi
 }
 
 // Subdivision component
-function Subdivision({ subdivision, onDelete, onEdit, isSelected, onSelect, onMove, drawingMode, onUpdateSubdivision, onSubdivisionCornerDragStateChange }) {
+function Subdivision({ subdivision, onDelete, onEdit, isSelected, onSelect, onMove, drawingMode, onUpdateSubdivision, onSubdivisionCornerDragStateChange, darkMode }) {
   const [hovered, setHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedCorner, setSelectedCorner] = useState(null);
@@ -1620,6 +1620,7 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
           drawingMode={drawingMode}
           onUpdateSubdivision={onUpdateSubdivision}
           onSubdivisionCornerDragStateChange={onSubdivisionCornerDragStateChange}
+          darkMode={darkMode}
         />
       ))}
       
