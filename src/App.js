@@ -623,116 +623,58 @@ function RealisticComparisonObject({ type, position, dimensions, color }) {
         </group>
       );
       
-    case 'olympicPool':
+    case 'boxingRing':
       return (
         <group position={position}>
           <ObjectBorder />
-          {/* Pool deck */}
-          <Plane
-            args={[width + 10, length + 10]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.01, 0]}
-          >
-            <meshLambertMaterial color="#e2e8f0" />
-          </Plane>
-          
-          {/* Pool water */}
+          {/* Boxing ring canvas */}
           <Plane
             args={[width, length]}
             rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, -1.2, 0]}
+            position={[0, 0.01, 0]}
           >
-            <meshLambertMaterial color="#1e90ff" transparent opacity={0.8} />
+            <meshLambertMaterial color="#ADD8E6" />
           </Plane>
           
-          {/* Pool edge/coping */}
+          {/* Ring ropes - outer boundary */}
           <Line
             points={[
-              [-width/2, 0.02, -length/2], [width/2, 0.02, -length/2],
-              [width/2, 0.02, length/2], [-width/2, 0.02, length/2],
-              [-width/2, 0.02, -length/2]
+              [-width/2, 1.2, -length/2], [width/2, 1.2, -length/2],
+              [width/2, 1.2, length/2], [-width/2, 1.2, length/2],
+              [-width/2, 1.2, -length/2]
             ]}
-            color="#4a5568"
-            lineWidth={5}
+            color="#ffffff"
+            lineWidth={4}
           />
           
-          {/* Lane ropes */}
-          {Array.from({ length: 9 }, (_, i) => (
-            <Line
-              key={i}
-              points={[
-                [(-width/2) + ((i + 1) * width/10), -0.5, -length/2],
-                [(-width/2) + ((i + 1) * width/10), -0.5, length/2]
-              ]}
-              color="#ff0000"
-              lineWidth={3}
-            />
-          ))}
-          
-          {/* Lane markers on pool bottom */}
-          {Array.from({ length: 10 }, (_, i) => (
-            <Line
-              key={i}
-              points={[
-                [(-width/2) + (i * width/9), -1.15, -length/2],
-                [(-width/2) + (i * width/9), -1.15, length/2]
-              ]}
-              color="#000000"
-              lineWidth={2}
-            />
-          ))}
-          
-          {/* 25m markers on pool bottom */}
+          {/* Middle rope */}
           <Line
             points={[
-              [-width/2, -1.15, 0], [width/2, -1.15, 0]
+              [-width/2, 0.8, -length/2], [width/2, 0.8, -length/2],
+              [width/2, 0.8, length/2], [-width/2, 0.8, length/2],
+              [-width/2, 0.8, -length/2]
             ]}
-            color="#000000"
-            lineWidth={3}
+            color="#ffffff"
+            lineWidth={4}
           />
           
-          {/* Starting blocks */}
-          {Array.from({ length: 10 }, (_, i) => (
-            <Box
-              key={i}
-              args={[1.5, 1, 2]}
-              position={[(-width/2) + 2.5 + (i * width/10), 0.5, -length/2 + 1]}
-            >
-              <meshLambertMaterial color="#0066cc" />
+          {/* Lower rope */}
+          <Line
+            points={[
+              [-width/2, 0.4, -length/2], [width/2, 0.4, -length/2],
+              [width/2, 0.4, length/2], [-width/2, 0.4, length/2],
+              [-width/2, 0.4, -length/2]
+            ]}
+            color="#ffffff"
+            lineWidth={4}
+          />
+          
+          {/* Corner posts */}
+          {[[-width/2, -length/2], [width/2, -length/2], [width/2, length/2], [-width/2, length/2]].map((corner, index) => (
+            <Box key={index} args={[0.2, 1.5, 0.2]} position={[corner[0], 0.75, corner[1]]}>
+              <meshLambertMaterial color="#8b4513" />
             </Box>
           ))}
-          
-          {/* Timing touchpads */}
-          {Array.from({ length: 10 }, (_, i) => (
-            <Box
-              key={i}
-              args={[1.2, 0.8, 0.1]}
-              position={[(-width/2) + 2.5 + (i * width/10), -0.4, length/2 - 0.1]}
-            >
-              <meshLambertMaterial color="#ffd700" />
-            </Box>
-          ))}
-          
-          {/* Spectator stands */}
-          <Box args={[width + 20, 8, 10]} position={[0, 4, length/2 + 10]} >
-            <meshLambertMaterial color="#4a5568" />
-          </Box>
-          
-          {/* Diving platforms */}
-          <Box args={[3, 0.5, 3]} position={[width/3, 10, -length/3]} >
-            <meshLambertMaterial color="#8B4513" />
-          </Box>
-          <Box args={[0.5, 10, 0.5]} position={[width/3, 5, -length/3]} >
-            <meshLambertMaterial color="#8B4513" />
-          </Box>
-          
-          {/* Pool ladders */}
-          <Box args={[0.2, 2, 1]} position={[width/2 - 0.1, 0.5, length/2 - 2]} >
-            <meshLambertMaterial color="#c0c0c0" />
-          </Box>
-          <Box args={[0.2, 2, 1]} position={[-width/2 + 0.1, 0.5, length/2 - 2]} >
-            <meshLambertMaterial color="#c0c0c0" />
-          </Box>
         </group>
       );
       
@@ -1536,7 +1478,7 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
     { id: 'swimmingPool', name: 'Swimming Pool', area: 163, color: '#06b6d4', dimensions: { width: 25, length: 6.5 } },
     { id: 'house', name: 'Average House', area: 150, color: '#8b5cf6', dimensions: { width: 12, length: 12.5 } },
     { id: 'parkingSpace', name: 'Parking Space', area: 12.5, color: '#64748b', dimensions: { width: 5, length: 2.5 } },
-    { id: 'olympicPool', name: 'Olympic Pool', area: 1250, color: '#3b82f6', dimensions: { width: 50, length: 25 } }
+    { id: 'boxingRing', name: 'Boxing Ring', area: 37.21, color: '#ADD8E6', dimensions: { width: 6.1, length: 6.1 } }
   ];
 
   const comparison = selectedComparison ? comparisonOptions.find(c => c.id === selectedComparison) : null;
@@ -2035,7 +1977,7 @@ const LandVisualizer = () => {
     { id: 'swimmingPool', name: 'Swimming Pool', area: 163, icon: '🏊', color: 'cyan', dimensions: { width: 25, length: 6.5 } },
     { id: 'house', name: 'Average House', area: 150, icon: '🏠', color: 'violet', dimensions: { width: 12, length: 12.5 } },
     { id: 'parkingSpace', name: 'Parking Space', area: 12.5, icon: '🚗', color: 'slate', dimensions: { width: 5, length: 2.5 } },
-    { id: 'olympicPool', name: 'Olympic Pool', area: 1250, icon: '🏊', color: 'blue', dimensions: { width: 50, length: 25 } }
+    { id: 'boxingRing', name: 'Boxing Ring', area: 37.21, icon: '🥊', color: 'lightblue', dimensions: { width: 6.1, length: 6.1 } }
   ];
 
   const addUnit = () => {
