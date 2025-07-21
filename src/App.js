@@ -2806,6 +2806,7 @@ const LandVisualizer = () => {
                    onClick={() => {
                      setDrawingMode(drawingMode === 'select' ? null : 'select');
                      setSelectedSubdivision(null);
+                     setMeasurementMode(null); // Auto-deselect measurement mode
                    }}
                    className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                      drawingMode === 'select'
@@ -2820,7 +2821,10 @@ const LandVisualizer = () => {
                  </button>
                  
                  <button
-                   onClick={() => setDrawingMode(drawingMode === 'rectangle' ? null : 'rectangle')}
+                   onClick={() => {
+                     setDrawingMode(drawingMode === 'rectangle' ? null : 'rectangle');
+                     setMeasurementMode(null); // Auto-deselect measurement mode
+                   }}
                    className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                      drawingMode === 'rectangle'
                        ? 'bg-blue-600 text-white'
@@ -2834,7 +2838,10 @@ const LandVisualizer = () => {
                  </button>
                  
                  <button
-                   onClick={() => setDrawingMode(drawingMode === 'polyline' ? null : 'polyline')}
+                   onClick={() => {
+                     setDrawingMode(drawingMode === 'polyline' ? null : 'polyline');
+                     setMeasurementMode(null); // Auto-deselect measurement mode
+                   }}
                    className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                      drawingMode === 'polyline'
                        ? 'bg-blue-600 text-white'
@@ -2869,7 +2876,10 @@ const LandVisualizer = () => {
                  }`}>Measurement Tools</h4>
                  <div className="grid grid-cols-3 gap-2">
                    <button
-                     onClick={() => setMeasurementMode(measurementMode === 'distance' ? null : 'distance')}
+                     onClick={() => {
+                       setMeasurementMode(measurementMode === 'distance' ? null : 'distance');
+                       setDrawingMode(null); // Auto-deselect drawing mode
+                     }}
                      className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                        measurementMode === 'distance'
                          ? 'bg-green-600 text-white'
@@ -2883,7 +2893,10 @@ const LandVisualizer = () => {
                    </button>
                    
                    <button
-                     onClick={() => setMeasurementMode(measurementMode === 'area' ? null : 'area')}
+                     onClick={() => {
+                       setMeasurementMode(measurementMode === 'area' ? null : 'area');
+                       setDrawingMode(null); // Auto-deselect drawing mode
+                     }}
                      className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                        measurementMode === 'area'
                          ? 'bg-green-600 text-white'
