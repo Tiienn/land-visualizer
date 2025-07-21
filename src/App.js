@@ -2269,8 +2269,8 @@ const LandVisualizer = () => {
           <div className="py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-4">
-                <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-3 rounded-xl shadow-lg">
-                  <Ruler className="w-6 h-6 text-white" />
+                <div className="p-2 rounded-xl shadow-lg">
+                  <img src="/logo192.png" alt="Land Visualizer Logo" className="w-10 h-10" />
                 </div>
                 <div>
                   <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Land Visualizer</h1>
