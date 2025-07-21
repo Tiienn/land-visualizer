@@ -2624,14 +2624,22 @@ const LandVisualizer = () => {
             {/* All Conversions */}
             <div className="mt-6 pt-6 border-t border-slate-200">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-slate-700 uppercase tracking-wide">All Conversions</h3>
+                <h3 className={`text-sm font-semibold uppercase tracking-wide ${darkMode ? 'text-white' : 'text-slate-700'}`}>All Conversions</h3>
               </div>
               
               <div className="grid grid-cols-3 gap-3">
                 {Object.entries(unitConversions).map(([unit, conversion]) => (
-                  <div key={unit} className="flex flex-col items-center py-3 px-2 bg-slate-50 rounded-lg border border-slate-200">
-                    <span className="text-xs font-medium text-slate-600 uppercase tracking-wide">{unit}</span>
-                    <span className="text-sm font-mono text-slate-900 font-semibold mt-1">
+                  <div key={unit} className={`flex flex-col items-center py-3 px-2 rounded-lg border ${
+                    darkMode 
+                      ? 'bg-gray-800 border-gray-600' 
+                      : 'bg-slate-50 border-slate-200'
+                  }`}>
+                    <span className={`text-xs font-medium uppercase tracking-wide ${
+                      darkMode ? 'text-gray-300' : 'text-slate-600'
+                    }`}>{unit}</span>
+                    <span className={`text-sm font-mono font-semibold mt-1 ${
+                      darkMode ? 'text-white' : 'text-slate-900'
+                    }`}>
                       {formatNumber(totalAreaInSqM / conversion)}
                     </span>
                   </div>
@@ -2751,7 +2759,9 @@ const LandVisualizer = () => {
                      className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ${
                        historyIndex <= 0
                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                         : darkMode
+                           ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                           : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                      }`}
                      title="Undo (Ctrl+Z)"
                    >
@@ -2764,7 +2774,9 @@ const LandVisualizer = () => {
                      className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ${
                        historyIndex >= history.length - 1
                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                         : darkMode
+                           ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                           : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                      }`}
                      title="Redo (Ctrl+Y)"
                    >
@@ -2774,7 +2786,11 @@ const LandVisualizer = () => {
                    {subdivisions.length > 0 && (
                      <button
                        onClick={clearAllSubdivisions}
-                       className="text-sm text-red-600 hover:text-red-700 flex items-center"
+                       className={`text-sm flex items-center ${
+                         darkMode 
+                           ? 'text-red-400 hover:text-red-300' 
+                           : 'text-red-600 hover:text-red-700'
+                       }`}
                      >
                        <Trash2 size={14} className="mr-1" />
                        Clear All
@@ -2793,7 +2809,9 @@ const LandVisualizer = () => {
                    className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                      drawingMode === 'select'
                        ? 'bg-blue-600 text-white'
-                       : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                       : darkMode
+                         ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                    }`}
                  >
                    <MousePointer size={16} className="mr-2" />
@@ -2805,7 +2823,9 @@ const LandVisualizer = () => {
                    className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                      drawingMode === 'rectangle'
                        ? 'bg-blue-600 text-white'
-                       : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                       : darkMode
+                         ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                    }`}
                  >
                    <SquareIcon size={16} className="mr-2" />
@@ -2817,7 +2837,9 @@ const LandVisualizer = () => {
                    className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                      drawingMode === 'polyline'
                        ? 'bg-blue-600 text-white'
-                       : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                       : darkMode
+                         ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                    }`}
                  >
                    <Edit3 size={16} className="mr-2" />
@@ -3049,10 +3071,20 @@ const LandVisualizer = () => {
          {/* Sidebar */}
          <div className="space-y-6">
            {/* Size Comparisons */}
-           <div className="bg-white rounded-xl shadow-sm border border-slate-200">
-             <div className="p-4 border-b border-slate-200">
-               <h3 className="text-lg font-semibold text-slate-900">Visual Comparisons</h3>
-               <p className="text-sm text-slate-600 mt-1">Click to overlay comparison objects</p>
+           <div className={`rounded-xl shadow-sm border ${
+           darkMode 
+             ? 'bg-gray-800 border-gray-600' 
+             : 'bg-white border-slate-200'
+         }`}>
+             <div className={`p-4 border-b ${
+               darkMode ? 'border-gray-600' : 'border-slate-200'
+             }`}>
+               <h3 className={`text-lg font-semibold ${
+                 darkMode ? 'text-white' : 'text-slate-900'
+               }`}>Visual Comparisons</h3>
+               <p className={`text-sm mt-1 ${
+                 darkMode ? 'text-gray-300' : 'text-slate-600'
+               }`}>Click to overlay comparison objects</p>
              </div>
              <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
                {comparisonOptions.map((comparison) => {
@@ -3062,8 +3094,12 @@ const LandVisualizer = () => {
                      key={comparison.id}
                      className={`w-full p-4 rounded-xl border-2 text-left transition-all transform hover:scale-[1.02] ${
                        selectedComparison === comparison.id
-                         ? 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-md'
-                         : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm'
+                         ? darkMode
+                           ? 'border-blue-400 bg-gradient-to-r from-blue-900/30 to-blue-800/30 shadow-md'
+                           : 'border-blue-500 bg-gradient-to-r from-blue-50 to-blue-100 shadow-md'
+                         : darkMode
+                           ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-700/50 hover:shadow-sm'
+                           : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm'
                      }`}
                      onClick={() => setSelectedComparison(
                        selectedComparison === comparison.id ? null : comparison.id
@@ -3076,13 +3112,19 @@ const LandVisualizer = () => {
                            {comparison.icon}
                          </div>
                          <div>
-                           <div className="font-semibold text-slate-900">{comparison.name}</div>
-                           <div className="text-sm text-slate-600">
+                           <div className={`font-semibold ${
+                             darkMode ? 'text-white' : 'text-slate-900'
+                           }`}>{comparison.name}</div>
+                           <div className={`text-sm ${
+                             darkMode ? 'text-gray-300' : 'text-slate-600'
+                           }`}>
                              {count >= 1 
                                ? `${count.toFixed(1)} ${count === 1 ? 'fits' : 'fit'} in your area`
                                : `You need ${(1/count).toFixed(1)} areas`}
                            </div>
-                           <div className="text-xs text-slate-500 mt-1">
+                           <div className={`text-xs mt-1 ${
+                             darkMode ? 'text-gray-400' : 'text-slate-500'
+                           }`}>
                              {comparison.dimensions.width}m × {comparison.dimensions.length}m
                            </div>
                          </div>
@@ -3093,7 +3135,9 @@ const LandVisualizer = () => {
                              ? 'bg-blue-500 ring-4 ring-blue-200' 
                              : 'bg-slate-300'
                          }`} />
-                         <div className="text-xs text-slate-500 mt-1">
+                         <div className={`text-xs mt-1 ${
+                           darkMode ? 'text-gray-400' : 'text-slate-500'
+                         }`}>
                            {formatNumber(comparison.area)} m²
                          </div>
                        </div>
