@@ -2291,7 +2291,10 @@ const LandVisualizer = () => {
                 </button>
                 <button
                   onClick={() => setShowShareModal(true)}
-                  className="inline-flex items-center px-4 py-2 bg-[#2E6D5A] hover:bg-[#245549] text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
+                  className="inline-flex items-center px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
+                  style={{backgroundColor: '#2E6D5A'}}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
                 >
                   <Share2 size={16} className="mr-2" />
                   Share
@@ -2343,7 +2346,7 @@ const LandVisualizer = () => {
                   className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all ${
                     copied 
                       ? 'bg-green-600 text-white' 
-                      : 'bg-[#2E6D5A] hover:bg-[#245549] text-white'
+                      : 'text-white  text-white'
                   }`}
                 >
                   {copied ? (
@@ -2392,7 +2395,7 @@ const LandVisualizer = () => {
                     value={manualDimensions.label}
                     onChange={(e) => setManualDimensions({...manualDimensions, label: e.target.value})}
                     placeholder={`Area ${subdivisions.length + 1}`}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#2E6D5A] focus:border-transparent ${
+                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-green-500 focus:border-transparent ${
                       darkMode 
                         ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' 
                         : 'bg-white border-slate-300 text-slate-900'
@@ -2411,7 +2414,7 @@ const LandVisualizer = () => {
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#2E6D5A] focus:border-transparent ${
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-green-500 focus:border-transparent ${
                         darkMode 
                           ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' 
                           : 'bg-white border-slate-300 text-slate-900'
@@ -2429,7 +2432,7 @@ const LandVisualizer = () => {
                       placeholder="0.00"
                       min="0"
                       step="0.01"
-                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#2E6D5A] focus:border-transparent ${
+                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-green-500 focus:border-transparent ${
                         darkMode 
                           ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' 
                           : 'bg-white border-slate-300 text-slate-900'
@@ -2460,7 +2463,10 @@ const LandVisualizer = () => {
                 <button
                   onClick={handleManualAdd}
                   disabled={!manualDimensions.width || !manualDimensions.length}
-                  className="px-4 py-2 bg-[#2E6D5A] hover:bg-[#245549] disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
+                  className="px-4 py-2 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
+                  style={{backgroundColor: '#2E6D5A'}}
+                  onMouseEnter={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#245549')}
+                  onMouseLeave={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#2E6D5A')}
                 >
                   Add Subdivision
                 </button>
@@ -2481,7 +2487,10 @@ const LandVisualizer = () => {
               </h2>
               <button
                 onClick={addUnit}
-                className="inline-flex items-center px-4 py-2 bg-[#2E6D5A] hover:bg-[#245549] text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
+                className="inline-flex items-center px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
+                style={{backgroundColor: '#2E6D5A'}}
+                onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
+                onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
               >
                 <Plus size={16} className="mr-2" />
                 Add Component
@@ -2507,7 +2516,7 @@ const LandVisualizer = () => {
                           type="number"
                           value={unitItem.value}
                           onChange={(e) => updateUnit(index, 'value', e.target.value)}
-                          className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#2E6D5A] focus:border-transparent transition-all ${
+                          className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
                             darkMode 
                               ? 'bg-gray-600 border-gray-500 text-gray-200 placeholder-gray-400' 
                               : 'bg-white border-slate-300 text-slate-900'
@@ -2528,7 +2537,7 @@ const LandVisualizer = () => {
                         <select
                           value={unitItem.unit}
                           onChange={(e) => updateUnit(index, 'unit', e.target.value)}
-                          className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-[#2E6D5A] focus:border-transparent transition-all appearance-none ${
+                          className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all appearance-none ${
                             darkMode 
                               ? 'bg-gray-600 border-gray-500 text-gray-200' 
                               : 'bg-white border-slate-300 text-slate-900'
@@ -2752,11 +2761,12 @@ const LandVisualizer = () => {
                    }}
                    className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                      drawingMode === 'select'
-                       ? 'bg-[#2E6D5A] text-white'
+                       ? 'text-white'
                        : darkMode
                          ? 'bg-gray-700 hover:bg-gray-600 text-white'
                          : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                    }`}
+                   style={drawingMode === 'select' ? {backgroundColor: '#2E6D5A'} : {}}
                  >
                    <MousePointer size={16} className="mr-2" />
                    Select
@@ -2769,11 +2779,12 @@ const LandVisualizer = () => {
                    }}
                    className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                      drawingMode === 'rectangle'
-                       ? 'bg-[#2E6D5A] text-white'
+                       ? 'text-white'
                        : darkMode
                          ? 'bg-gray-700 hover:bg-gray-600 text-white'
                          : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                    }`}
+                   style={drawingMode === 'rectangle' ? {backgroundColor: '#2E6D5A'} : {}}
                  >
                    <SquareIcon size={16} className="mr-2" />
                    Draw Rectangle
@@ -2786,11 +2797,12 @@ const LandVisualizer = () => {
                    }}
                    className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                      drawingMode === 'polyline'
-                       ? 'bg-[#2E6D5A] text-white'
+                       ? 'text-white'
                        : darkMode
                          ? 'bg-gray-700 hover:bg-gray-600 text-white'
                          : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                    }`}
+                   style={drawingMode === 'polyline' ? {backgroundColor: '#2E6D5A'} : {}}
                  >
                    <Edit3 size={16} className="mr-2" />
                    Draw Polyline
@@ -2946,7 +2958,10 @@ const LandVisualizer = () => {
                      <button
                        onClick={finishPolylineDrawing}
                        disabled={polylinePoints.length < 3}
-                       className="inline-flex items-center px-3 py-2 bg-[#2E6D5A] hover:bg-[#245549] disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-all"
+                       className="inline-flex items-center px-3 py-2 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-all"
+                       style={{backgroundColor: '#2E6D5A'}}
+                       onMouseEnter={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#245549')}
+                       onMouseLeave={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#2E6D5A')}
                      >
                        Finish Shape
                      </button>
@@ -3113,8 +3128,8 @@ const LandVisualizer = () => {
                      className={`w-full p-4 rounded-xl border-2 text-left transition-all transform hover:scale-[1.02] ${
                        selectedComparison === comparison.id
                          ? darkMode
-                           ? 'border-[#2E6D5A] bg-gradient-to-r from-[#2E6D5A]/30 to-[#245549]/30 shadow-md'
-                           : 'border-[#2E6D5A] bg-gradient-to-r from-[#2E6D5A]/10 to-[#2E6D5A]/20 shadow-md'
+                           ? 'border-green-500 bg-gradient-to-r from-green-900/30 to-green-800/30 shadow-md'
+                           : 'border-green-500 bg-gradient-to-r from-green-50 to-green-100 shadow-md'
                          : darkMode
                            ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-700/50 hover:shadow-sm'
                            : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm'
@@ -3150,7 +3165,7 @@ const LandVisualizer = () => {
                        <div className="flex flex-col items-end">
                          <div className={`w-4 h-4 rounded-full transition-all ${
                            selectedComparison === comparison.id 
-                             ? 'bg-[#2E6D5A] ring-4 ring-[#2E6D5A]/30' 
+                             ? 'text-white ring-4 ring-green-200' 
                              : 'bg-slate-300'
                          }`} />
                          <div className={`text-xs mt-1 ${
@@ -3207,7 +3222,7 @@ const LandVisualizer = () => {
                      darkMode ? 'text-gray-300' : 'text-slate-700'
                    }`}>Remaining</span>
                    <span className={`text-sm font-mono ${
-                     darkMode ? 'text-[#2E6D5A]' : 'text-[#2E6D5A]'
+                     darkMode ? 'text-green-600' : 'text-green-600'
                    }`}>
                      {formatNumber(remainingArea)} m²
                    </span>
