@@ -2408,26 +2408,6 @@ const LandVisualizer = () => {
                   {darkMode ? <Sun size={16} className="mr-2" /> : <Moon size={16} className="mr-2" />}
                   {darkMode ? 'Light' : 'Dark'}
                 </button>
-                <button
-                  onClick={() => setShowShareModal(true)}
-                  className="inline-flex items-center px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
-                  style={{backgroundColor: '#2E6D5A'}}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
-                >
-                  <Share2 size={16} className="mr-2" />
-                  Share
-                </button>
-                <button
-                  onClick={exportToPDF}
-                  className="inline-flex items-center px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
-                  style={{backgroundColor: '#2E6D5A'}}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
-                >
-                  <FileDown size={16} className="mr-2" />
-                  Export PDF
-                </button>
                 <div className="hidden lg:flex items-center space-x-6">
                   <div className="text-center">
                     <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{formatNumber(totalAreaInSqM)}</div>
@@ -2793,6 +2773,28 @@ const LandVisualizer = () => {
                        : 'Drag to rotate • Scroll to zoom • Outdoor environment'
                      }
                    </p>
+                 </div>
+                 <div className="flex items-center space-x-3">
+                   <button
+                     onClick={() => setShowShareModal(true)}
+                     className="inline-flex items-center px-3 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
+                     style={{backgroundColor: '#2E6D5A'}}
+                     onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
+                     onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
+                   >
+                     <Share2 size={14} className="mr-2" />
+                     Share
+                   </button>
+                   <button
+                     onClick={exportToPDF}
+                     className="inline-flex items-center px-3 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
+                     style={{backgroundColor: '#2E6D5A'}}
+                     onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
+                     onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
+                   >
+                     <FileDown size={14} className="mr-2" />
+                     Export PDF
+                   </button>
                  </div>
                </div>
              </div>
