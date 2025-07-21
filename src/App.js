@@ -2760,7 +2760,7 @@ const LandVisualizer = () => {
                        historyIndex <= 0
                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                          : darkMode
-                           ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                           ? 'bg-gray-600 hover:bg-gray-500 text-gray-200'
                            : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                      }`}
                      title="Undo (Ctrl+Z)"
@@ -2775,7 +2775,7 @@ const LandVisualizer = () => {
                        historyIndex >= history.length - 1
                          ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
                          : darkMode
-                           ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                           ? 'bg-gray-600 hover:bg-gray-500 text-gray-200'
                            : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                      }`}
                      title="Redo (Ctrl+Y)"
@@ -2848,7 +2848,11 @@ const LandVisualizer = () => {
                  
                  <button
                    onClick={() => setShowManualInput(true)}
-                   className="inline-flex items-center justify-center px-4 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded-lg transition-all"
+                   className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                     darkMode
+                       ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                       : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                   }`}
                  >
                    <Edit3 size={16} className="mr-2" />
                    Enter Dimensions
@@ -2856,15 +2860,21 @@ const LandVisualizer = () => {
                </div>
                
                {/* Measurement Tools */}
-               <div className="mt-4 pt-4 border-t border-slate-200">
-                 <h4 className="text-sm font-medium text-slate-700 mb-3">Measurement Tools</h4>
+               <div className={`mt-4 pt-4 border-t ${
+                 darkMode ? 'border-gray-600' : 'border-slate-200'
+               }`}>
+                 <h4 className={`text-sm font-medium mb-3 ${
+                   darkMode ? 'text-white' : 'text-slate-700'
+                 }`}>Measurement Tools</h4>
                  <div className="grid grid-cols-3 gap-2">
                    <button
                      onClick={() => setMeasurementMode(measurementMode === 'distance' ? null : 'distance')}
                      className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                        measurementMode === 'distance'
                          ? 'bg-green-600 text-white'
-                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                         : darkMode
+                           ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                           : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                      }`}
                    >
                      <Ruler size={16} className="mr-2" />
@@ -2876,7 +2886,9 @@ const LandVisualizer = () => {
                      className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
                        measurementMode === 'area'
                          ? 'bg-green-600 text-white'
-                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+                         : darkMode
+                           ? 'bg-gray-700 hover:bg-gray-600 text-white'
+                           : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                      }`}
                    >
                      <SquareIcon size={16} className="mr-2" />
@@ -2885,7 +2897,11 @@ const LandVisualizer = () => {
                    
                    <button
                      onClick={clearMeasurements}
-                     className="inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all bg-red-200 hover:bg-red-300 text-red-700"
+                     className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
+                     darkMode
+                       ? 'bg-red-800/30 hover:bg-red-700/40 text-red-300'
+                       : 'bg-red-200 hover:bg-red-300 text-red-700'
+                   }`}
                    >
                      <Trash2 size={16} className="mr-2" />
                      Clear
@@ -2893,16 +2909,24 @@ const LandVisualizer = () => {
                  </div>
                  
                  {measurementMode === 'distance' && (
-                   <div className="mt-3 p-3 bg-green-50 rounded-lg">
-                     <p className="text-sm text-green-800">
+                   <div className={`mt-3 p-3 rounded-lg ${
+                     darkMode ? 'bg-green-900/20' : 'bg-green-50'
+                   }`}>
+                     <p className={`text-sm ${
+                       darkMode ? 'text-green-300' : 'text-green-800'
+                     }`}>
                        Click two points to measure distance
                      </p>
                    </div>
                  )}
                  
                  {measurementMode === 'area' && (
-                   <div className="mt-3 p-3 bg-green-50 rounded-lg">
-                     <p className="text-sm text-green-800">
+                   <div className={`mt-3 p-3 rounded-lg ${
+                     darkMode ? 'bg-green-900/20' : 'bg-green-50'
+                   }`}>
+                     <p className={`text-sm ${
+                       darkMode ? 'text-green-300' : 'text-green-800'
+                     }`}>
                        Click points to create polygon. Press Enter to complete.
                      </p>
                      {measurementPoints.length >= 3 && (
