@@ -11,7 +11,19 @@
       "Bash(rm:*)",
       "Bash(find:*)",
       "Bash(ls:*)",
-      "Bash(npm install:*)"
+      "Bash(npm install:*)",
+      "Bash(sed:*)",
+      "Bash(tail:*)",
+      "Bash(npx eslint:*)",
+      "Bash(timeout 10 npm start)",
+      "Bash(node:*)",
+      "Bash(grep:*)",
+      "Bash(cp:*)",
+      "Bash(powershell:*)",
+      "Bash(awk:*)",
+      "Bash(od:*)",
+      "Bash(git checkout:*)",
+      "Bash(tasklist)"
     ],
     "deny": []
   }
