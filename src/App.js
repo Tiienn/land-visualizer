@@ -1,10 +1,210 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { BrowserRouter, Routes, Route, useLocation, Link } from 'react-router-dom';
+import { HelmetProvider, Helmet } from 'react-helmet-async';
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Plane, Box, Text, Line } from '@react-three/drei';
 import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X, RotateCcw, RotateCw, Moon, Sun, FileDown } from 'lucide-react';
 import * as THREE from 'three';
 import jsPDF from 'jspdf';
 import './App.css';
+
+// Meta content configuration for SEO
+const metaContent = {
+  '/': {
+    title: 'Land Visualization Tool - Interactive 3D Plot Mapping Software',
+    description: 'Professional land visualization tool with interactive 3D mapping. Online plot mapping software for real estate, property boundaries, and land survey visualization. Free land parcel viewer with 3D capabilities.',
+    keywords: 'land visualization tool, plot mapping software, interactive land maps, property boundary visualizer, real estate mapping tool'
+  },
+  '/land-visualization-tool': {
+    title: 'Advanced Land Visualization Tool - 3D Property Mapping & Analysis',
+    description: 'Professional land visualization software for property mapping, site planning, and terrain analysis. Interactive 3D land viewer with measurement tools and subdivision capabilities.',
+    keywords: 'land visualization tool, 3D property mapping, terrain analysis, site planning software'
+  },
+  '/plot-mapping-software': {
+    title: 'Plot Mapping Software - Professional Land Survey & Property Tools',
+    description: 'Comprehensive plot mapping software for surveyors, developers, and property professionals. Create accurate land plots with 3D visualization and measurement tools.',
+    keywords: 'plot mapping software, land survey tools, property mapping, surveyor software'
+  },
+  '/interactive-land-maps': {
+    title: 'Interactive Land Maps - Dynamic Property Visualization Platform',
+    description: 'Create interactive land maps with real-time editing, property boundaries, and 3D terrain visualization. Professional mapping tools for real estate and development.',
+    keywords: 'interactive land maps, property visualization, real estate mapping, dynamic maps'
+  },
+  '/real-estate-mapping-tool': {
+    title: 'Real Estate Mapping Tool - Property Visualization & Analysis Software',
+    description: 'Professional real estate mapping tool for property visualization, site analysis, and client presentations. Interactive 3D property maps with measurement capabilities.',
+    keywords: 'real estate mapping tool, property visualization, site analysis, client presentations'
+  },
+  '/property-boundary-visualizer': {
+    title: 'Property Boundary Visualizer - 3D Land Survey & Parcel Mapping',
+    description: 'Visualize property boundaries with precision using 3D mapping technology. Professional boundary visualization tool for surveyors and property developers.',
+    keywords: 'property boundary visualizer, land survey mapping, parcel boundaries, surveyor tools'
+  },
+  '/online-land-plot-viewer': {
+    title: 'Online Land Plot Viewer - Web-Based Property Visualization Tool',
+    description: 'Free online land plot viewer with 3D visualization capabilities. View, measure, and analyze land parcels directly in your browser with interactive tools.',
+    keywords: 'online land plot viewer, web-based mapping, property visualization, browser mapping tool'
+  },
+  '/land-survey-visualization': {
+    title: 'Land Survey Visualization - 3D Survey Data Mapping & Analysis',
+    description: 'Advanced land survey visualization software for displaying survey data in 3D. Professional tools for surveyors to present and analyze survey results.',
+    keywords: 'land survey visualization, survey data mapping, 3D survey analysis, surveyor presentation tools'
+  },
+  '/gis-land-mapping': {
+    title: 'GIS Land Mapping - Geographic Information System Visualization Tool',
+    description: 'Professional GIS land mapping platform with 3D visualization and spatial analysis capabilities. Integrate geographic data with interactive mapping tools.',
+    keywords: 'GIS land mapping, geographic information system, spatial analysis, GIS visualization'
+  },
+  '/land-ownership-map': {
+    title: 'Land Ownership Map - Property Owner Visualization & Records Tool',
+    description: 'Create detailed land ownership maps with property boundaries and owner information. Professional tool for title companies and property research.',
+    keywords: 'land ownership map, property records, title research, ownership visualization'
+  },
+  '/land-parcel-viewer': {
+    title: 'Land Parcel Viewer - Interactive Property Parcel Mapping Tool',
+    description: 'Professional land parcel viewer with 3D visualization and detailed parcel information. Interactive tools for property analysis and subdivision planning.',
+    keywords: 'land parcel viewer, property parcel mapping, subdivision planning, parcel analysis'
+  }
+};
+
+// SEO component for dynamic meta tags
+function SEOHead() {
+  const location = useLocation();
+  const currentPath = location.pathname;
+  const meta = metaContent[currentPath] || metaContent['/'];
+  
+  return (
+    <Helmet>
+      <title>{meta.title}</title>
+      <meta name="description" content={meta.description} />
+      <meta name="keywords" content={meta.keywords} />
+      <link rel="canonical" href={`https://landvisualizer.com${currentPath}`} />
+      
+      {/* Open Graph Meta Tags */}
+      <meta property="og:title" content={meta.title} />
+      <meta property="og:description" content={meta.description} />
+      <meta property="og:url" content={`https://landvisualizer.com${currentPath}`} />
+      
+      {/* Twitter Card Meta Tags */}
+      <meta name="twitter:title" content={meta.title} />
+      <meta name="twitter:description" content={meta.description} />
+    </Helmet>
+  );
+}
+
+// Content sections for different pages
+const pageContent = {
+  '/': {
+    heading: 'Professional Land Visualization Tool',
+    content: `Transform your land data into stunning 3D visualizations with our professional-grade mapping software. Perfect for real estate professionals, surveyors, property developers, and anyone who needs to visualize land areas with precision and clarity.
+
+    Our interactive 3D land visualization tool offers comprehensive features including plot mapping, property boundary visualization, subdivision planning, and size comparisons with familiar objects. Whether you're planning a development project, presenting to clients, or analyzing survey data, our platform provides the tools you need.
+
+    Key features include unit conversion between metric and imperial systems, support for traditional land measurement units, interactive drawing tools for subdivisions, and professional PDF export capabilities. Create shareable configurations and collaborate with team members using custom URLs.
+
+    Experience the future of land visualization with our browser-based platform that requires no software installation. Get started immediately with accurate measurements, 3D terrain modeling, and professional reporting tools.`
+  },
+  '/land-visualization-tool': {
+    heading: 'Advanced Land Visualization Tool',
+    content: `Our advanced land visualization tool transforms complex property data into intuitive 3D models, making it easier than ever to understand land layouts, topography, and development potential. Designed for professionals who demand accuracy and visual clarity.
+
+    With cutting-edge 3D rendering technology, visualize land parcels from multiple angles, zoom in on specific areas, and interact with your data in real-time. Perfect for site planning, terrain analysis, and client presentations.
+
+    Advanced features include elevation mapping, slope analysis, drainage visualization, and environmental factor integration. Create detailed reports with measurements, calculations, and visual documentation for stakeholders and regulatory compliance.
+
+    The tool supports various data import formats and provides export options for CAD software, GIS systems, and presentation platforms. Streamline your workflow with automated calculations and professional documentation generation.`
+  },
+  '/plot-mapping-software': {
+    heading: 'Professional Plot Mapping Software',
+    content: `Comprehensive plot mapping software designed for surveyors, developers, and property professionals. Create accurate land plots with precision measurement tools and 3D visualization capabilities that exceed industry standards.
+
+    Our software handles complex plotting scenarios including irregular boundaries, curved property lines, and multi-parcel developments. Draw subdivisions directly on the 3D surface with snap-to-grid functionality and automatic area calculations.
+
+    Features include coordinate system support, bearing and distance calculations, closure analysis, and survey-grade accuracy validation. Generate professional plats, subdivision maps, and boundary surveys with automated annotation and dimensioning.
+
+    Integration capabilities allow seamless data exchange with popular surveying instruments, GPS systems, and CAD software. Maintain project version control and collaborate with team members through cloud-based sharing and real-time updates.`
+  },
+  '/interactive-land-maps': {
+    heading: 'Interactive Land Maps Platform',
+    content: `Create dynamic, interactive land maps that engage stakeholders and facilitate better decision-making. Our platform combines the power of GIS technology with user-friendly interfaces for maximum accessibility and functionality.
+
+    Interactive features include layer management, real-time editing, property search and filtering, and dynamic data visualization. Users can toggle between different map views, overlay various data sets, and perform spatial analysis with point-and-click simplicity.
+
+    Advanced mapping capabilities support custom symbology, data classification, and thematic mapping for demographic, environmental, and economic analysis. Create compelling visualizations that tell the story of your land data.
+
+    Collaboration tools enable multiple users to work on the same project simultaneously, with change tracking and comment systems for efficient project management. Share maps publicly or restrict access with user authentication and permission controls.`
+  },
+  '/real-estate-mapping-tool': {
+    heading: 'Real Estate Mapping Tool',
+    content: `Specialized mapping tool designed for real estate professionals, offering property visualization, market analysis, and client presentation capabilities that close more deals and enhance customer satisfaction.
+
+    Visualize properties in their neighborhood context with aerial imagery, street views, and demographic overlays. Show clients nearby amenities, schools, transportation, and development plans with interactive mapping features.
+
+    Market analysis tools include comparable property mapping, price trend visualization, and market area delineation. Generate professional property reports with maps, photos, and detailed analysis for listing presentations and buyer consultations.
+
+    Client engagement features include virtual property tours, measurement tools for room layouts and outdoor spaces, and customizable map sharing for remote consultations. Integrate with MLS systems and CRM platforms for streamlined workflow management.`
+  },
+  '/property-boundary-visualizer': {
+    heading: 'Property Boundary Visualizer',
+    content: `Precision property boundary visualization tool that transforms survey data and legal descriptions into clear, accurate 3D representations. Essential for resolving boundary disputes, planning developments, and ensuring regulatory compliance.
+
+    Advanced boundary rendering shows property lines with survey-grade accuracy, including monuments, easements, and right-of-way designations. Visualize setbacks, building envelopes, and zoning restrictions in three-dimensional space for better planning.
+
+    Conflict detection algorithms identify potential boundary issues, overlapping claims, and surveying discrepancies before they become expensive problems. Generate comprehensive boundary reports with legal descriptions and supporting documentation.
+
+    Professional survey integration supports data import from total stations, GPS units, and existing survey files. Export boundary data to CAD systems, GIS platforms, and legal documentation software for seamless workflow integration.`
+  },
+  '/online-land-plot-viewer': {
+    heading: 'Online Land Plot Viewer',
+    content: `Free online land plot viewer that works directly in your web browser without software installation. View, measure, and analyze land parcels with professional-grade tools accessible from anywhere with an internet connection.
+
+    Browser-based functionality includes 3D visualization, measurement tools, area calculations, and comparative analysis features. Perfect for quick property assessments, client demonstrations, and field work using mobile devices.
+
+    Cloud storage capabilities allow you to save and share plot configurations with colleagues and clients. Generate shareable links for remote collaboration and client review without requiring software licenses or installations.
+
+    Mobile-optimized interface works seamlessly on tablets and smartphones, making it ideal for field work, client meetings, and on-site property analysis. Offline capabilities ensure functionality even in areas with limited connectivity.`
+  },
+  '/land-survey-visualization': {
+    heading: 'Land Survey Visualization',
+    content: `Transform raw survey data into compelling 3D visualizations that communicate complex information clearly to clients, stakeholders, and regulatory agencies. Perfect for presenting survey results and supporting professional reports.
+
+    Import survey data from various formats including field books, total station files, and GPS measurements. Automatically generate 3D terrain models, contour maps, and cross-sectional views with professional accuracy and presentation quality.
+
+    Advanced visualization features include animation sequences, fly-through tours, and comparative before-and-after presentations. Create engaging presentations that help clients understand survey findings and proposed changes.
+
+    Quality assurance tools validate survey data integrity, identify measurement inconsistencies, and ensure compliance with professional surveying standards. Generate comprehensive reports with visualizations, calculations, and supporting documentation.`
+  },
+  '/gis-land-mapping': {
+    heading: 'GIS Land Mapping Platform',
+    content: `Professional Geographic Information System (GIS) platform designed specifically for land mapping applications. Combine spatial data analysis with 3D visualization for comprehensive land management and planning solutions.
+
+    Advanced spatial analysis capabilities include buffer analysis, overlay operations, proximity calculations, and statistical modeling. Integrate multiple data sources including satellite imagery, elevation models, and demographic databases.
+
+    Data management features support large datasets with efficient processing and visualization capabilities. Create custom spatial databases, manage attribute information, and maintain data quality with built-in validation tools.
+
+    Professional GIS functionality includes coordinate system management, projection handling, and geodetic calculations. Export data to industry-standard formats for use with ArcGIS, QGIS, and other professional GIS software platforms.`
+  },
+  '/land-ownership-map': {
+    heading: 'Land Ownership Mapping Tool',
+    content: `Comprehensive land ownership mapping tool for title companies, legal professionals, and property researchers. Visualize ownership patterns, track property transfers, and identify potential title issues with advanced mapping technology.
+
+    Ownership visualization includes current owners, historical ownership patterns, and property transfer timelines. Link ownership data with property boundaries, tax records, and legal descriptions for complete property profiles.
+
+    Research tools support title searches, ownership verification, and due diligence processes. Generate ownership reports with maps, documentation, and chain-of-title analysis for legal and financial applications.
+
+    Integration capabilities connect with county records, tax databases, and legal document systems. Automate data updates and maintain current ownership information with scheduled data synchronization and validation processes.`
+  },
+  '/land-parcel-viewer': {
+    heading: 'Land Parcel Viewer',
+    content: `Interactive land parcel viewer with detailed parcel information, 3D visualization, and analysis tools for property assessment, development planning, and investment analysis. Access comprehensive parcel data in an intuitive interface.
+
+    Parcel information includes legal descriptions, zoning classifications, tax assessments, and development restrictions. Visualize parcels in context with surrounding properties, infrastructure, and environmental features.
+
+    Analysis tools support subdivision planning, development feasibility studies, and investment analysis. Calculate development potential, assess infrastructure requirements, and model various development scenarios.
+
+    Professional reporting features generate parcel summaries, development analyses, and investment reports with maps, calculations, and supporting documentation. Export data for use with appraisal software, financial modeling, and presentation applications.`
+  }
+};
 
 // Realistic comparison object component
 function RealisticComparisonObject({ type, position, dimensions, color }) {
@@ -2405,7 +2605,7 @@ const LandVisualizer = () => {
                       : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                   }`}
                 >
-                  {darkMode ? <Sun size={16} className="mr-2" /> : <Moon size={16} className="mr-2" />}
+                  {darkMode ? <Sun size={16} className="mr-2" aria-label="Switch to light mode" /> : <Moon size={16} className="mr-2" aria-label="Switch to dark mode" />}
                   {darkMode ? 'Light' : 'Dark'}
                 </button>
                 <div className="hidden lg:flex items-center space-x-6">
@@ -2465,7 +2665,7 @@ const LandVisualizer = () => {
                     </>
                   ) : (
                     <>
-                      <Copy size={16} className="mr-2" />
+                      <Copy size={16} className="mr-2" aria-label="Copy share link" />
                       Copy
                     </>
                   )}
@@ -2591,7 +2791,7 @@ const LandVisualizer = () => {
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className={`text-lg font-semibold flex items-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                <Activity className={`w-5 h-5 mr-2 ${darkMode ? 'text-gray-400' : 'text-slate-600'}`} />
+                <Activity className={`w-5 h-5 mr-2 ${darkMode ? 'text-gray-400' : 'text-slate-600'}`} aria-label="Land area calculations" />
                 Area Configuration
               </h2>
               <button
@@ -2601,7 +2801,7 @@ const LandVisualizer = () => {
                 onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
                 onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
               >
-                <Plus size={16} className="mr-2" />
+                <Plus size={16} className="mr-2" aria-label="Add land area" />
                 Add Component
               </button>
             </div>
@@ -2670,7 +2870,7 @@ const LandVisualizer = () => {
                             darkMode ? 'hover:bg-red-900/20' : 'hover:bg-red-50'
                           }`}
                         >
-                          <Minus size={18} />
+                          <Minus size={18} aria-label="Remove land area" />
                         </button>
                       )}
                     </div>
@@ -2782,7 +2982,7 @@ const LandVisualizer = () => {
                      onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
                      onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
                    >
-                     <Share2 size={14} className="mr-2" />
+                     <Share2 size={14} className="mr-2" aria-label="Share configuration" />
                      Share
                    </button>
                    <button
@@ -2799,7 +2999,12 @@ const LandVisualizer = () => {
                </div>
              </div>
              <div style={{ width: '100%', height: '500px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc' }}>
-               <Canvas camera={{ position: [50, 50, 50], fov: 75 }}>
+               <Canvas 
+                 camera={{ position: [50, 50, 50], fov: 75 }}
+                 aria-label="Interactive 3D land visualization showing property boundaries, subdivisions, and measurement tools"
+                 role="img"
+                 tabIndex={0}
+               >
                  <Scene 
                    landShape={landShape}
                    onUpdateLandShape={handleUpdateLandShape}
@@ -3373,8 +3578,178 @@ const LandVisualizer = () => {
  );
 };
 
+// Collapsible content component that shows different content based on route
+function ContentSection() {
+  const location = useLocation();
+  const currentPath = location.pathname;
+  const content = pageContent[currentPath] || pageContent['/'];
+  const [isExpanded, setIsExpanded] = useState(false);
+  
+  if (!isExpanded) {
+    // Collapsed state - show only the tagline with Learn More button
+    return (
+      <div className="mb-6">
+        <div className="flex items-center flex-wrap gap-2">
+          <span className="text-lg text-gray-700 dark:text-gray-300">
+            Advanced 3D land measurement and analysis tool
+          </span>
+          <button
+            onClick={() => setIsExpanded(true)}
+            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 underline"
+            aria-expanded={false}
+            aria-controls="content-details"
+          >
+            Learn More
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+        </div>
+        
+        {/* Hidden content for SEO - always present in DOM but visually hidden when collapsed */}
+        <div className="sr-only" aria-hidden="true">
+          <h1>{content.heading}</h1>
+          {content.content}
+        </div>
+      </div>
+    );
+  }
+  
+  // Expanded state - show full content section
+  return (
+    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+          {content.heading}
+        </h1>
+        <button
+          onClick={() => setIsExpanded(false)}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200"
+          aria-expanded={true}
+          aria-controls="content-details"
+        >
+          <span>Show Less</span>
+          <svg className="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+          </svg>
+        </button>
+      </div>
+      
+      {/* Full content */}
+      <div 
+        id="content-details"
+        className="text-gray-700 dark:text-gray-300 text-base leading-relaxed whitespace-pre-line"
+      >
+        {content.content}
+      </div>
+      
+      {/* Navigation breadcrumbs for SEO */}
+      <nav className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
+        <div className="flex flex-wrap gap-4 text-sm">
+          <Link to="/" className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
+            Home
+          </Link>
+          {currentPath !== '/' && (
+            <>
+              <span className="text-gray-400">•</span>
+              <span className="text-gray-600 dark:text-gray-400 capitalize">
+                {currentPath.replace('/', '').replace(/-/g, ' ')}
+              </span>
+            </>
+          )}
+        </div>
+      </nav>
+    </div>
+  );
+}
+
+// Main App component with routing
 function App() {
- return <LandVisualizer />;
+  return (
+    <HelmetProvider>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </HelmetProvider>
+  );
+}
+
+// App content component that uses Router context
+function AppContent() {
+  return (
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <SEOHead />
+          
+          <Routes>
+            <Route path="/" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+            <Route path="/land-visualization-tool" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+            <Route path="/plot-mapping-software" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+            <Route path="/interactive-land-maps" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+            <Route path="/real-estate-mapping-tool" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+            <Route path="/property-boundary-visualizer" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+            <Route path="/online-land-plot-viewer" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+            <Route path="/land-survey-visualization" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+            <Route path="/gis-land-mapping" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+            <Route path="/land-ownership-map" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+            <Route path="/land-parcel-viewer" element={
+              <div>
+                <ContentSection />
+                <LandVisualizer />
+              </div>
+            } />
+      </Routes>
+    </div>
+  );
 }
 
 export default App;

@@ -1,6 +1,7 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Land Visualizer",
+  "name": "Land Visualization Tool - Interactive 3D Plot Mapping Software",
+  "description": "Professional land visualization tool with interactive 3D mapping, plot subdivision, and property boundary visualization capabilities.",
   "icons": [
     {
       "src": "favicon.ico",
@@ -18,8 +19,11 @@
       "sizes": "512x512"
     }
   ],
-  "start_url": ".",
+  "start_url": "/",
   "display": "standalone",
-  "theme_color": "#000000",
-  "background_color": "#ffffff"
+  "orientation": "landscape-primary",
+  "theme_color": "#2E6D5A",
+  "background_color": "#ffffff",
+  "categories": ["business", "productivity", "utilities"],
+  "lang": "en-US"
 }

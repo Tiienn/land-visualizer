@@ -1,3 +1,11 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
-Disallow:
+Disallow: /static/
+Disallow: /build/
+Allow: /
+
+# Sitemap
+Sitemap: https://landvisualizer.com/sitemap.xml
+
+# Crawl-delay for polite crawling
+Crawl-delay: 1
