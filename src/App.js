@@ -1,6 +1,46 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Link } from 'react-router-dom';
-import { HelmetProvider, Helmet } from 'react-helmet-async';
+
+// Simple SEO hook to replace React Helmet for better React 19 compatibility
+function useSEO(meta) {
+  useEffect(() => {
+    // Update document title
+    if (meta.title) {
+      document.title = meta.title;
+    }
+    
+    // Update meta description
+    const descriptionMeta = document.querySelector('meta[name="description"]');
+    if (descriptionMeta && meta.description) {
+      descriptionMeta.setAttribute('content', meta.description);
+    }
+    
+    // Update canonical URL
+    let canonicalLink = document.querySelector('link[rel="canonical"]');
+    if (!canonicalLink) {
+      canonicalLink = document.createElement('link');
+      canonicalLink.rel = 'canonical';
+      document.head.appendChild(canonicalLink);
+    }
+    canonicalLink.href = meta.canonical || window.location.href;
+    
+    // Update Open Graph tags
+    const updateOGTag = (property, content) => {
+      let ogTag = document.querySelector(`meta[property="${property}"]`);
+      if (!ogTag) {
+        ogTag = document.createElement('meta');
+        ogTag.setAttribute('property', property);
+        document.head.appendChild(ogTag);
+      }
+      ogTag.setAttribute('content', content);
+    };
+    
+    if (meta.title) updateOGTag('og:title', meta.title);
+    if (meta.description) updateOGTag('og:description', meta.description);
+    if (meta.canonical) updateOGTag('og:url', meta.canonical);
+    
+  }, [meta]);
+}
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Grid, Plane, Box, Text, Line } from '@react-three/drei';
 import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X, RotateCcw, RotateCw, Moon, Sun, FileDown } from 'lucide-react';
@@ -67,29 +107,21 @@ const metaContent = {
   }
 };
 
-// SEO component for dynamic meta tags
+// SEO component for dynamic meta tags (Native implementation)
 function SEOHead() {
   const location = useLocation();
   const currentPath = location.pathname;
   const meta = metaContent[currentPath] || metaContent['/'];
   
-  return (
-    <Helmet>
-      <title>{meta.title}</title>
-      <meta name="description" content={meta.description} />
-      <meta name="keywords" content={meta.keywords} />
-      <link rel="canonical" href={`https://landvisualizer.com${currentPath}`} />
-      
-      {/* Open Graph Meta Tags */}
-      <meta property="og:title" content={meta.title} />
-      <meta property="og:description" content={meta.description} />
-      <meta property="og:url" content={`https://landvisualizer.com${currentPath}`} />
-      
-      {/* Twitter Card Meta Tags */}
-      <meta name="twitter:title" content={meta.title} />
-      <meta name="twitter:description" content={meta.description} />
-    </Helmet>
-  );
+  // Use our custom SEO hook
+  useSEO({
+    title: meta.title,
+    description: meta.description,
+    canonical: `https://landvisualizer.com${currentPath}`
+  });
+  
+  // Return null since we're using DOM manipulation
+  return null;
 }
 
 // Content sections for different pages
