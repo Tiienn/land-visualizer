@@ -23,7 +23,8 @@
       "Bash(awk:*)",
       "Bash(od:*)",
       "Bash(git checkout:*)",
-      "Bash(tasklist)"
+      "Bash(tasklist)",
+      "Bash(git stash:*)"
     ],
     "deny": []
   }
