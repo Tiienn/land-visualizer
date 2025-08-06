@@ -1,5 +1,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Link } from 'react-router-dom';
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Grid, Plane, Box, Text, Line } from '@react-three/drei';
+import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X, RotateCcw, RotateCw, Moon, Sun, FileDown } from 'lucide-react';
+import * as THREE from 'three';
+import jsPDF from 'jspdf';
+import './App.css';
 
 // Simple SEO hook to replace React Helmet for better React 19 compatibility
 function useSEO(meta) {
@@ -41,12 +47,6 @@ function useSEO(meta) {
     
   }, [meta]);
 }
-import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Grid, Plane, Box, Text, Line } from '@react-three/drei';
-import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X, RotateCcw, RotateCw, Moon, Sun, FileDown } from 'lucide-react';
-import * as THREE from 'three';
-import jsPDF from 'jspdf';
-import './App.css';
 
 // Meta content configuration for SEO
 const metaContent = {
