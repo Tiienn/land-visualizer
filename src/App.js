@@ -1869,7 +1869,7 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
   );
 }
 
-const LandVisualizer = () => {
+const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
   const [units, setUnits] = useState([{ value: 1000, unit: 'm²' }]);
   const [selectedComparison, setSelectedComparison] = useState(null);
   const [showTraditionalInfo, setShowTraditionalInfo] = useState(false);
@@ -1894,6 +1894,17 @@ const LandVisualizer = () => {
   const [darkMode, setDarkMode] = useState(() => {
     const saved = localStorage.getItem('landVisualizer-darkMode');
     return saved ? JSON.parse(saved) : false;
+  });
+  const [showPdfCustomizer, setShowPdfCustomizer] = useState(false);
+  const [pdfSettings, setPdfSettings] = useState({
+    includeVisualization: true,
+    includeLandSummary: true,
+    includeSubdivisions: true,
+    includeComparisons: true,
+    includeConversions: true,
+    companyName: '',
+    reportTitle: 'Land Visualizer Report',
+    logoUrl: ''
   });
   
   // Measurement state
@@ -2276,122 +2287,159 @@ const LandVisualizer = () => {
     setDrawingMode(null);
   };
 
-  // PDF Export functionality
-  const exportToPDF = () => {
-    const doc = new jsPDF();
-    const pageWidth = doc.internal.pageSize.getWidth();
-    const pageHeight = doc.internal.pageSize.getHeight();
-    let yPosition = 20;
-    
-    // Helper function to add text and manage page breaks
-    const addText = (text, fontSize = 12, isBold = false, align = 'left') => {
-      if (yPosition > pageHeight - 20) {
-        doc.addPage();
-        yPosition = 20;
+  // PDF Export functionality - Clean generation using jsPDF
+  const exportToPDF = async () => {
+    try {
+      console.log('Starting PDF export with jsPDF...');
+      
+      // First capture the 3D scene with a small delay to ensure rendering
+      let sceneImageData = null;
+      try {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+          const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+          if (gl) {
+            gl.finish();
+            sceneImageData = canvas.toDataURL('image/png', 1.0);
+            console.log('3D scene captured successfully');
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to capture 3D scene:', error);
       }
-      doc.setFontSize(fontSize);
-      doc.setFont(undefined, isBold ? 'bold' : 'normal');
-      
-      if (align === 'center') {
-        doc.text(text, pageWidth / 2, yPosition, { align: 'center' });
-      } else {
-        doc.text(text, 20, yPosition);
-      }
-      yPosition += fontSize * 0.8;
-    };
-    
-    // Title
-    addText('Land Visualizer Report', 20, true, 'center');
-    yPosition += 10;
-    
-    // Report date
-    addText(`Generated: ${new Date().toLocaleString()}`, 10, false, 'center');
-    yPosition += 15;
-    
-    // Land Area Summary
-    addText('LAND AREA SUMMARY', 16, true);
-    yPosition += 5;
-    
-    addText(`Total Area: ${formatNumber(totalAreaInSqM)} m²`);
-    addText(`Total Area: ${formatNumber(totalHectares)} hectares`);
-    addText(`Total Area: ${formatNumber(totalAcres)} acres`);
-    yPosition += 10;
-    
-    // Unit Conversions
-    if (units.length > 0) {
-      addText('INPUT COMPONENTS', 14, true);
-      yPosition += 5;
-      
-      units.forEach((unit, index) => {
-        addText(`Component ${index + 1}: ${formatNumber(unit.value)} ${unit.unit}`);
-      });
-      yPosition += 10;
-    }
-    
-    // Subdivisions
-    if (subdivisions.length > 0) {
-      addText('SUBDIVISIONS', 14, true);
-      yPosition += 5;
-      
-      let totalSubdivided = 0;
-      subdivisions.forEach((subdivision, index) => {
-        addText(`${subdivision.label}: ${formatNumber(subdivision.area)} m²`);
-        totalSubdivided += subdivision.area;
-      });
-      
-      yPosition += 5;
-      addText(`Total Subdivided: ${formatNumber(totalSubdivided)} m²`, 12, true);
-      addText(`Remaining Area: ${formatNumber(totalAreaInSqM - totalSubdivided)} m²`, 12, true);
-      addText(`Percentage Subdivided: ${((totalSubdivided / totalAreaInSqM) * 100).toFixed(1)}%`, 12, true);
-      yPosition += 10;
-    }
-    
-    // Unit Conversions Table
-    addText('UNIT CONVERSIONS', 14, true);
-    yPosition += 5;
-    
-    const unitConversions = {
-      'm²': 1,
-      'ft²': 10.764,
-      'hectares': 0.0001,
-      'acres': 0.000247105,
-      'arpent': 0.000295684,
-      'perche': 0.0395367,
-      'toise': 0.282486
-    };
-    
-    Object.entries(unitConversions).forEach(([unit, conversion]) => {
-      const value = totalAreaInSqM / conversion;
-      addText(`${formatNumber(value)} ${unit}`);
-    });
-    yPosition += 10;
-    
-    // Comparison Objects
-    if (selectedComparison) {
-      const comparison = comparisonOptions.find(c => c.id === selectedComparison);
-      if (comparison) {
-        addText('SIZE COMPARISON', 14, true);
-        yPosition += 5;
+
+      // Create new PDF with jsPDF
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let yPosition = 20;
+
+      // Helper function to add text and manage page breaks
+      const addText = (text, fontSize = 12, isBold = false, align = 'left') => {
+        if (yPosition > pageHeight - 30) {
+          doc.addPage();
+          yPosition = 20;
+        }
+        doc.setFontSize(fontSize);
+        doc.setFont(undefined, isBold ? 'bold' : 'normal');
         
-        const count = totalAreaInSqM / comparison.area;
-        if (count >= 1) {
-          addText(`Your land area equals approximately ${count.toFixed(1)} ${comparison.name}${count > 1 ? 's' : ''}`);
+        if (align === 'center') {
+          doc.text(text, pageWidth / 2, yPosition, { align: 'center' });
         } else {
-          addText(`You would need ${(1/count).toFixed(1)} of your land areas to equal one ${comparison.name}`);
+          doc.text(text, 20, yPosition);
+        }
+        yPosition += fontSize * 1.2;
+      };
+
+      // Prepare data
+      const totalSubdivided = subdivisions.reduce((sum, sub) => sum + sub.area, 0);
+      const comparisonObj = selectedComparison ? comparisonOptions.find(c => c.id === selectedComparison) : null;
+
+      // Header
+      if (pdfSettings.companyName) {
+        addText(pdfSettings.companyName, 14, false, 'center');
+      }
+      addText(pdfSettings.reportTitle, 20, true, 'center');
+      addText(`Generated: ${new Date().toLocaleString()}`, 10, false, 'center');
+      yPosition += 10;
+
+      // Add 3D visualization image if available
+      if (sceneImageData && pdfSettings.includeVisualization) {
+        try {
+          const imageWidth = 160;
+          const imageHeight = 100;
+          const imageX = (pageWidth - imageWidth) / 2;
+          
+          if (yPosition + imageHeight > pageHeight - 20) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          
+          addText('3D VISUALIZATION', 14, true, 'center');
+          
+          doc.addImage(sceneImageData, 'PNG', imageX, yPosition, imageWidth, imageHeight);
+          yPosition += imageHeight + 15;
+          console.log('3D image added to PDF');
+        } catch (imageError) {
+          console.warn('Failed to add 3D image:', imageError);
+        }
+      }
+
+      // Land Area Summary
+      if (pdfSettings.includeLandSummary) {
+        addText('LAND AREA SUMMARY', 16, true);
+        addText(`Total Area: ${formatNumber(totalAreaInSqM)} m²`);
+        addText(`Total Area: ${formatNumber(totalHectares)} hectares`);
+        addText(`Total Area: ${formatNumber(totalAcres)} acres`);
+        yPosition += 10;
+      }
+
+      // Subdivisions
+      if (pdfSettings.includeSubdivisions && subdivisions.length > 0) {
+        addText('SUBDIVISIONS', 14, true);
+        
+        subdivisions.forEach((subdivision, index) => {
+          addText(`${subdivision.label}: ${formatNumber(subdivision.area)} m²`);
+        });
+        
+        yPosition += 5;
+        addText(`Total Subdivided: ${formatNumber(totalSubdivided)} m²`, 12, true);
+        addText(`Remaining Area: ${formatNumber(totalAreaInSqM - totalSubdivided)} m²`, 12, true);
+        addText(`Percentage Subdivided: ${((totalSubdivided / totalAreaInSqM) * 100).toFixed(1)}%`, 12, true);
+        yPosition += 10;
+      }
+
+      // Unit Conversions
+      if (pdfSettings.includeConversions) {
+        addText('UNIT CONVERSIONS', 14, true);
+        
+        const unitConversions = {
+          'm²': 1,
+          'ft²': 10.764,
+          'hectares': 0.0001,
+          'acres': 0.000247105,
+          'arpent': 0.000295684,
+          'perche': 0.0395367,
+          'toise': 0.282486
+        };
+        
+        Object.entries(unitConversions).forEach(([unit, conversion]) => {
+          const value = totalAreaInSqM / conversion;
+          addText(`${formatNumber(value)} ${unit}`);
+        });
+        yPosition += 10;
+      }
+
+      // Comparison Objects
+      if (pdfSettings.includeComparisons && comparisonObj) {
+        addText('SIZE COMPARISON', 14, true);
+        
+        const count = totalAreaInSqM / comparisonObj.area;
+        if (count >= 1) {
+          addText(`Your land area equals approximately ${count.toFixed(1)} ${comparisonObj.name}${count > 1 ? 's' : ''}`);
+        } else {
+          addText(`You would need ${(1/count).toFixed(1)} of your land areas to equal one ${comparisonObj.name}`);
         }
         yPosition += 10;
       }
+
+      // Footer
+      const footerY = pageHeight - 20;
+      doc.setFontSize(8);
+      doc.setFont(undefined, 'normal');
+      doc.text('Generated by Land Visualizer - landvisualizer.com', pageWidth / 2, footerY, { align: 'center' });
+
+      // Save the PDF
+      const fileName = `land-report-${new Date().toISOString().split('T')[0]}.pdf`;
+      doc.save(fileName);
+      
+      console.log('PDF generated successfully with jsPDF');
+
+    } catch (error) {
+      console.error('PDF generation failed:', error);
+      alert(`Failed to generate PDF: ${error.message}`);
     }
-    
-    // Footer
-    yPosition = pageHeight - 30;
-    doc.setFontSize(8);
-    doc.setFont(undefined, 'normal');
-    doc.text('Generated by Land Visualizer - landvisualizer.com', pageWidth / 2, yPosition, { align: 'center' });
-    
-    // Save the PDF
-    const fileName = `land-report-${new Date().toISOString().split('T')[0]}.pdf`;
-    doc.save(fileName);
   };
 
   const handleUpdateLandShape = (newShape) => {
@@ -2625,7 +2673,20 @@ const LandVisualizer = () => {
                 </div>
                 <div>
                   <h1 className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Land Visualizer</h1>
-                  <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>Advanced 3D land measurement and analysis tool</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>Advanced 3D land measurement and analysis tool</p>
+                    <button
+                      onClick={() => setIsExpanded(!isExpanded)}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 underline"
+                      aria-expanded={isExpanded}
+                      aria-controls="content-details"
+                    >
+                      Learn More
+                      <svg className={`w-3 h-3 transition-transform duration-200 ${isExpanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
@@ -3018,7 +3079,7 @@ const LandVisualizer = () => {
                      Share
                    </button>
                    <button
-                     onClick={exportToPDF}
+                     onClick={() => setShowPdfCustomizer(true)}
                      className="inline-flex items-center px-3 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
                      style={{backgroundColor: '#2E6D5A'}}
                      onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
@@ -3033,6 +3094,7 @@ const LandVisualizer = () => {
              <div style={{ width: '100%', height: '500px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc' }}>
                <Canvas 
                  camera={{ position: [50, 50, 50], fov: 75 }}
+                 gl={{ preserveDrawingBuffer: true }}
                  aria-label="Interactive 3D land visualization showing property boundaries, subdivisions, and measurement tools"
                  role="img"
                  tabIndex={0}
@@ -3606,43 +3668,118 @@ const LandVisualizer = () => {
          </div>
        </div>
      </div>
+
+     {/* PDF Customizer Modal */}
+   {showPdfCustomizer && (
+     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+       <div className={`p-6 rounded-lg shadow-xl max-w-md w-full mx-4 ${
+         darkMode ? 'bg-gray-800' : 'bg-white'
+       }`}>
+         <h3 className={`text-xl font-bold mb-4 ${
+           darkMode ? 'text-white' : 'text-slate-900'
+         }`}>Customize PDF Report</h3>
+         
+         <div className="space-y-4">
+           <div>
+             <label className={`block text-sm font-medium mb-2 ${
+               darkMode ? 'text-gray-300' : 'text-slate-700'
+             }`}>Report Title</label>
+             <input
+               type="text"
+               value={pdfSettings.reportTitle}
+               onChange={(e) => setPdfSettings({...pdfSettings, reportTitle: e.target.value})}
+               className={`w-full p-2 border rounded-md ${
+                 darkMode 
+                   ? 'bg-gray-700 border-gray-600 text-white' 
+                   : 'bg-white border-slate-300'
+               }`}
+             />
+           </div>
+           
+           <div>
+             <label className={`block text-sm font-medium mb-2 ${
+               darkMode ? 'text-gray-300' : 'text-slate-700'
+             }`}>Company Name (optional)</label>
+             <input
+               type="text"
+               value={pdfSettings.companyName}
+               onChange={(e) => setPdfSettings({...pdfSettings, companyName: e.target.value})}
+               className={`w-full p-2 border rounded-md ${
+                 darkMode 
+                   ? 'bg-gray-700 border-gray-600 text-white' 
+                   : 'bg-white border-slate-300'
+               }`}
+               placeholder="Your Company Name"
+             />
+           </div>
+           
+           <div className="space-y-2">
+             <label className={`block text-sm font-medium ${
+               darkMode ? 'text-gray-300' : 'text-slate-700'
+             }`}>Include Sections:</label>
+             
+             {[
+               { key: 'includeVisualization', label: '3D Visualization' },
+               { key: 'includeLandSummary', label: 'Land Summary' },
+               { key: 'includeSubdivisions', label: 'Subdivisions' },
+               { key: 'includeComparisons', label: 'Size Comparisons' },
+               { key: 'includeConversions', label: 'Unit Conversions' }
+             ].map(({key, label}) => (
+               <label key={key} className="flex items-center">
+                 <input
+                   type="checkbox"
+                   checked={pdfSettings[key]}
+                   onChange={(e) => setPdfSettings({...pdfSettings, [key]: e.target.checked})}
+                   className="mr-2"
+                 />
+                 <span className={`text-sm ${
+                   darkMode ? 'text-gray-300' : 'text-slate-700'
+                 }`}>{label}</span>
+               </label>
+             ))}
+           </div>
+         </div>
+         
+         <div className="flex gap-3 mt-6">
+           <button
+             onClick={() => setShowPdfCustomizer(false)}
+             className={`flex-1 px-4 py-2 rounded-md border ${
+               darkMode 
+                 ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                 : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+             }`}
+           >
+             Cancel
+           </button>
+           <button
+             onClick={() => {
+               exportToPDF();
+               setShowPdfCustomizer(false);
+             }}
+             className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+           >
+             Generate PDF
+           </button>
+         </div>
+       </div>
+     </div>
+   )}
    </div>
  );
 };
 
 // Collapsible content component that shows different content based on route
-function ContentSection() {
+function ContentSection({ isExpanded }) {
   const location = useLocation();
   const currentPath = location.pathname;
   const content = pageContent[currentPath] || pageContent['/'];
-  const [isExpanded, setIsExpanded] = useState(false);
   
   if (!isExpanded) {
-    // Collapsed state - show only the tagline with Learn More button
+    // Collapsed state - hide content completely now that Learn More is in header
     return (
-      <div className="mb-6">
-        <div className="flex items-center flex-wrap gap-2">
-          <span className="text-lg text-gray-700 dark:text-gray-300">
-            Advanced 3D land measurement and analysis tool
-          </span>
-          <button
-            onClick={() => setIsExpanded(true)}
-            className="inline-flex items-center gap-1 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200 underline"
-            aria-expanded={false}
-            aria-controls="content-details"
-          >
-            Learn More
-            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-            </svg>
-          </button>
-        </div>
-        
-        {/* Hidden content for SEO - always present in DOM but visually hidden when collapsed */}
-        <div className="sr-only" aria-hidden="true">
-          <h1>{content.heading}</h1>
-          {content.content}
-        </div>
+      <div className="sr-only" aria-hidden="true">
+        <h1>{content.heading}</h1>
+        {content.content}
       </div>
     );
   }
@@ -3650,21 +3787,10 @@ function ContentSection() {
   // Expanded state - show full content section
   return (
     <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
-      <div className="flex items-center justify-between mb-4">
+      <div className="mb-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
           {content.heading}
         </h1>
-        <button
-          onClick={() => setIsExpanded(false)}
-          className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors duration-200"
-          aria-expanded={true}
-          aria-controls="content-details"
-        >
-          <span>Show Less</span>
-          <svg className="w-4 h-4 transform transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-          </svg>
-        </button>
       </div>
       
       {/* Full content */}
@@ -3706,6 +3832,7 @@ function App() {
 
 // App content component that uses Router context
 function AppContent() {
+  const [isExpanded, setIsExpanded] = useState(false);
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <SEOHead />
@@ -3713,68 +3840,68 @@ function AppContent() {
           <Routes>
             <Route path="/" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
             <Route path="/land-visualization-tool" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
             <Route path="/plot-mapping-software" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
             <Route path="/interactive-land-maps" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
             <Route path="/real-estate-mapping-tool" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
             <Route path="/property-boundary-visualizer" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
             <Route path="/online-land-plot-viewer" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
             <Route path="/land-survey-visualization" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
             <Route path="/gis-land-mapping" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
             <Route path="/land-ownership-map" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
             <Route path="/land-parcel-viewer" element={
               <div>
-                <ContentSection />
-                <LandVisualizer />
+                <ContentSection isExpanded={isExpanded} />
+                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
               </div>
             } />
       </Routes>

@@ -24,7 +24,11 @@
       "Bash(od:*)",
       "Bash(git checkout:*)",
       "Bash(tasklist)",
-      "Bash(git stash:*)"
+      "Bash(git stash:*)",
+      "Bash(del package-lock.json)",
+      "Bash(curl:*)",
+      "Bash(npm uninstall:*)",
+      "Bash(taskkill:*)"
     ],
     "deny": []
   }
