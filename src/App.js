@@ -5,6 +5,7 @@ import { OrbitControls, Grid, Plane, Box, Text, Line } from '@react-three/drei';
 import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X, RotateCcw, RotateCw, Moon, Sun, FileDown } from 'lucide-react';
 import * as THREE from 'three';
 import jsPDF from 'jspdf';
+import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
 import './App.css';
 
 // Simple SEO hook to replace React Helmet for better React 19 compatibility
@@ -256,7 +257,7 @@ function RealisticComparisonObject({ type, position, dimensions, color }) {
   );
   
   switch (type) {
-    case 'soccerField':
+    case 'footballField':
       return (
         <group position={position}>
           <ObjectBorder />
@@ -1703,16 +1704,7 @@ function Subdivision({ subdivision, onDelete, onEdit, isSelected, onSelect, onMo
   );
 }
 
-function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, totalAreaInSqM, drawingMode, subdivisions, setSubdivisions, isDraggingCorner, onDragStateChange, onAddPolylinePoint, polylinePoints, selectedSubdivision, onSubdivisionSelect, onSubdivisionMove, onUpdateSubdivision, isDraggingSubdivisionCorner, onSubdivisionCornerDragStateChange, measurementMode, measurementPoints, onMeasurementPoint, measurements, onClearMeasurements, darkMode }) {
-  const comparisonOptions = [
-    { id: 'soccerField', name: 'Soccer Field', area: 7140, color: '#10b981', dimensions: { width: 105, length: 68 } },
-    { id: 'basketballCourt', name: 'Basketball Court', area: 420, color: '#f59e0b', dimensions: { width: 28, length: 15 } },
-    { id: 'tennisCourt', name: 'Tennis Court', area: 260.87, color: '#0ea5e9', dimensions: { width: 23.77, length: 10.97 } },
-    { id: 'swimmingPool', name: 'Swimming Pool', area: 163, color: '#06b6d4', dimensions: { width: 25, length: 6.5 } },
-    { id: 'house', name: 'Average House', area: 150, color: '#8b5cf6', dimensions: { width: 12, length: 12.5 } },
-    { id: 'parkingSpace', name: 'Parking Space', area: 12.5, color: '#64748b', dimensions: { width: 5, length: 2.5 } },
-    { id: 'boxingRing', name: 'Boxing Ring', area: 37.21, color: '#ADD8E6', dimensions: { width: 6.1, length: 6.1 } }
-  ];
+function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, comparisonOptions, totalAreaInSqM, drawingMode, subdivisions, setSubdivisions, isDraggingCorner, onDragStateChange, onAddPolylinePoint, polylinePoints, selectedSubdivision, onSubdivisionSelect, onSubdivisionMove, onUpdateSubdivision, isDraggingSubdivisionCorner, onSubdivisionCornerDragStateChange, measurementMode, measurementPoints, onMeasurementPoint, measurements, onClearMeasurements, darkMode }) {
 
   const comparison = selectedComparison ? comparisonOptions.find(c => c.id === selectedComparison) : null;
   
@@ -1869,13 +1861,105 @@ function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, 
   );
 }
 
+// Check WebGL support
+const checkWebGLSupport = () => {
+  try {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    return !!gl;
+  } catch (e) {
+    return false;
+  }
+};
+
 const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
   const [units, setUnits] = useState([{ value: 1000, unit: 'm²' }]);
   const [selectedComparison, setSelectedComparison] = useState(null);
+  const [webGLSupported, setWebGLSupported] = useState(true);
   const [showTraditionalInfo, setShowTraditionalInfo] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [copied, setCopied] = useState(false);
   const [drawingMode, setDrawingMode] = useState(null);
+  
+  // Custom Object States
+  const [showCustomObjectForm, setShowCustomObjectForm] = useState(false);
+  const [customObject, setCustomObject] = useState({
+    name: '',
+    width: '',
+    length: '',
+    icon: '📦',
+    color: 'purple'
+  });
+  const [customComparisons, setCustomComparisons] = useState([]);
+  
+  // Available colors for custom objects
+  const customObjectColors = ['purple', 'indigo', 'pink', 'red', 'orange', 'yellow', 'lime', 'teal', 'cyan'];
+  
+  // Color mapping for 3D visualization
+  const colorMap = {
+    'purple': '#8b5cf6',
+    'indigo': '#6366f1', 
+    'pink': '#ec4899',
+    'red': '#ef4444',
+    'orange': '#f97316',
+    'yellow': '#eab308',
+    'lime': '#84cc16',
+    'teal': '#14b8a6',
+    'cyan': '#06b6d4',
+    'emerald': '#10b981',
+    'amber': '#f59e0b',
+    'sky': '#0ea5e9',
+    'violet': '#8b5cf6',
+    'slate': '#64748b',
+    'lightblue': '#ADD8E6'
+  };
+  
+  // Premium Export System States
+  const [showPremiumExportModal, setShowPremiumExportModal] = useState(false);
+  const [selectedExportType, setSelectedExportType] = useState(null);
+  const [paymentStatus, setPaymentStatus] = useState('pending'); // pending, processing, success, failed
+  const [downloadToken, setDownloadToken] = useState(null);
+  const [exportHistory, setExportHistory] = useState([]);
+  const [selectedTier, setSelectedTier] = useState(null);
+  const [paymentMethod, setPaymentMethod] = useState('paypal');
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  
+  // Premium Export Tiers
+  const exportTiers = {
+    basic: {
+      id: 'basic',
+      name: 'Basic Export',
+      price: 5,
+      currency: 'USD',
+      description: 'Professional PDF report with your land analysis',
+      features: [
+        'High-resolution PDF (300 DPI)',
+        'Watermark-free export',
+        'Professional landscape design',
+        '3D visualization included',
+        'Full measurement data',
+        'Subdivision analysis'
+      ],
+      formats: ['PDF']
+    },
+    premium: {
+      id: 'premium', 
+      name: 'Premium Export Package',
+      price: 10,
+      currency: 'USD',
+      description: 'Complete export package with all formats',
+      features: [
+        'Everything in Basic Export',
+        'High-resolution PNG (4K)',
+        'CSV data export',
+        'Multiple format bundle',
+        'Print-ready files',
+        'Raw measurement data'
+      ],
+      formats: ['PDF', 'PNG', 'CSV']
+    }
+  };
+
   const [subdivisions, setSubdivisions] = useState([]);
   const [editingSubdivision, setEditingSubdivision] = useState(null);
   const [editingLabel, setEditingLabel] = useState('');
@@ -2106,16 +2190,23 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
   const [selectedSubdivision, setSelectedSubdivision] = useState(null);
   const [isDraggingSubdivisionCorner, setIsDraggingSubdivisionCorner] = useState(false);
 
-  // Unit conversions to square meters
+  // Unit conversions to square meters (arranged by popularity, m² first)
   const unitConversions = {
-    'm²': 1,
-    'ft²': 0.092903,
-    'hectares': 10000,
-    'acres': 4046.86,
-    'arpent': 3418.89,
-    'perche': 42.2112,
-    'toise': 3.798
+    'm²': 1,                   // Square meters (most popular metric)
+    'ft²': 0.09290304,         // Square feet (most popular imperial)
+    'acres': 4046.86,          // Acres (very popular for land)
+    'hectares': 10000,         // Hectares (popular metric for large areas)
+    'yd²': 0.83612736,         // Square yards (common in US)
+    'km²': 1000000,            // Square kilometers (for very large areas)
+    'arpent': 3419,            // Arpent (traditional French/Louisiana)
+    'perche': 25.29285264,     // Perche (traditional British)
+    'toise': 3.7987            // Toise (historical French - least popular)
   };
+
+  // Check browser compatibility on mount
+  useEffect(() => {
+    setWebGLSupported(checkWebGLSupport());
+  }, []);
 
   // Load configuration from URL on mount
   useEffect(() => {
@@ -2126,23 +2217,59 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
       if (config) {
         try {
           const decoded = JSON.parse(atob(config));
-          if (decoded.units && Array.isArray(decoded.units)) {
-            setUnits(decoded.units);
-          }
-          if (decoded.comparison) {
-            setSelectedComparison(decoded.comparison);
-          }
-          if (decoded.subdivisions) {
-            setSubdivisions(decoded.subdivisions);
-          }
-          if (decoded.landShape) {
-            setLandShape(decoded.landShape);
-          }
-          if (decoded.hasManuallyEditedShape) {
-            setHasManuallyEditedShape(decoded.hasManuallyEditedShape);
+          
+          // Validate and sanitize loaded data
+          if (decoded && typeof decoded === 'object') {
+            if (decoded.units && Array.isArray(decoded.units)) {
+              // Validate units array
+              const validUnits = decoded.units.filter(unit => 
+                unit && 
+                typeof unit === 'object' && 
+                typeof unit.value === 'number' && 
+                unit.value >= 0 && 
+                unit.value <= 1000000 && // Max 1M square meters
+                typeof unit.unit === 'string' && 
+                unitConversions.hasOwnProperty(unit.unit)
+              );
+              if (validUnits.length > 0) {
+                setUnits(validUnits);
+              }
+            }
+            if (decoded.comparison && typeof decoded.comparison === 'string') {
+              setSelectedComparison(decoded.comparison);
+            }
+            if (decoded.subdivisions && Array.isArray(decoded.subdivisions)) {
+              // Validate subdivisions
+              const validSubdivisions = decoded.subdivisions.filter(sub =>
+                sub &&
+                typeof sub === 'object' &&
+                typeof sub.id === 'string' &&
+                typeof sub.area === 'number' &&
+                sub.area >= 0 &&
+                sub.area <= 1000000
+              );
+              setSubdivisions(validSubdivisions);
+            }
+            if (decoded.landShape && Array.isArray(decoded.landShape)) {
+              // Validate landShape coordinates
+              const validLandShape = decoded.landShape.filter(point =>
+                point &&
+                typeof point === 'object' &&
+                typeof point.x === 'number' &&
+                typeof point.z === 'number' &&
+                Math.abs(point.x) <= 10000 &&
+                Math.abs(point.z) <= 10000
+              );
+              if (validLandShape.length >= 3) {
+                setLandShape(validLandShape);
+              }
+            }
+            if (typeof decoded.hasManuallyEditedShape === 'boolean') {
+              setHasManuallyEditedShape(decoded.hasManuallyEditedShape);
+            }
           }
         } catch (error) {
-          console.error('Failed to load configuration from URL');
+          // Silently ignore malformed URL configurations
         }
       }
     };
@@ -2165,23 +2292,405 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
     return url;
   };
 
-  // Copy to clipboard
+  // Copy to clipboard with browser compatibility
   const copyToClipboard = async () => {
     const url = generateShareURL();
+    
+    // Check for modern clipboard API support
+    if (navigator.clipboard && window.isSecureContext) {
+      try {
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        const timer = setTimeout(() => setCopied(false), 2000);
+        return () => clearTimeout(timer);
+      } catch (err) {
+        // Fall through to legacy method
+      }
+    }
+    
+    // Fallback for older browsers or non-secure contexts
     try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      // Fallback for older browsers
       const textArea = document.createElement('textarea');
       textArea.value = url;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
       document.body.appendChild(textArea);
+      textArea.focus();
       textArea.select();
-      document.execCommand('copy');
+      const successful = document.execCommand('copy');
       document.body.removeChild(textArea);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      
+      if (successful) {
+        setCopied(true);
+        const timer = setTimeout(() => setCopied(false), 2000);
+        return () => clearTimeout(timer);
+      } else {
+        // If copy failed, show the URL in an alert
+        alert(`Copy failed. Please copy this URL manually: ${url}`);
+      }
+    } catch (err) {
+      // Last resort - show URL in alert
+      alert(`Copy not supported. Please copy this URL manually: ${url}`);
+    }
+  };
+
+  // Premium Export Functions
+  const generateWatermarkedPreview = async () => {
+    // Generate a watermarked version for free preview
+    try {
+      // First capture the 3D scene
+      let sceneImageData = null;
+      try {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        const canvas = document.querySelector('canvas');
+        if (canvas) {
+          const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
+          if (gl) {
+            gl.finish();
+            sceneImageData = canvas.toDataURL('image/png', 0.7); // Lower quality for preview
+          }
+        }
+      } catch (error) {
+        // Continue without 3D image
+      }
+
+      // Create watermarked PDF
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      
+      // Colors for landscape design
+      const colors = {
+        skyBlue: [135, 206, 250],
+        cloudWhite: [248, 250, 252],
+        hillGreen1: [34, 139, 34],
+        hillGreen2: [85, 107, 47],
+        hillGreen3: [107, 142, 35],
+        contentBg: [248, 250, 252],
+        headerGray: [156, 163, 175]
+      };
+      
+      // Add landscape header (simplified for watermarked version)
+      doc.setFillColor(...colors.headerGray);
+      doc.rect(0, 0, pageWidth, 30, 'F');
+      
+      // Title
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(18);
+      doc.setFont(undefined, 'bold');
+      doc.text('LAND VISUALIZER', 20, 20);
+      
+      // Add sky with simplified design
+      doc.setFillColor(...colors.skyBlue);
+      doc.rect(0, 30, pageWidth, 70, 'F');
+      
+      // Add rolling hills (simplified)
+      doc.setFillColor(...colors.hillGreen1);
+      const hill1Points = [];
+      for (let x = 0; x <= pageWidth; x += 10) {
+        const y = 100 + Math.sin(x * 0.02) * 8;
+        hill1Points.push([x, y]);
+      }
+      hill1Points.push([pageWidth, 150], [0, 150]);
+      doc.triangle(...hill1Points[0], ...hill1Points[hill1Points.length-2], ...hill1Points[hill1Points.length-1]);
+      
+      // Add content background
+      doc.setFillColor(...colors.contentBg);
+      doc.rect(0, 150, pageWidth, pageHeight - 180, 'F');
+      
+      // Add prominent watermarks
+      doc.setTextColor(200, 200, 200);
+      doc.setFontSize(40);
+      doc.setFont(undefined, 'bold');
+      
+      // Diagonal watermarks across the page
+      for (let i = 0; i < 3; i++) {
+        const x = (pageWidth / 4) * (i + 1);
+        const y = (pageHeight / 3) * 2;
+        doc.text('PREVIEW', x - 20, y, { angle: -45 });
+      }
+      
+      // Content with limited data
+      let yPosition = 160;
+      doc.setTextColor(34, 139, 34);
+      doc.setFontSize(16);
+      doc.text('LAND AREA SUMMARY', 20, yPosition);
+      yPosition += 15;
+      
+      doc.setFontSize(12);
+      doc.text(`TOTAL AREA: ${formatNumber(totalAreaInSqM)} m²`, 20, yPosition);
+      yPosition += 10;
+      doc.text('Purchase full export for complete analysis', 20, yPosition);
+      
+      // Add footer watermark
+      doc.setFillColor(...colors.headerGray);
+      doc.rect(0, pageHeight - 30, pageWidth, 30, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(10);
+      doc.text('PREVIEW ONLY - Purchase for full report', 20, pageHeight - 15);
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(12);
+      doc.text('WATERMARKED PREVIEW - Purchase to remove', pageWidth/2, pageHeight - 40, { align: 'center' });
+
+      // Save preview
+      doc.save('LandVisualizer_Preview.pdf');
+      
+      // Track preview generation
+      const preview = {
+        id: Date.now(),
+        type: 'preview',
+        timestamp: new Date().toISOString(),
+        downloaded: true
+      };
+      setExportHistory(prev => [preview, ...prev]);
+      
+    } catch (error) {
+      alert('Failed to generate preview. Please try again.');
+    }
+  };
+
+  const initializePayPalPayment = async (tier) => {
+    setSelectedExportType(tier);
+    setPaymentStatus('processing');
+    
+    try {
+      // In a real implementation, you'd integrate with PayPal SDK
+      // For now, we'll simulate the payment flow
+      
+      // PayPal integration would look like this:
+      /*
+      const paypalResponse = await fetch('/api/create-paypal-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: tier.price,
+          currency: tier.currency,
+          description: tier.description,
+          exportData: {
+            units: units,
+            subdivisions: subdivisions,
+            selectedComparison: selectedComparison,
+            landShape: landShape
+          }
+        })
+      });
+      */
+      
+      // Simulate PayPal redirect (replace with actual PayPal integration)
+      const paypalUrl = `https://www.paypal.com/checkoutnow?token=SIMULATED_${tier.id}_${Date.now()}`;
+      
+      // For demo purposes, show payment simulation
+      const confirmPayment = window.confirm(
+        `This would redirect to PayPal to pay $${tier.price} for ${tier.name}.\n\n` +
+        `In production, you'll be redirected to PayPal's secure checkout.\n\n` +
+        `Click OK to simulate successful payment.`
+      );
+      
+      if (confirmPayment) {
+        // Simulate successful payment
+        setTimeout(() => {
+          const token = `premium_${tier.id}_${Date.now()}`;
+          setDownloadToken(token);
+          setPaymentStatus('success');
+          
+          // Add to export history
+          const exportRecord = {
+            id: Date.now(),
+            type: tier.id,
+            tier: tier,
+            token: token,
+            timestamp: new Date().toISOString(),
+            downloaded: false,
+            paymentId: `PAY_SIMULATED_${Date.now()}`
+          };
+          setExportHistory(prev => [exportRecord, ...prev]);
+          
+        }, 2000); // Simulate payment processing time
+      } else {
+        setPaymentStatus('failed');
+        setSelectedExportType(null);
+      }
+      
+    } catch (error) {
+      setPaymentStatus('failed');
+      alert('Payment failed. Please try again.');
+    }
+  };
+
+  const downloadPremiumExport = async (exportRecord) => {
+    if (!exportRecord.token) {
+      alert('Invalid download token. Please contact support.');
+      return;
+    }
+    
+    try {
+      const tier = exportRecord.tier;
+      
+      // Generate premium exports based on tier
+      if (tier.formats.includes('PDF')) {
+        await generatePremiumPDF(tier);
+      }
+      
+      if (tier.formats.includes('PNG')) {
+        await generatePremiumPNG();
+      }
+      
+      if (tier.formats.includes('CSV')) {
+        await generateCSVExport();
+      }
+      
+      // Mark as downloaded
+      setExportHistory(prev => 
+        prev.map(record => 
+          record.id === exportRecord.id 
+            ? { ...record, downloaded: true, downloadedAt: new Date().toISOString() }
+            : record
+        )
+      );
+      
+    } catch (error) {
+      alert('Download failed. Please try again or contact support.');
+    }
+  };
+
+  const generatePremiumPDF = async (tier) => {
+    // Generate high-quality, watermark-free PDF
+    // (This is the same as the existing exportToPDF but without watermarks)
+    return exportToPDF(); // Use existing function
+  };
+
+  const generatePremiumPNG = async () => {
+    try {
+      // Capture high-resolution 3D scene
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const canvas = document.querySelector('canvas');
+      if (canvas) {
+        // Create high-res version
+        const link = document.createElement('a');
+        link.download = `LandVisualizer_Export_${new Date().toISOString().split('T')[0]}.png`;
+        link.href = canvas.toDataURL('image/png', 1.0); // Highest quality
+        link.click();
+      }
+    } catch (error) {
+      alert('Failed to generate PNG export.');
+    }
+  };
+
+  const generateCSVExport = () => {
+    try {
+      // Generate CSV with all measurement data
+      let csvContent = 'Land Visualization Data Export\n\n';
+      
+      // Basic measurements
+      csvContent += 'Type,Value,Unit\n';
+      csvContent += `Total Area,${totalAreaInSqM},m²\n`;
+      csvContent += `Total Area,${totalAreaInSqM * (1 / 10000)},hectares\n`;
+      csvContent += `Total Area,${totalAreaInSqM * (1 / 4046.86)},acres\n`;
+      csvContent += `Total Area,${totalAreaInSqM * (1 / 0.09290304)},ft²\n\n`;
+      
+      // Input units
+      csvContent += 'Input Units\n';
+      csvContent += 'Value,Unit,Square Meters\n';
+      units.forEach(unit => {
+        csvContent += `${unit.value},${unit.unit},${unit.value * unitConversions[unit.unit]}\n`;
+      });
+      csvContent += '\n';
+      
+      // Subdivisions
+      if (subdivisions.length > 0) {
+        csvContent += 'Subdivisions\n';
+        csvContent += 'Label,Area (m²),Area (acres),Area (hectares),Percentage of Total\n';
+        subdivisions.forEach(sub => {
+          const percentage = ((sub.area / totalAreaInSqM) * 100).toFixed(2);
+          csvContent += `${sub.label},${sub.area},${(sub.area * (1/4046.86)).toFixed(4)},${(sub.area * (1/10000)).toFixed(4)},${percentage}%\n`;
+        });
+        csvContent += '\n';
+      }
+      
+      // Export metadata
+      csvContent += 'Export Information\n';
+      csvContent += `Generated,${new Date().toISOString()}\n`;
+      csvContent += `Tool,Land Visualizer\n`;
+      csvContent += `Website,https://landvisualizer.com\n`;
+      
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `LandVisualizer_Data_${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+    } catch (error) {
+      alert('Failed to generate CSV export.');
+    }
+  };
+
+  const handlePaymentSuccess = (order) => {
+    console.log('handlePaymentSuccess called:', order);
+    const tier = exportTiers[selectedTier];
+    const token = `premium_${selectedTier}_${Date.now()}`;
+    
+    setDownloadToken(token);
+    setPaymentStatus('success');
+    
+    // Add to export history
+    const exportRecord = {
+      id: Date.now(),
+      format: tier.formats.join(', '),
+      status: 'completed',
+      token: token,
+      timestamp: Date.now(),
+      tier: selectedTier,
+      paymentMethod: 'paypal',
+      price: tier.price,
+      paypalOrderId: order.id
+    };
+    setExportHistory(prev => [exportRecord, ...prev]);
+    
+    // Close modal and reset states
+    setShowPremiumExportModal(false);
+    setSelectedTier(null);
+    setIsProcessingPayment(false);
+    
+    alert('Payment successful! Your premium exports are ready for download.');
+    
+    // Automatically trigger the download
+    downloadExport(exportRecord);
+  };
+
+  const downloadExport = async (exportRecord) => {
+    try {
+      const tier = exportTiers[exportRecord.tier];
+      
+      // Generate and download based on formats
+      if (tier.formats.includes('PDF')) {
+        await exportToPDF();
+      }
+      
+      if (tier.formats.includes('PNG')) {
+        await generatePremiumPNG();
+      }
+      
+      if (tier.formats.includes('CSV')) {
+        await generateCSVExport();
+      }
+      
+      // Mark as downloaded
+      setExportHistory(prev => 
+        prev.map(record => 
+          record.id === exportRecord.id 
+            ? { ...record, downloadedAt: Date.now() }
+            : record
+        )
+      );
+      
+    } catch (error) {
+      alert('Download failed. Please try again.');
     }
   };
 
@@ -2214,15 +2723,17 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
   const remainingArea = totalAreaInSqM - subdivisionsTotal;
 
   // Comparison data
-  const comparisonOptions = [
-    { id: 'soccerField', name: 'Soccer Field', area: 7140, icon: '⚽', color: 'emerald', dimensions: { width: 105, length: 68 } },
-    { id: 'basketballCourt', name: 'Basketball Court', area: 420, icon: '🏀', color: 'amber', dimensions: { width: 28, length: 15 } },
-    { id: 'tennisCourt', name: 'Tennis Court', area: 260.87, icon: '🎾', color: 'sky', dimensions: { width: 23.77, length: 10.97 } },
-    { id: 'swimmingPool', name: 'Swimming Pool', area: 163, icon: '🏊', color: 'cyan', dimensions: { width: 25, length: 6.5 } },
-    { id: 'house', name: 'Average House', area: 150, icon: '🏠', color: 'violet', dimensions: { width: 12, length: 12.5 } },
-    { id: 'parkingSpace', name: 'Parking Space', area: 12.5, icon: '🚗', color: 'slate', dimensions: { width: 5, length: 2.5 } },
-    { id: 'boxingRing', name: 'Boxing Ring', area: 37.21, icon: '🥊', color: 'lightblue', dimensions: { width: 6.1, length: 6.1 } }
+  const defaultComparisons = [
+    { id: 'footballField', name: 'Football Field', area: 7140, icon: '⚽', color: colorMap.emerald, dimensions: { width: 105, length: 68 } },
+    { id: 'basketballCourt', name: 'Basketball Court', area: 420, icon: '🏀', color: colorMap.amber, dimensions: { width: 28, length: 15 } },
+    { id: 'tennisCourt', name: 'Tennis Court', area: 260.87, icon: '🎾', color: colorMap.sky, dimensions: { width: 23.77, length: 10.97 } },
+    { id: 'house', name: 'Average House', area: 150, icon: '🏠', color: colorMap.violet, dimensions: { width: 12, length: 12.5 } },
+    { id: 'parkingSpace', name: 'Parking Space', area: 12.5, icon: '🚗', color: colorMap.slate, dimensions: { width: 5, length: 2.5 } },
+    { id: 'swimmingPool', name: 'Swimming Pool', area: 163, icon: '🏊', color: colorMap.cyan, dimensions: { width: 25, length: 6.5 } },
+    { id: 'boxingRing', name: 'Boxing Ring', area: 37.21, icon: '🥊', color: colorMap.lightblue, dimensions: { width: 6.1, length: 6.1 } }
   ];
+  
+  const comparisonOptions = [...defaultComparisons, ...customComparisons];
 
   const addUnit = () => {
     const newUnits = [...units, { value: 0, unit: 'm²' }];
@@ -2242,7 +2753,22 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
 
   const updateUnit = (index, field, value) => {
     const newUnits = [...units];
-    newUnits[index][field] = field === 'value' ? Number(value) : value;
+    
+    if (field === 'value') {
+      // Validate numeric input
+      const numValue = Number(value);
+      if (isNaN(numValue) || numValue < 0 || numValue > 1000000) {
+        return; // Don't update if invalid
+      }
+      newUnits[index][field] = numValue;
+    } else if (field === 'unit') {
+      // Validate unit type
+      if (!unitConversions.hasOwnProperty(value)) {
+        return; // Don't update if invalid unit
+      }
+      newUnits[index][field] = value;
+    }
+    
     setUnits(newUnits);
     
     // Reset manual edit flag when user changes area value input or unit type
@@ -2253,6 +2779,66 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
 
   const formatNumber = (num) => {
     return num.toLocaleString('en-US', { maximumFractionDigits: 2 });
+  };
+
+  // Custom Object Functions
+  const handleCustomObjectChange = (field, value) => {
+    setCustomObject(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const addCustomObject = () => {
+    const { name, width, length, icon } = customObject;
+    
+    // Validation
+    if (!name.trim() || !width || !length) {
+      alert('Please fill in all required fields (Name, Width, Length)');
+      return;
+    }
+    
+    const widthNum = parseFloat(width);
+    const lengthNum = parseFloat(length);
+    
+    if (isNaN(widthNum) || isNaN(lengthNum) || widthNum <= 0 || lengthNum <= 0) {
+      alert('Width and Length must be positive numbers');
+      return;
+    }
+    
+    const area = widthNum * lengthNum;
+    // Assign color based on current number of custom objects
+    const assignedColor = customObjectColors[customComparisons.length % customObjectColors.length];
+    
+    const newCustomObject = {
+      id: `custom_${Date.now()}`,
+      name: name.trim(),
+      area: area,
+      icon: icon || '📦',
+      color: colorMap[assignedColor] || '#8b5cf6',
+      dimensions: { width: widthNum, length: lengthNum },
+      isCustom: true
+    };
+    
+    setCustomComparisons(prev => [...prev, newCustomObject]);
+    
+    // Reset form
+    setCustomObject({
+      name: '',
+      width: '',
+      length: '',
+      icon: '📦',
+      color: 'purple'
+    });
+    
+    setShowCustomObjectForm(false);
+  };
+
+  const removeCustomObject = (id) => {
+    setCustomComparisons(prev => prev.filter(obj => obj.id !== id));
+    if (selectedComparison === id) {
+      setSelectedComparison(null);
+    }
   };
 
   const handleDeleteSubdivision = (id) => {
@@ -2290,7 +2876,7 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
   // PDF Export functionality - Clean generation using jsPDF
   const exportToPDF = async () => {
     try {
-      console.log('Starting PDF export with jsPDF...');
+      // Starting PDF export with enhanced design
       
       // First capture the 3D scene with a small delay to ensure rendering
       let sceneImageData = null;
@@ -2302,142 +2888,402 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
           if (gl) {
             gl.finish();
             sceneImageData = canvas.toDataURL('image/png', 1.0);
-            console.log('3D scene captured successfully');
+            // 3D scene captured successfully
           }
         }
       } catch (error) {
-        console.warn('Failed to capture 3D scene:', error);
+        // Failed to capture 3D scene - continuing without image
       }
 
       // Create new PDF with jsPDF
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      let yPosition = 20;
+      let yPosition = 0;
 
-      // Helper function to add text and manage page breaks
-      const addText = (text, fontSize = 12, isBold = false, align = 'left') => {
-        if (yPosition > pageHeight - 30) {
+      // Landscape-themed color scheme (matching your design)
+      const colors = {
+        headerGray: [160, 174, 166],     // Gray-green header
+        skyBlue: [173, 216, 230],        // Light blue sky
+        cloudWhite: [255, 255, 255],     // White clouds
+        hillDark: [107, 142, 35],        // Dark green hills
+        hillMid: [154, 205, 50],         // Medium green hills  
+        hillLight: [173, 255, 47],       // Light green hills
+        creamBg: [245, 245, 220],        // Cream content background
+        darkGreen: [34, 139, 34],        // Dark green for text/footer
+        brightGreen: [127, 255, 0],      // Bright green accents
+        yellow: [255, 255, 0],           // Yellow for conversions
+        text: [34, 139, 34],             // Dark green text
+        white: [255, 255, 255]           // White
+      };
+
+      // Landscape-themed helper functions
+      const addLandscapeHeader = async () => {
+        // Gray-green header band (matching design)
+        doc.setFillColor(...colors.headerGray);
+        doc.rect(0, 0, pageWidth, 30, 'F');
+        
+        // Add actual logo (left side)
+        try {
+          // Convert logo to base64 for embedding
+          const logoResponse = await fetch('/logo512.png');
+          const logoBlob = await logoResponse.blob();
+          const logoBase64 = await new Promise((resolve) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.readAsDataURL(logoBlob);
+          });
+          
+          // Add logo to PDF
+          const logoSize = 16;
+          doc.addImage(logoBase64, 'PNG', 15, 7, logoSize, logoSize);
+        } catch (error) {
+          // Fallback to simple circle if logo fails to load
+          doc.setFillColor(...colors.darkGreen);
+          doc.circle(25, 15, 8, 'F');
+          doc.setFillColor(...colors.white);
+          doc.setFontSize(8);
+          doc.setFont(undefined, 'bold');
+          doc.text('LV', 22, 17);
+        }
+        
+        // Company name
+        doc.setTextColor(...colors.text);
+        doc.setFontSize(12);
+        doc.text('LAND VISUALIZER', 40, 18);
+        
+        // Company/Date info (right side)
+        doc.setFontSize(10);
+        if (pdfSettings.companyName) {
+          doc.text(`{{${pdfSettings.companyName}}}`, pageWidth - 20, 12, { align: 'right' });
+        }
+        doc.text(`{{${new Date().toLocaleDateString()}}}`, pageWidth - 20, 22, { align: 'right' });
+        
+        yPosition = 35;
+      };
+
+      const addSkyAndCloudsWithVisualization = (sceneImageData) => {
+        // Sky background
+        doc.setFillColor(...colors.skyBlue);
+        doc.rect(0, 30, pageWidth, 80, 'F'); // Taller sky area for 3D image
+        
+        // Simple cloud shapes around the 3D visualization
+        const addCloud = (x, y, size = 1) => {
+          doc.setFillColor(...colors.cloudWhite);
+          // Main cloud body
+          doc.ellipse(x, y, 8 * size, 4 * size, 'F');
+          doc.ellipse(x - 6 * size, y, 6 * size, 3 * size, 'F');
+          doc.ellipse(x + 6 * size, y, 6 * size, 3 * size, 'F');
+          doc.ellipse(x - 3 * size, y - 2 * size, 4 * size, 2 * size, 'F');
+          doc.ellipse(x + 3 * size, y - 2 * size, 4 * size, 2 * size, 'F');
+        };
+        
+        // Add clouds around the visualization area
+        addCloud(40, 50, 0.6);   // Left side
+        addCloud(160, 45, 0.8);  // Right side  
+        addCloud(30, 75, 0.5);   // Lower left
+        addCloud(170, 70, 0.7);  // Lower right
+        
+        // Center area for 3D visualization
+        if (sceneImageData) {
+          const imageWidth = 120;
+          const imageHeight = 70;
+          const imageX = (pageWidth - imageWidth) / 2;
+          const imageY = 45; // Centered in sky area
+          
+          try {
+            // Add subtle border/frame for the 3D image
+            doc.setDrawColor(...colors.darkGreen);
+            doc.setLineWidth(1);
+            doc.rect(imageX - 2, imageY - 2, imageWidth + 4, imageHeight + 4);
+            
+            // Add the actual 3D screenshot
+            doc.addImage(sceneImageData, 'PNG', imageX, imageY, imageWidth, imageHeight);
+            
+          } catch (imageError) {
+            // Fallback: show placeholder in styled box
+            doc.setFillColor(...colors.creamBg);
+            doc.rect(imageX, imageY, imageWidth, imageHeight, 'F');
+            doc.setDrawColor(...colors.darkGreen);
+            doc.setLineWidth(2);
+            doc.rect(imageX, imageY, imageWidth, imageHeight);
+            
+            doc.setTextColor(...colors.text);
+            doc.setFontSize(16);
+            doc.setFont(undefined, 'bold');
+            doc.text('{{3D_IMAGE}}', imageX + imageWidth/2 - 25, imageY + imageHeight/2);
+          }
+        } else {
+          // No 3D data - show placeholder
+          const imageWidth = 120;
+          const imageHeight = 70;
+          const imageX = (pageWidth - imageWidth) / 2;
+          const imageY = 45;
+          
+          doc.setFillColor(...colors.creamBg);
+          doc.rect(imageX, imageY, imageWidth, imageHeight, 'F');
+          doc.setDrawColor(...colors.darkGreen);
+          doc.setLineWidth(2);
+          doc.rect(imageX, imageY, imageWidth, imageHeight);
+          
+          doc.setTextColor(...colors.text);
+          doc.setFontSize(16);
+          doc.setFont(undefined, 'bold');
+          doc.text('{{3D_IMAGE}}', imageX + imageWidth/2 - 25, imageY + imageHeight/2);
+        }
+        
+        yPosition = 115; // Position after taller sky area
+      };
+
+      const addRollingHills = () => {
+        // Create rolling hills using curves
+        const hillHeight = 40;
+        const hillY = yPosition - 5;
+        
+        // Back hills (darker)
+        doc.setFillColor(...colors.hillDark);
+        doc.moveTo(0, hillY + hillHeight);
+        doc.curveTo(30, hillY + 10, 80, hillY + 5, 120, hillY + 15);
+        doc.curveTo(150, hillY + 25, 180, hillY + 10, pageWidth, hillY + 20);
+        doc.lineTo(pageWidth, hillY + hillHeight);
+        doc.lineTo(0, hillY + hillHeight);
+        doc.fill();
+        
+        // Mid hills (medium green)
+        doc.setFillColor(...colors.hillMid);
+        doc.moveTo(0, hillY + hillHeight - 5);
+        doc.curveTo(40, hillY + 20, 90, hillY + 15, 140, hillY + 25);
+        doc.curveTo(170, hillY + 35, 190, hillY + 25, pageWidth, hillY + 30);
+        doc.lineTo(pageWidth, hillY + hillHeight);
+        doc.lineTo(0, hillY + hillHeight);
+        doc.fill();
+        
+        // Front hills (lightest)
+        doc.setFillColor(...colors.hillLight);
+        doc.moveTo(0, hillY + hillHeight - 2);
+        doc.curveTo(50, hillY + 30, 100, hillY + 25, 150, hillY + 35);
+        doc.curveTo(180, hillY + 40, 200, hillY + 30, pageWidth, hillY + 35);
+        doc.lineTo(pageWidth, hillY + hillHeight);
+        doc.lineTo(0, hillY + hillHeight);
+        doc.fill();
+        
+        yPosition += hillHeight + 10;
+      };
+
+      const addContentBackground = () => {
+        // Cream background for content area
+        doc.setFillColor(...colors.creamBg);
+        doc.rect(0, yPosition, pageWidth, pageHeight - yPosition - 25, 'F');
+        yPosition += 10;
+      };
+
+      const addLandscapeFooter = () => {
+        // Dark green footer band (matching design)
+        doc.setFillColor(...colors.darkGreen);
+        doc.rect(0, pageHeight - 25, pageWidth, 25, 'F');
+        
+        // Website with globe icon
+        doc.setTextColor(...colors.white);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        
+        // Simple globe icon
+        doc.setFillColor(...colors.brightGreen);
+        doc.circle(pageWidth/2 - 30, pageHeight - 12, 4, 'F');
+        doc.setTextColor(...colors.white);
+        doc.setFontSize(6);
+        doc.text('🌍', pageWidth/2 - 32, pageHeight - 10);
+        
+        doc.setFontSize(10);
+        doc.text('www.landvisualizer.com', pageWidth/2 - 20, pageHeight - 9);
+      };
+
+      const addLandscapeSectionHeader = (title) => {
+        if (yPosition > pageHeight - 60) {
+          doc.addPage();
+          addContentBackground();
+        }
+        
+        // Natural section header with green styling
+        doc.setFontSize(16);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(...colors.darkGreen);
+        doc.text(title, 20, yPosition);
+        
+        // Underline with natural green
+        doc.setDrawColor(...colors.hillMid);
+        doc.setLineWidth(2);
+        doc.line(20, yPosition + 2, 20 + (title.length * 4), yPosition + 2);
+        
+        yPosition += 20;
+      };
+
+      const addUnitConversionsBox = (startY, conversions) => {
+        // Sidebar-style unit conversions box (like in design)
+        const boxX = pageWidth - 80;
+        const boxY = startY;
+        const boxWidth = 65;
+        const boxHeight = Object.keys(conversions).length * 8 + 20;
+        
+        // Dark green header
+        doc.setFillColor(...colors.darkGreen);
+        doc.rect(boxX, boxY, boxWidth, 15, 'F');
+        
+        // Yellow/green content area
+        doc.setFillColor(...colors.yellow);
+        doc.rect(boxX, boxY + 15, boxWidth, boxHeight - 15, 'F');
+        
+        // Header text
+        doc.setTextColor(...colors.white);
+        doc.setFontSize(10);
+        doc.setFont(undefined, 'bold');
+        doc.text('Unit Conversions', boxX + 2, boxY + 10);
+        
+        // Conversion values
+        doc.setTextColor(...colors.darkGreen);
+        doc.setFont(undefined, 'normal');
+        doc.setFontSize(8);
+        
+        let textY = boxY + 25;
+        Object.entries(conversions).forEach(([unit, value]) => {
+          doc.text(unit, boxX + 2, textY);
+          textY += 8;
+        });
+        
+        return boxHeight;
+      };
+
+      const addText = (text, fontSize = 10, isBold = false, align = 'left', color = colors.text, indent = 0) => {
+        if (yPosition > pageHeight - 25) {
           doc.addPage();
           yPosition = 20;
         }
+        
         doc.setFontSize(fontSize);
         doc.setFont(undefined, isBold ? 'bold' : 'normal');
+        doc.setTextColor(...color);
         
+        const xPos = 20 + indent;
         if (align === 'center') {
           doc.text(text, pageWidth / 2, yPosition, { align: 'center' });
+        } else if (align === 'right') {
+          doc.text(text, pageWidth - 20, yPosition, { align: 'right' });
         } else {
-          doc.text(text, 20, yPosition);
+          doc.text(text, xPos, yPosition);
         }
-        yPosition += fontSize * 1.2;
+        yPosition += fontSize * 1.4;
+      };
+
+      const addDataRow = (label, value, isSubtotal = false) => {
+        if (yPosition > pageHeight - 25) {
+          doc.addPage();
+          yPosition = 20;
+        }
+
+        const fontSize = isSubtotal ? 11 : 10;
+        const fontWeight = isSubtotal ? 'bold' : 'normal';
+        const textColor = isSubtotal ? colors.primary : colors.text;
+        
+        doc.setFontSize(fontSize);
+        doc.setFont(undefined, fontWeight);
+        doc.setTextColor(...textColor);
+        
+        // Add subtle background for subtotals
+        if (isSubtotal) {
+          doc.setFillColor(248, 250, 252);
+          doc.rect(15, yPosition - 4, pageWidth - 30, 12, 'F');
+        }
+        
+        doc.text(label, 25, yPosition);
+        doc.text(value, pageWidth - 25, yPosition, { align: 'right' });
+        yPosition += fontSize * 1.4;
+      };
+
+      const addDivider = () => {
+        doc.setDrawColor(...colors.lightGray);
+        doc.setLineWidth(0.3);
+        doc.line(20, yPosition, pageWidth - 20, yPosition);
+        yPosition += 8;
       };
 
       // Prepare data
       const totalSubdivided = subdivisions.reduce((sum, sub) => sum + sub.area, 0);
       const comparisonObj = selectedComparison ? comparisonOptions.find(c => c.id === selectedComparison) : null;
 
-      // Header
-      if (pdfSettings.companyName) {
-        addText(pdfSettings.companyName, 14, false, 'center');
-      }
-      addText(pdfSettings.reportTitle, 20, true, 'center');
-      addText(`Generated: ${new Date().toLocaleString()}`, 10, false, 'center');
-      yPosition += 10;
+      // LANDSCAPE-THEMED PAGE DESIGN
+      
+      // Create the beautiful landscape layout with integrated 3D visualization
+      await addLandscapeHeader();
+      
+      // Add sky with 3D visualization as centerpiece (matching your design)
+      const include3D = pdfSettings.includeVisualization && sceneImageData;
+      addSkyAndCloudsWithVisualization(include3D ? sceneImageData : null);
+      
+      addRollingHills();
+      addContentBackground();
 
-      // Add 3D visualization image if available
-      if (sceneImageData && pdfSettings.includeVisualization) {
-        try {
-          const imageWidth = 160;
-          const imageHeight = 100;
-          const imageX = (pageWidth - imageWidth) / 2;
-          
-          if (yPosition + imageHeight > pageHeight - 20) {
-            doc.addPage();
-            yPosition = 20;
-          }
-          
-          addText('3D VISUALIZATION', 14, true, 'center');
-          
-          doc.addImage(sceneImageData, 'PNG', imageX, yPosition, imageWidth, imageHeight);
-          yPosition += imageHeight + 15;
-          console.log('3D image added to PDF');
-        } catch (imageError) {
-          console.warn('Failed to add 3D image:', imageError);
-        }
-      }
-
-      // Land Area Summary
-      if (pdfSettings.includeLandSummary) {
-        addText('LAND AREA SUMMARY', 16, true);
-        addText(`Total Area: ${formatNumber(totalAreaInSqM)} m²`);
-        addText(`Total Area: ${formatNumber(totalHectares)} hectares`);
-        addText(`Total Area: ${formatNumber(totalAcres)} acres`);
-        yPosition += 10;
-      }
-
-      // Subdivisions
+      // Main content area with natural styling
+      addLandscapeSectionHeader('LAND AREA SUMMARY');
+      
+      // Create unit conversions sidebar (matching design)
+      const conversionsData = {
+        'm²': formatNumber(totalAreaInSqM),
+        'acres': formatNumber(totalAreaInSqM * (1 / 4046.86)),
+        'hectares': formatNumber(totalAreaInSqM * (1 / 10000)),
+        'ft²': formatNumber(totalAreaInSqM * (1 / 0.09290304))
+      };
+      
+      const conversionsBoxHeight = addUnitConversionsBox(yPosition - 15, conversionsData);
+      
+      // Main content (left side, not overlapping with sidebar)
+      const contentWidth = pageWidth - 100; // Leave space for sidebar
+      
+      addText(`TOTAL AREA: {{${formatNumber(totalAreaInSqM)}_SQM}} | {{${formatNumber(totalAcres)}}}`, 
+        12, true, 'left', colors.text);
+      yPosition += 15;
+      
+      // Add subdivisions with natural dot indicators (matching design)
       if (pdfSettings.includeSubdivisions && subdivisions.length > 0) {
-        addText('SUBDIVISIONS', 14, true);
-        
         subdivisions.forEach((subdivision, index) => {
-          addText(`${subdivision.label}: ${formatNumber(subdivision.area)} m²`);
+          // Subdivision name and area
+          addText(`{{${subdivision.label.toUpperCase()}_NAME}}`, 11, true, 'left', colors.darkGreen);
+          addText(`{{${subdivision.label.toUpperCase()}_AREA}}`, 10, false, 'left', colors.text);
+          yPosition += 5;
         });
         
-        yPosition += 5;
-        addText(`Total Subdivided: ${formatNumber(totalSubdivided)} m²`, 12, true);
-        addText(`Remaining Area: ${formatNumber(totalAreaInSqM - totalSubdivided)} m²`, 12, true);
-        addText(`Percentage Subdivided: ${((totalSubdivided / totalAreaInSqM) * 100).toFixed(1)}%`, 12, true);
-        yPosition += 10;
-      }
-
-      // Unit Conversions
-      if (pdfSettings.includeConversions) {
-        addText('UNIT CONVERSIONS', 14, true);
+        yPosition += 15;
         
-        const unitConversions = {
-          'm²': 1,
-          'ft²': 10.764,
-          'hectares': 0.0001,
-          'acres': 0.000247105,
-          'arpent': 0.000295684,
-          'perche': 0.0395367,
-          'toise': 0.282486
-        };
-        
-        Object.entries(unitConversions).forEach(([unit, conversion]) => {
-          const value = totalAreaInSqM / conversion;
-          addText(`${formatNumber(value)} ${unit}`);
-        });
-        yPosition += 10;
-      }
-
-      // Comparison Objects
-      if (pdfSettings.includeComparisons && comparisonObj) {
-        addText('SIZE COMPARISON', 14, true);
-        
-        const count = totalAreaInSqM / comparisonObj.area;
-        if (count >= 1) {
-          addText(`Your land area equals approximately ${count.toFixed(1)} ${comparisonObj.name}${count > 1 ? 's' : ''}`);
-        } else {
-          addText(`You would need ${(1/count).toFixed(1)} of your land areas to equal one ${comparisonObj.name}`);
+        // Natural dot pattern (like in design)
+        const dotY = yPosition;
+        for (let i = 0; i < 14; i++) {
+          const dotX = 20 + (i * 8);
+          doc.setFillColor(...colors.darkGreen);
+          doc.circle(dotX, dotY, 1.5, 'F');
         }
         yPosition += 10;
+        
+        // Second row of dots  
+        const dotY2 = yPosition;
+        for (let i = 0; i < 14; i++) {
+          const dotX = 20 + (i * 8);
+          doc.setFillColor(...colors.darkGreen);
+          doc.circle(dotX, dotY2, 1.5, 'F');
+        }
+        yPosition += 20;
       }
 
-      // Footer
-      const footerY = pageHeight - 20;
-      doc.setFontSize(8);
-      doc.setFont(undefined, 'normal');
-      doc.text('Generated by Land Visualizer - landvisualizer.com', pageWidth / 2, footerY, { align: 'center' });
+      // Add the beautiful landscape footer
+      addLandscapeFooter();
 
-      // Save the PDF
-      const fileName = `land-report-${new Date().toISOString().split('T')[0]}.pdf`;
+      // Save PDF with landscape-themed filename
+      const timestamp = new Date().toISOString().split('T')[0];
+      const fileName = `LandVisualizer_Report_${timestamp}.pdf`;
       doc.save(fileName);
       
-      console.log('PDF generated successfully with jsPDF');
+      // PDF generated successfully with jsPDF
 
     } catch (error) {
-      console.error('PDF generation failed:', error);
+      // PDF generation failed
       alert(`Failed to generate PDF: ${error.message}`);
     }
   };
@@ -2924,10 +3770,13 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                               : 'bg-white border-slate-300 text-slate-900'
                           }`}
                           min="0"
+                          max="1000000"
                           step="0.01"
                           placeholder="0.00"
                           id={`area-value-${index}`}
                           name={`area-value-${index}`}
+                          aria-label={`Area value in ${unitItem.unit}`}
+                          aria-describedby={`unit-conversion-${index}`}
                         />
                       </div>
                       <div className="flex-1">
@@ -2946,11 +3795,14 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                           }`}
                           id={`unit-type-${index}`}
                           name={`unit-type-${index}`}
+                          aria-label={`Unit type for area ${index + 1}`}
                         >
                           <option value="m²">m²</option>
                           <option value="ft²">ft²</option>
+                          <option value="yd²">yd²</option>
                           <option value="hectares">hectares</option>
                           <option value="acres">acres</option>
+                          <option value="km²">km²</option>
                           <option value="arpent">arpent</option>
                           <option value="perche">perche</option>
                           <option value="toise">toise</option>
@@ -2967,7 +3819,7 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                         </button>
                       )}
                     </div>
-                    <div className={`mt-2 text-xs ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>
+                    <div id={`unit-conversion-${index}`} className={`mt-2 text-xs ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>
                       = {formatNumber(unitItem.value * unitConversions[unitItem.unit])} m²
                     </div>
                   </div>
@@ -2983,7 +3835,7 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
               
               <div className="grid grid-cols-3 gap-3">
                 {Object.entries(unitConversions).map(([unit, conversion]) => (
-                  <div key={unit} className={`flex flex-col items-center py-3 px-2 rounded-lg border ${
+                  <div key={unit} className={`flex flex-col items-center py-2 px-2 rounded-lg border ${
                     darkMode 
                       ? 'bg-gray-800 border-gray-600' 
                       : 'bg-slate-50 border-slate-200'
@@ -3063,11 +3915,18 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                    <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>
                      {drawingMode === 'rectangle' 
                        ? 'Click and drag to draw subdivisions'
-                       : 'Drag to rotate • Scroll to zoom • Outdoor environment'
+                       : drawingMode === 'polyline'
+                       ? 'Click to add points, double-click to finish drawing'
+                       : measurementMode === 'distance'
+                       ? 'Click two points to measure distance'
+                       : measurementMode === 'area'
+                       ? 'Click points to outline area, double-click to finish'
+                       : 'Drag to rotate • Scroll to zoom'
                      }
                    </p>
                  </div>
-                 <div className="flex items-center space-x-3">
+                 <div className="flex items-center gap-3">
+                   {/* Share Button */}
                    <button
                      onClick={() => setShowShareModal(true)}
                      className="inline-flex items-center px-3 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
@@ -3078,54 +3937,79 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                      <Share2 size={14} className="mr-2" aria-label="Share configuration" />
                      Share
                    </button>
+                   
+                   {/* Free Preview Button */}
                    <button
-                     onClick={() => setShowPdfCustomizer(true)}
-                     className="inline-flex items-center px-3 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
-                     style={{backgroundColor: '#2E6D5A'}}
-                     onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
-                     onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
+                     onClick={generateWatermarkedPreview}
+                     className={`flex items-center px-3 py-2 rounded-md transition-colors text-sm font-medium border ${
+                       darkMode 
+                         ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
+                         : 'border-slate-300 text-slate-700 hover:bg-slate-50'
+                     }`}
                    >
                      <FileDown size={14} className="mr-2" />
-                     Export PDF
+                     Free Preview
+                   </button>
+                   
+                   {/* Premium Export Button */}
+                   <button
+                     onClick={() => setShowPremiumExportModal(true)}
+                     className="flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-md hover:from-green-700 hover:to-blue-700 transition-all text-sm font-medium shadow-lg"
+                   >
+                     <FileDown size={14} className="mr-2" />
+                     Premium Export
+                     <span className="ml-2 bg-white text-green-600 px-2 py-0.5 rounded text-xs font-bold">$5-$10</span>
                    </button>
                  </div>
                </div>
              </div>
              <div style={{ width: '100%', height: '500px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc' }}>
-               <Canvas 
-                 camera={{ position: [50, 50, 50], fov: 75 }}
-                 gl={{ preserveDrawingBuffer: true }}
-                 aria-label="Interactive 3D land visualization showing property boundaries, subdivisions, and measurement tools"
-                 role="img"
-                 tabIndex={0}
-               >
-                 <Scene 
-                   landShape={landShape}
-                   onUpdateLandShape={handleUpdateLandShape}
-                   environment="outdoor" 
-                   selectedComparison={selectedComparison}
-                   totalAreaInSqM={totalAreaInSqM}
-                   drawingMode={drawingMode}
-                   darkMode={darkMode}
-                   subdivisions={subdivisions}
-                   setSubdivisions={setSubdivisions}
-                   isDraggingCorner={isDraggingCorner}
-                   onDragStateChange={handleDragStateChange}
-                   onAddPolylinePoint={addPolylinePoint}
-                   polylinePoints={polylinePoints}
-                   selectedSubdivision={selectedSubdivision}
-                   onSubdivisionSelect={handleSubdivisionSelect}
-                   onSubdivisionMove={handleSubdivisionMove}
-                   onUpdateSubdivision={handleUpdateSubdivision}
-                   isDraggingSubdivisionCorner={isDraggingSubdivisionCorner}
-                   onSubdivisionCornerDragStateChange={handleSubdivisionCornerDragStateChange}
-                   measurementMode={measurementMode}
-                   measurementPoints={measurementPoints}
-                   onMeasurementPoint={handleMeasurementPoint}
-                   measurements={measurements}
-                   onClearMeasurements={clearMeasurements}
-                 />
-               </Canvas>
+               {webGLSupported ? (
+                 <Canvas 
+                   camera={{ position: [50, 50, 50], fov: 75 }}
+                   gl={{ preserveDrawingBuffer: true }}
+                   aria-label="Interactive 3D land visualization showing property boundaries, subdivisions, and measurement tools"
+                   role="img"
+                   tabIndex={0}
+                 >
+                   <Scene 
+                     landShape={landShape}
+                     onUpdateLandShape={handleUpdateLandShape}
+                     environment="outdoor" 
+                     selectedComparison={selectedComparison}
+                     comparisonOptions={comparisonOptions}
+                     totalAreaInSqM={totalAreaInSqM}
+                     drawingMode={drawingMode}
+                     darkMode={darkMode}
+                     subdivisions={subdivisions}
+                     setSubdivisions={setSubdivisions}
+                     isDraggingCorner={isDraggingCorner}
+                     onDragStateChange={handleDragStateChange}
+                     onAddPolylinePoint={addPolylinePoint}
+                     polylinePoints={polylinePoints}
+                     selectedSubdivision={selectedSubdivision}
+                     onSubdivisionSelect={handleSubdivisionSelect}
+                     onSubdivisionMove={handleSubdivisionMove}
+                     onUpdateSubdivision={handleUpdateSubdivision}
+                     isDraggingSubdivisionCorner={isDraggingSubdivisionCorner}
+                     onSubdivisionCornerDragStateChange={handleSubdivisionCornerDragStateChange}
+                     measurementMode={measurementMode}
+                     measurementPoints={measurementPoints}
+                     onMeasurementPoint={handleMeasurementPoint}
+                     measurements={measurements}
+                     onClearMeasurements={clearMeasurements}
+                   />
+                 </Canvas>
+               ) : (
+                 <div className={`flex items-center justify-center h-full text-center p-8 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                   <div>
+                     <h3 className="text-lg font-semibold mb-2">3D Visualization Not Available</h3>
+                     <p className="mb-2">Your browser doesn't support WebGL, which is required for 3D visualization.</p>
+                     <p className="text-sm">Please use a modern browser like Chrome, Firefox, Safari, or Edge.</p>
+                     <p className="text-sm mt-2">You can still use all other features including area calculations and PDF export.</p>
+                   </div>
+                 </div>
+               )}
              </div>
            </div>
            
@@ -3549,13 +4433,144 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                  darkMode ? 'text-gray-300' : 'text-slate-600'
                }`}>Click to overlay comparison objects</p>
              </div>
-             <div className="p-4 space-y-3 max-h-96 overflow-y-auto">
+             <div className="p-4 space-y-3 overflow-y-auto" style={{ height: '500px' }}>
+               {/* Add Custom Object Button */}
+               {!showCustomObjectForm ? (
+                 <button
+                   onClick={() => setShowCustomObjectForm(true)}
+                   className={`w-full p-2 rounded-lg border text-center transition-all font-medium text-sm ${
+                     darkMode 
+                       ? 'border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white' 
+                       : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'
+                   }`}
+                 >
+                   <span className="text-lg mr-2">+</span>
+                   Add Custom Object
+                 </button>
+               ) : (
+                 <div className={`p-4 rounded-xl border-2 ${
+                   darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-50'
+                 }`}>
+                   <h4 className={`text-lg font-semibold mb-3 ${
+                     darkMode ? 'text-white' : 'text-slate-900'
+                   }`}>Add Custom Object</h4>
+                   
+                   <div className="space-y-3">
+                     {/* Name Input */}
+                     <div>
+                       <label className={`block text-sm font-medium mb-1 ${
+                         darkMode ? 'text-gray-300' : 'text-slate-700'
+                       }`}>Name *</label>
+                       <input
+                         type="text"
+                         value={customObject.name}
+                         onChange={(e) => handleCustomObjectChange('name', e.target.value)}
+                         placeholder="e.g., My Building"
+                         className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                           darkMode 
+                             ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' 
+                             : 'bg-white border-gray-300 text-slate-900 placeholder-gray-500'
+                         }`}
+                       />
+                     </div>
+                     
+                     {/* Width and Length Inputs */}
+                     <div className="grid grid-cols-2 gap-3">
+                       <div>
+                         <label className={`block text-sm font-medium mb-1 ${
+                           darkMode ? 'text-gray-300' : 'text-slate-700'
+                         }`}>Width (m) *</label>
+                         <input
+                           type="number"
+                           value={customObject.width}
+                           onChange={(e) => handleCustomObjectChange('width', e.target.value)}
+                           placeholder="10"
+                           min="0"
+                           step="0.1"
+                           className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                             darkMode 
+                               ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' 
+                               : 'bg-white border-gray-300 text-slate-900 placeholder-gray-500'
+                           }`}
+                         />
+                       </div>
+                       <div>
+                         <label className={`block text-sm font-medium mb-1 ${
+                           darkMode ? 'text-gray-300' : 'text-slate-700'
+                         }`}>Length (m) *</label>
+                         <input
+                           type="number"
+                           value={customObject.length}
+                           onChange={(e) => handleCustomObjectChange('length', e.target.value)}
+                           placeholder="20"
+                           min="0"
+                           step="0.1"
+                           className={`w-full px-3 py-2 border rounded-lg text-sm ${
+                             darkMode 
+                               ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' 
+                               : 'bg-white border-gray-300 text-slate-900 placeholder-gray-500'
+                           }`}
+                         />
+                       </div>
+                     </div>
+                     
+                     {/* Icon Selector */}
+                     <div>
+                       <label className={`block text-sm font-medium mb-2 ${
+                         darkMode ? 'text-gray-300' : 'text-slate-700'
+                       }`}>Icon</label>
+                       <div className="grid grid-cols-5 gap-2">
+                         {['📦', '🏢', '🏭', '🏘️', '🎯'].map((iconOption) => (
+                           <button
+                             key={iconOption}
+                             type="button"
+                             onClick={() => handleCustomObjectChange('icon', iconOption)}
+                             className={`p-2 rounded-lg border-2 text-2xl transition-all ${
+                               customObject.icon === iconOption
+                                 ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
+                                 : darkMode
+                                   ? 'border-gray-600 hover:border-gray-500 bg-gray-700 hover:bg-gray-600'
+                                   : 'border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-50'
+                             }`}
+                           >
+                             {iconOption}
+                           </button>
+                         ))}
+                       </div>
+                     </div>
+                     
+                     {/* Buttons */}
+                     <div className="flex gap-2 pt-2">
+                       <button
+                         onClick={addCustomObject}
+                         className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+                       >
+                         Add Object
+                       </button>
+                       <button
+                         onClick={() => {
+                           setShowCustomObjectForm(false);
+                           setCustomObject({ name: '', width: '', length: '', icon: '📦', color: 'purple' });
+                         }}
+                         className={`flex-1 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
+                           darkMode 
+                             ? 'bg-gray-600 text-white hover:bg-gray-500' 
+                             : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
+                         }`}
+                       >
+                         Cancel
+                       </button>
+                     </div>
+                   </div>
+                 </div>
+               )}
+               
                {comparisonOptions.map((comparison) => {
                  const count = totalAreaInSqM / comparison.area;
                  return (
                    <button
                      key={comparison.id}
-                     className={`w-full p-4 rounded-xl border-2 text-left transition-all transform hover:scale-[1.02] ${
+                     className={`w-full p-3 rounded-xl border-2 text-left transition-all transform hover:scale-[1.02] ${
                        selectedComparison === comparison.id
                          ? darkMode
                            ? 'border-green-500 bg-gradient-to-r from-green-900/30 to-green-800/30 shadow-md'
@@ -3570,8 +4585,8 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                      disabled={drawingMode === 'rectangle'}
                    >
                      <div className="flex items-center justify-between">
-                       <div className="flex items-center space-x-3">
-                         <div className="text-3xl">
+                       <div className="flex items-center space-x-2">
+                         <div className="text-2xl">
                            {comparison.icon}
                          </div>
                          <div>
@@ -3582,8 +4597,8 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                              darkMode ? 'text-gray-300' : 'text-slate-600'
                            }`}>
                              {count >= 1 
-                               ? `${count.toFixed(1)} ${count === 1 ? 'fits' : 'fit'} in your area`
-                               : `You need ${(1/count).toFixed(1)} areas`}
+                               ? `${count.toFixed(1)} fit${count === 1 ? 's' : ''}`
+                               : `Need ${(1/count).toFixed(1)}x area`}
                            </div>
                            <div className={`text-xs mt-1 ${
                              darkMode ? 'text-gray-400' : 'text-slate-500'
@@ -3593,11 +4608,27 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                          </div>
                        </div>
                        <div className="flex flex-col items-end">
-                         <div className={`w-4 h-4 rounded-full transition-all ${
-                           selectedComparison === comparison.id 
-                             ? 'text-white ring-4 ring-green-200' 
-                             : 'bg-slate-300'
-                         }`} />
+                         {comparison.isCustom ? (
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               removeCustomObject(comparison.id);
+                             }}
+                             className={`text-xs px-2 py-1 rounded transition-colors ${
+                               darkMode 
+                                 ? 'text-red-400 hover:text-red-300 hover:bg-red-900/20' 
+                                 : 'text-red-600 hover:text-red-700 hover:bg-red-50'
+                             }`}
+                           >
+                             Remove
+                           </button>
+                         ) : (
+                           <div className={`w-4 h-4 rounded-full transition-all ${
+                             selectedComparison === comparison.id 
+                               ? 'text-white ring-4 ring-green-200' 
+                               : 'bg-slate-300'
+                           }`} />
+                         )}
                          <div className={`text-xs mt-1 ${
                            darkMode ? 'text-gray-400' : 'text-slate-500'
                          }`}>
@@ -3764,6 +4795,178 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
        </div>
      </div>
    )}
+   
+   {/* Premium Export Modal */}
+   {showPremiumExportModal && (
+     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+       <div className={`rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
+         {/* Modal Header */}
+         <div className={`sticky top-0 px-6 py-4 border-b z-10 ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white'}`}>
+           <div className="flex items-center justify-between">
+             <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
+               Premium Export Options
+             </h2>
+             <button 
+               onClick={() => setShowPremiumExportModal(false)}
+               className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'}`}
+             >
+               <X size={20} />
+             </button>
+           </div>
+         </div>
+
+         {/* Modal Content */}
+         <div className="p-6 overflow-y-auto flex-1">
+           {/* Export Tiers */}
+           <div className="grid md:grid-cols-2 gap-6 mb-6 mt-2">
+             {/* Basic Export */}
+             <div className={`rounded-xl border-2 p-6 relative ${selectedTier === 'basic' ? 'border-green-500 bg-green-50/50 dark:bg-green-900/10' : darkMode ? 'border-gray-600 hover:border-gray-500' : 'border-gray-200 hover:border-gray-300'} transition-all cursor-pointer`}
+                  onClick={() => setSelectedTier('basic')}>
+               <div className="flex items-start justify-between mb-4">
+                 <div>
+                   <h3 className="text-xl font-semibold text-green-600">Basic Export</h3>
+                   <div className="text-3xl font-bold mt-2">$5</div>
+                 </div>
+                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedTier === 'basic' ? 'border-green-500 bg-green-500' : darkMode ? 'border-gray-400' : 'border-gray-300'}`}>
+                   {selectedTier === 'basic' && <Check size={16} className="text-white" />}
+                 </div>
+               </div>
+               <ul className="space-y-2 mb-4">
+                 {exportTiers.basic.features.map((feature, idx) => (
+                   <li key={idx} className="flex items-start">
+                     <Check size={16} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
+                     <span className="text-sm">{feature}</span>
+                   </li>
+                 ))}
+               </ul>
+               <div className="flex flex-wrap gap-2">
+                 {exportTiers.basic.formats.map(format => (
+                   <span key={format} className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs font-medium">
+                     {format}
+                   </span>
+                 ))}
+               </div>
+             </div>
+
+             {/* Premium Export */}
+             <div className={`rounded-xl border-2 p-6 relative ${selectedTier === 'premium' ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10' : darkMode ? 'border-gray-600 hover:border-gray-500' : 'border-gray-200 hover:border-gray-300'} transition-all cursor-pointer`}
+                  onClick={() => setSelectedTier('premium')}>
+               <div className="absolute -top-3 left-4">
+                 <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold">
+                   BEST VALUE
+                 </span>
+               </div>
+               <div className="flex items-start justify-between mb-4">
+                 <div>
+                   <h3 className="text-xl font-semibold text-blue-600">Premium Export</h3>
+                   <div className="text-3xl font-bold mt-2">$10</div>
+                 </div>
+                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedTier === 'premium' ? 'border-blue-500 bg-blue-500' : darkMode ? 'border-gray-400' : 'border-gray-300'}`}>
+                   {selectedTier === 'premium' && <Check size={16} className="text-white" />}
+                 </div>
+               </div>
+               <ul className="space-y-2 mb-4">
+                 {exportTiers.premium.features.map((feature, idx) => (
+                   <li key={idx} className="flex items-start">
+                     <Check size={16} className="text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+                     <span className="text-sm">{feature}</span>
+                   </li>
+                 ))}
+               </ul>
+               <div className="flex flex-wrap gap-2">
+                 {exportTiers.premium.formats.map(format => (
+                   <span key={format} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">
+                     {format}
+                   </span>
+                 ))}
+               </div>
+             </div>
+           </div>
+
+           {/* Payment Section */}
+           {selectedTier && (
+             <div className={`rounded-xl border p-4 mb-4 ${darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'}`}>
+               <h3 className="text-lg font-semibold mb-3">Payment Information</h3>
+               <div className="grid md:grid-cols-2 gap-4">
+                 <div>
+                   <h4 className="font-medium mb-2">Selected Package</h4>
+                   <div className={`p-2 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
+                     <div className="flex justify-between items-center">
+                       <span>{exportTiers[selectedTier].name}</span>
+                       <span className="font-bold">${exportTiers[selectedTier].price}</span>
+                     </div>
+                   </div>
+                 </div>
+                 <div>
+                   <h4 className="font-medium mb-2">Payment</h4>
+                   <div className="w-full">
+                     <PayPalButtons
+                       createOrder={(data, actions) => {
+                         return actions.order.create({
+                           purchase_units: [
+                             {
+                               amount: {
+                                 value: exportTiers[selectedTier].price.toString(),
+                               },
+                               description: exportTiers[selectedTier].name,
+                             },
+                           ],
+                         });
+                       }}
+                       onApprove={async (data, actions) => {
+                         console.log('PayPal onApprove called:', data);
+                         try {
+                           const order = await actions.order.capture();
+                           console.log('PayPal order captured:', order);
+                           handlePaymentSuccess(order);
+                         } catch (error) {
+                           console.error('PayPal capture error:', error);
+                           alert('Payment capture failed. Please try again.');
+                         }
+                       }}
+                       onError={(err) => {
+                         console.error('PayPal Error:', err);
+                         alert('Payment failed. Please try again.');
+                       }}
+                       style={{
+                         layout: 'vertical',
+                         color: 'gold',
+                         shape: 'rect',
+                         label: 'paypal'
+                       }}
+                     />
+                     
+                     {/* Cancel Button */}
+                     <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
+                       <button
+                         onClick={() => setShowPremiumExportModal(false)}
+                         className={`w-full py-2 px-4 rounded-lg font-medium transition-colors text-sm ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
+                       >
+                         Cancel
+                       </button>
+                     </div>
+                   </div>
+                 </div>
+               </div>
+             </div>
+           )}
+
+
+           {/* Security Notice */}
+           <div className={`mt-6 p-4 rounded-lg text-sm ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
+             <div className="flex items-start">
+               <Info size={16} className="mr-2 mt-0.5 flex-shrink-0" />
+               <div>
+                 <strong>Secure Payment:</strong> All transactions are processed securely through PayPal. 
+                 We don't store your payment information. Downloads are available immediately after successful payment.
+               </div>
+             </div>
+           </div>
+         </div>
+       </div>
+     </div>
+   )}
+   
    </div>
  );
 };
@@ -3823,10 +5026,24 @@ function ContentSection({ isExpanded }) {
 
 // Main App component with routing
 function App() {
+  const paypalOptions = {
+    "client-id": process.env.REACT_APP_PAYPAL_CLIENT_ID || "test",
+    currency: "USD",
+    intent: "capture",
+    components: "buttons",
+    "enable-funding": "venmo",
+    "disable-funding": ""
+  };
+
+  // Debug log to check if environment variable is loaded
+  console.log("PayPal Client ID:", process.env.REACT_APP_PAYPAL_CLIENT_ID);
+
   return (
-    <BrowserRouter>
-      <AppContent />
-    </BrowserRouter>
+    <PayPalScriptProvider options={paypalOptions}>
+      <BrowserRouter>
+        <AppContent />
+      </BrowserRouter>
+    </PayPalScriptProvider>
   );
 }
 
