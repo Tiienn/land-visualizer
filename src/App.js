@@ -3819,9 +3819,6 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                         </button>
                       )}
                     </div>
-                    <div id={`unit-conversion-${index}`} className={`mt-2 text-xs ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>
-                      = {formatNumber(unitItem.value * unitConversions[unitItem.unit])} m²
-                    </div>
                   </div>
                 </div>
               ))}
