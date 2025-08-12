@@ -1,11 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Link } from 'react-router-dom';
-import { Canvas } from '@react-three/fiber';
+import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Plane, Box, Text, Line } from '@react-three/drei';
 import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X, RotateCcw, RotateCw, Moon, Sun, FileDown } from 'lucide-react';
 import * as THREE from 'three';
 import jsPDF from 'jspdf';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
+
+// Import modular components
+import Ribbon from './components/Ribbon';
+import LeftSidebar from './components/LeftSidebar';
+import PropertiesPanel from './components/PropertiesPanel';
+import AreaPresetSelector from './components/AreaPresetSelector';
+import { ToastContainer } from './components/Toast';
+
 import './App.css';
 
 // Simple SEO hook to replace React Helmet for better React 19 compatibility
@@ -49,2061 +57,1034 @@ function useSEO(meta) {
   }, [meta]);
 }
 
-// Meta content configuration for SEO
-const metaContent = {
-  '/': {
-    title: 'Land Visualization Tool - Interactive 3D Plot Mapping Software',
-    description: 'Professional land visualization tool with interactive 3D mapping. Online plot mapping software for real estate, property boundaries, and land survey visualization. Free land parcel viewer with 3D capabilities.',
-    keywords: 'land visualization tool, plot mapping software, interactive land maps, property boundary visualizer, real estate mapping tool'
-  },
-  '/land-visualization-tool': {
-    title: 'Advanced Land Visualization Tool - 3D Property Mapping & Analysis',
-    description: 'Professional land visualization software for property mapping, site planning, and terrain analysis. Interactive 3D land viewer with measurement tools and subdivision capabilities.',
-    keywords: 'land visualization tool, 3D property mapping, terrain analysis, site planning software'
-  },
-  '/plot-mapping-software': {
-    title: 'Plot Mapping Software - Professional Land Survey & Property Tools',
-    description: 'Comprehensive plot mapping software for surveyors, developers, and property professionals. Create accurate land plots with 3D visualization and measurement tools.',
-    keywords: 'plot mapping software, land survey tools, property mapping, surveyor software'
-  },
-  '/interactive-land-maps': {
-    title: 'Interactive Land Maps - Dynamic Property Visualization Platform',
-    description: 'Create interactive land maps with real-time editing, property boundaries, and 3D terrain visualization. Professional mapping tools for real estate and development.',
-    keywords: 'interactive land maps, property visualization, real estate mapping, dynamic maps'
-  },
-  '/real-estate-mapping-tool': {
-    title: 'Real Estate Mapping Tool - Property Visualization & Analysis Software',
-    description: 'Professional real estate mapping tool for property visualization, site analysis, and client presentations. Interactive 3D property maps with measurement capabilities.',
-    keywords: 'real estate mapping tool, property visualization, site analysis, client presentations'
-  },
-  '/property-boundary-visualizer': {
-    title: 'Property Boundary Visualizer - 3D Land Survey & Parcel Mapping',
-    description: 'Visualize property boundaries with precision using 3D mapping technology. Professional boundary visualization tool for surveyors and property developers.',
-    keywords: 'property boundary visualizer, land survey mapping, parcel boundaries, surveyor tools'
-  },
-  '/online-land-plot-viewer': {
-    title: 'Online Land Plot Viewer - Web-Based Property Visualization Tool',
-    description: 'Free online land plot viewer with 3D visualization capabilities. View, measure, and analyze land parcels directly in your browser with interactive tools.',
-    keywords: 'online land plot viewer, web-based mapping, property visualization, browser mapping tool'
-  },
-  '/land-survey-visualization': {
-    title: 'Land Survey Visualization - 3D Survey Data Mapping & Analysis',
-    description: 'Advanced land survey visualization software for displaying survey data in 3D. Professional tools for surveyors to present and analyze survey results.',
-    keywords: 'land survey visualization, survey data mapping, 3D survey analysis, surveyor presentation tools'
-  },
-  '/gis-land-mapping': {
-    title: 'GIS Land Mapping - Geographic Information System Visualization Tool',
-    description: 'Professional GIS land mapping platform with 3D visualization and spatial analysis capabilities. Integrate geographic data with interactive mapping tools.',
-    keywords: 'GIS land mapping, geographic information system, spatial analysis, GIS visualization'
-  },
-  '/land-ownership-map': {
-    title: 'Land Ownership Map - Property Owner Visualization & Records Tool',
-    description: 'Create detailed land ownership maps with property boundaries and owner information. Professional tool for title companies and property research.',
-    keywords: 'land ownership map, property records, title research, ownership visualization'
-  },
-  '/land-parcel-viewer': {
-    title: 'Land Parcel Viewer - Interactive Property Parcel Mapping Tool',
-    description: 'Professional land parcel viewer with 3D visualization and detailed parcel information. Interactive tools for property analysis and subdivision planning.',
-    keywords: 'land parcel viewer, property parcel mapping, subdivision planning, parcel analysis'
-  }
-};
-
-// SEO component for dynamic meta tags (Native implementation)
+// SEO Head component
 function SEOHead() {
   const location = useLocation();
   const currentPath = location.pathname;
-  const meta = metaContent[currentPath] || metaContent['/'];
   
-  // Use our custom SEO hook
+  const pageContent = {
+    '/': {
+      title: 'Land Visualizer - Professional 3D Land Area Calculator & Survey Tool',
+      description: 'Visualize and calculate land areas with precision using our professional 3D land surveying tool. Convert between units, draw subdivisions, and export detailed reports.',
+      heading: 'Professional Land Area Calculator',
+      content: `Transform complex land measurements into clear, visual understanding. Perfect for surveyors, real estate professionals, architects, and property developers who need precise area calculations and professional reporting.
+      
+Features include advanced unit conversions, interactive 3D visualization, subdivision drawing tools, and comprehensive export capabilities for professional documentation.`
+    }
+  };
+  
+  const content = pageContent[currentPath] || pageContent['/'];
+  
   useSEO({
-    title: meta.title,
-    description: meta.description,
-    canonical: `https://landvisualizer.com${currentPath}`
+    title: content.title,
+    description: content.description,
+    canonical: `${window.location.origin}${currentPath}`
   });
   
-  // Return null since we're using DOM manipulation
   return null;
 }
 
-// Content sections for different pages
-const pageContent = {
-  '/': {
-    heading: 'Professional Land Visualization Tool',
-    content: `Transform your land data into stunning 3D visualizations with our professional-grade mapping software. Perfect for real estate professionals, surveyors, property developers, and anyone who needs to visualize land areas with precision and clarity.
-
-    Our interactive 3D land visualization tool offers comprehensive features including plot mapping, property boundary visualization, subdivision planning, and size comparisons with familiar objects. Whether you're planning a development project, presenting to clients, or analyzing survey data, our platform provides the tools you need.
-
-    Key features include unit conversion between metric and imperial systems, support for traditional land measurement units, interactive drawing tools for subdivisions, and professional PDF export capabilities. Create shareable configurations and collaborate with team members using custom URLs.
-
-    Experience the future of land visualization with our browser-based platform that requires no software installation. Get started immediately with accurate measurements, 3D terrain modeling, and professional reporting tools.`
-  },
-  '/land-visualization-tool': {
-    heading: 'Advanced Land Visualization Tool',
-    content: `Our advanced land visualization tool transforms complex property data into intuitive 3D models, making it easier than ever to understand land layouts, topography, and development potential. Designed for professionals who demand accuracy and visual clarity.
-
-    With cutting-edge 3D rendering technology, visualize land parcels from multiple angles, zoom in on specific areas, and interact with your data in real-time. Perfect for site planning, terrain analysis, and client presentations.
-
-    Advanced features include elevation mapping, slope analysis, drainage visualization, and environmental factor integration. Create detailed reports with measurements, calculations, and visual documentation for stakeholders and regulatory compliance.
-
-    The tool supports various data import formats and provides export options for CAD software, GIS systems, and presentation platforms. Streamline your workflow with automated calculations and professional documentation generation.`
-  },
-  '/plot-mapping-software': {
-    heading: 'Professional Plot Mapping Software',
-    content: `Comprehensive plot mapping software designed for surveyors, developers, and property professionals. Create accurate land plots with precision measurement tools and 3D visualization capabilities that exceed industry standards.
-
-    Our software handles complex plotting scenarios including irregular boundaries, curved property lines, and multi-parcel developments. Draw subdivisions directly on the 3D surface with snap-to-grid functionality and automatic area calculations.
-
-    Features include coordinate system support, bearing and distance calculations, closure analysis, and survey-grade accuracy validation. Generate professional plats, subdivision maps, and boundary surveys with automated annotation and dimensioning.
-
-    Integration capabilities allow seamless data exchange with popular surveying instruments, GPS systems, and CAD software. Maintain project version control and collaborate with team members through cloud-based sharing and real-time updates.`
-  },
-  '/interactive-land-maps': {
-    heading: 'Interactive Land Maps Platform',
-    content: `Create dynamic, interactive land maps that engage stakeholders and facilitate better decision-making. Our platform combines the power of GIS technology with user-friendly interfaces for maximum accessibility and functionality.
-
-    Interactive features include layer management, real-time editing, property search and filtering, and dynamic data visualization. Users can toggle between different map views, overlay various data sets, and perform spatial analysis with point-and-click simplicity.
-
-    Advanced mapping capabilities support custom symbology, data classification, and thematic mapping for demographic, environmental, and economic analysis. Create compelling visualizations that tell the story of your land data.
-
-    Collaboration tools enable multiple users to work on the same project simultaneously, with change tracking and comment systems for efficient project management. Share maps publicly or restrict access with user authentication and permission controls.`
-  },
-  '/real-estate-mapping-tool': {
-    heading: 'Real Estate Mapping Tool',
-    content: `Specialized mapping tool designed for real estate professionals, offering property visualization, market analysis, and client presentation capabilities that close more deals and enhance customer satisfaction.
-
-    Visualize properties in their neighborhood context with aerial imagery, street views, and demographic overlays. Show clients nearby amenities, schools, transportation, and development plans with interactive mapping features.
-
-    Market analysis tools include comparable property mapping, price trend visualization, and market area delineation. Generate professional property reports with maps, photos, and detailed analysis for listing presentations and buyer consultations.
-
-    Client engagement features include virtual property tours, measurement tools for room layouts and outdoor spaces, and customizable map sharing for remote consultations. Integrate with MLS systems and CRM platforms for streamlined workflow management.`
-  },
-  '/property-boundary-visualizer': {
-    heading: 'Property Boundary Visualizer',
-    content: `Precision property boundary visualization tool that transforms survey data and legal descriptions into clear, accurate 3D representations. Essential for resolving boundary disputes, planning developments, and ensuring regulatory compliance.
-
-    Advanced boundary rendering shows property lines with survey-grade accuracy, including monuments, easements, and right-of-way designations. Visualize setbacks, building envelopes, and zoning restrictions in three-dimensional space for better planning.
-
-    Conflict detection algorithms identify potential boundary issues, overlapping claims, and surveying discrepancies before they become expensive problems. Generate comprehensive boundary reports with legal descriptions and supporting documentation.
-
-    Professional survey integration supports data import from total stations, GPS units, and existing survey files. Export boundary data to CAD systems, GIS platforms, and legal documentation software for seamless workflow integration.`
-  },
-  '/online-land-plot-viewer': {
-    heading: 'Online Land Plot Viewer',
-    content: `Free online land plot viewer that works directly in your web browser without software installation. View, measure, and analyze land parcels with professional-grade tools accessible from anywhere with an internet connection.
-
-    Browser-based functionality includes 3D visualization, measurement tools, area calculations, and comparative analysis features. Perfect for quick property assessments, client demonstrations, and field work using mobile devices.
-
-    Cloud storage capabilities allow you to save and share plot configurations with colleagues and clients. Generate shareable links for remote collaboration and client review without requiring software licenses or installations.
-
-    Mobile-optimized interface works seamlessly on tablets and smartphones, making it ideal for field work, client meetings, and on-site property analysis. Offline capabilities ensure functionality even in areas with limited connectivity.`
-  },
-  '/land-survey-visualization': {
-    heading: 'Land Survey Visualization',
-    content: `Transform raw survey data into compelling 3D visualizations that communicate complex information clearly to clients, stakeholders, and regulatory agencies. Perfect for presenting survey results and supporting professional reports.
-
-    Import survey data from various formats including field books, total station files, and GPS measurements. Automatically generate 3D terrain models, contour maps, and cross-sectional views with professional accuracy and presentation quality.
-
-    Advanced visualization features include animation sequences, fly-through tours, and comparative before-and-after presentations. Create engaging presentations that help clients understand survey findings and proposed changes.
-
-    Quality assurance tools validate survey data integrity, identify measurement inconsistencies, and ensure compliance with professional surveying standards. Generate comprehensive reports with visualizations, calculations, and supporting documentation.`
-  },
-  '/gis-land-mapping': {
-    heading: 'GIS Land Mapping Platform',
-    content: `Professional Geographic Information System (GIS) platform designed specifically for land mapping applications. Combine spatial data analysis with 3D visualization for comprehensive land management and planning solutions.
-
-    Advanced spatial analysis capabilities include buffer analysis, overlay operations, proximity calculations, and statistical modeling. Integrate multiple data sources including satellite imagery, elevation models, and demographic databases.
-
-    Data management features support large datasets with efficient processing and visualization capabilities. Create custom spatial databases, manage attribute information, and maintain data quality with built-in validation tools.
-
-    Professional GIS functionality includes coordinate system management, projection handling, and geodetic calculations. Export data to industry-standard formats for use with ArcGIS, QGIS, and other professional GIS software platforms.`
-  },
-  '/land-ownership-map': {
-    heading: 'Land Ownership Mapping Tool',
-    content: `Comprehensive land ownership mapping tool for title companies, legal professionals, and property researchers. Visualize ownership patterns, track property transfers, and identify potential title issues with advanced mapping technology.
-
-    Ownership visualization includes current owners, historical ownership patterns, and property transfer timelines. Link ownership data with property boundaries, tax records, and legal descriptions for complete property profiles.
-
-    Research tools support title searches, ownership verification, and due diligence processes. Generate ownership reports with maps, documentation, and chain-of-title analysis for legal and financial applications.
-
-    Integration capabilities connect with county records, tax databases, and legal document systems. Automate data updates and maintain current ownership information with scheduled data synchronization and validation processes.`
-  },
-  '/land-parcel-viewer': {
-    heading: 'Land Parcel Viewer',
-    content: `Interactive land parcel viewer with detailed parcel information, 3D visualization, and analysis tools for property assessment, development planning, and investment analysis. Access comprehensive parcel data in an intuitive interface.
-
-    Parcel information includes legal descriptions, zoning classifications, tax assessments, and development restrictions. Visualize parcels in context with surrounding properties, infrastructure, and environmental features.
-
-    Analysis tools support subdivision planning, development feasibility studies, and investment analysis. Calculate development potential, assess infrastructure requirements, and model various development scenarios.
-
-    Professional reporting features generate parcel summaries, development analyses, and investment reports with maps, calculations, and supporting documentation. Export data for use with appraisal software, financial modeling, and presentation applications.`
-  }
-};
-
-// Realistic comparison object component
-function RealisticComparisonObject({ type, position, dimensions, color }) {
-  const { width, length } = dimensions;
+// Land Visualizer main component
+function LandVisualizer() {
+  // SEO and expandable content state
+  const [isExpanded, setIsExpanded] = useState(false);
   
-  // Border component for each object
-  const ObjectBorder = () => (
-    <Line
-      points={[
-        [-width/2, 0.001, -length/2], [width/2, 0.001, -length/2],
-        [width/2, 0.001, length/2], [-width/2, 0.001, length/2],
-        [-width/2, 0.001, -length/2]
-      ]}
-      color="#000000"
-      lineWidth={4}
-    />
-  );
+  // Core state
+  const [darkMode, setDarkMode] = useState(false);
+  const [drawingMode, setDrawingMode] = useState(null);
+  const [units, setUnits] = useState([{ value: 1000, unit: 'm²' }]);
+  const [subdivisions, setSubdivisions] = useState([]);
+  const [selectedComparison, setSelectedComparison] = useState('footballField');
   
-  switch (type) {
-    case 'footballField':
-      return (
-        <group position={position}>
-          <ObjectBorder />
-          {/* Grass field */}
-          <Plane
-            args={[width, length]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.01, 0]}
-          >
-            <meshLambertMaterial color="#2d5a2d" />
-          </Plane>
-          
-          {/* Center circle */}
-          <Line
-            points={Array.from({ length: 33 }, (_, i) => {
-              const angle = (i / 32) * Math.PI * 2;
-              const radius = 9.15;
-              return [Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
-            })}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Center line */}
-          <Line
-            points={[[0, 0.02, -length/2], [0, 0.02, length/2]]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Penalty areas (16.5m x 40.32m) */}
-          <Line
-            points={[
-              [-width/2, 0.02, -16.5], [-width/2 + 16.5, 0.02, -16.5],
-              [-width/2 + 16.5, 0.02, 16.5], [-width/2, 0.02, 16.5],
-              [-width/2, 0.02, -16.5]
-            ]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          <Line
-            points={[
-              [width/2, 0.02, -16.5], [width/2 - 16.5, 0.02, -16.5],
-              [width/2 - 16.5, 0.02, 16.5], [width/2, 0.02, 16.5],
-              [width/2, 0.02, -16.5]
-            ]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Goal areas (5.5m x 18.32m) */}
-          <Line
-            points={[
-              [-width/2, 0.02, -5.5], [-width/2 + 5.5, 0.02, -5.5],
-              [-width/2 + 5.5, 0.02, 5.5], [-width/2, 0.02, 5.5],
-              [-width/2, 0.02, -5.5]
-            ]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          <Line
-            points={[
-              [width/2, 0.02, -5.5], [width/2 - 5.5, 0.02, -5.5],
-              [width/2 - 5.5, 0.02, 5.5], [width/2, 0.02, 5.5],
-              [width/2, 0.02, -5.5]
-            ]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Corner arcs */}
-          {Array.from({ length: 4 }, (_, i) => {
-            const cornerX = i < 2 ? -width/2 : width/2;
-            const cornerZ = i % 2 === 0 ? -length/2 : length/2;
-            const startAngle = i * Math.PI / 2;
-            
-            return (
-              <Line
-                key={i}
-                points={Array.from({ length: 17 }, (_, j) => {
-                  const angle = startAngle + (j / 16) * (Math.PI / 2);
-                  const radius = 1;
-                  return [
-                    cornerX + Math.cos(angle) * radius * (i < 2 ? 1 : -1),
-                    0.02,
-                    cornerZ + Math.sin(angle) * radius * (i % 2 === 0 ? 1 : -1)
-                  ];
-                })}
-                color="#ffffff"
-                lineWidth={2}
-              />
-            );
-          })}
-          
-          {/* Penalty arcs */}
-          <Line
-            points={Array.from({ length: 17 }, (_, i) => {
-              const angle = -Math.PI/2 + (i / 16) * Math.PI; // Mirror the arc
-              const radius = 9.15;
-              const centerX = -width/2 + 16.5; // Position at edge of penalty area
-              return [centerX + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
-            })}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          <Line
-            points={Array.from({ length: 17 }, (_, i) => {
-              const angle = Math.PI/2 + (i / 16) * Math.PI; // Mirror the arc
-              const radius = 9.15;
-              const centerX = width/2 - 16.5; // Position at edge of penalty area
-              return [centerX + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
-            })}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Goals */}
-          <Box args={[0.5, 2.44, 7.32]} position={[-width/2, 1.22, 0]} >
-            <meshLambertMaterial color="#ffffff" />
-          </Box>
-          <Box args={[0.5, 2.44, 7.32]} position={[width/2, 1.22, 0]} >
-            <meshLambertMaterial color="#ffffff" />
-          </Box>
-        </group>
-      );
-      
-    case 'basketballCourt':
-      return (
-        <group position={position}>
-          <ObjectBorder />
-          {/* Court surface */}
-          <Plane
-            args={[width, length]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.01, 0]}
-          >
-            <meshLambertMaterial color="#B8860B" />
-          </Plane>
-          
-          {/* Center circle */}
-          <Line
-            points={Array.from({ length: 33 }, (_, i) => {
-              const angle = (i / 32) * Math.PI * 2;
-              const radius = 1.8;
-              return [Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
-            })}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Center line */}
-          <Line
-            points={[[0, 0.02, -length/2], [0, 0.02, length/2]]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Free throw circles */}
-          <Line
-            points={Array.from({ length: 33 }, (_, i) => {
-              const angle = (i / 32) * Math.PI * 2;
-              const radius = 1.8;
-              return [-width/2 + 5.8 + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
-            })}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          <Line
-            points={Array.from({ length: 33 }, (_, i) => {
-              const angle = (i / 32) * Math.PI * 2;
-              const radius = 1.8;
-              return [width/2 - 5.8 + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
-            })}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Free throw lanes (painted areas) */}
-          <Plane
-            args={[5.8, 4.9]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[-width/2 + 2.9, 0.015, 0]}
-          >
-            <meshLambertMaterial color="#FF6B35" />
-          </Plane>
-          <Plane
-            args={[5.8, 4.9]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[width/2 - 2.9, 0.015, 0]}
-          >
-            <meshLambertMaterial color="#FF6B35" />
-          </Plane>
-          
-          {/* Free throw lines */}
-          <Line
-            points={[[-width/2 + 5.8, 0.02, -2.45], [-width/2 + 5.8, 0.02, 2.45]]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          <Line
-            points={[[width/2 - 5.8, 0.02, -2.45], [width/2 - 5.8, 0.02, 2.45]]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Three-point arcs */}
-          <Line
-            points={Array.from({ length: 25 }, (_, i) => {
-              const angle = -Math.PI/2 + (i / 24) * Math.PI;
-              const radius = 7.24;
-              return [-width/2 + 1.575 + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
-            })}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          <Line
-            points={Array.from({ length: 25 }, (_, i) => {
-              const angle = Math.PI/2 + (i / 24) * Math.PI;
-              const radius = 7.24;
-              return [width/2 - 1.575 + Math.cos(angle) * radius, 0.02, Math.sin(angle) * radius];
-            })}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Baskets with hoops */}
-          <Box args={[0.2, 3.05, 1.8]} position={[-width/2 + 1.2, 1.5, 0]} >
-            <meshLambertMaterial color="#FF6B35" />
-          </Box>
-          <Box args={[0.2, 3.05, 1.8]} position={[width/2 - 1.2, 1.5, 0]} >
-            <meshLambertMaterial color="#FF6B35" />
-          </Box>
-          
-          {/* Basketball hoops */}
-          <Line
-            points={Array.from({ length: 17 }, (_, i) => {
-              const angle = (i / 16) * Math.PI * 2;
-              const radius = 0.225;
-              return [-width/2 + 1.575 + Math.cos(angle) * radius, 3.05, Math.sin(angle) * radius];
-            })}
-            color="#FFA500"
-            lineWidth={3}
-          />
-          <Line
-            points={Array.from({ length: 17 }, (_, i) => {
-              const angle = (i / 16) * Math.PI * 2;
-              const radius = 0.225;
-              return [width/2 - 1.575 + Math.cos(angle) * radius, 3.05, Math.sin(angle) * radius];
-            })}
-            color="#FFA500"
-            lineWidth={3}
-          />
-        </group>
-      );
-      
-    case 'tennisCourt':
-      return (
-        <group position={position}>
-          <ObjectBorder />
-          {/* Court surface */}
-          <Plane
-            args={[width, length]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.01, 0]}
-          >
-            <meshLambertMaterial color="#2E7D32" />
-          </Plane>
-          
-          {/* Singles court markings */}
-          <Line
-            points={[
-              [-8.23, 0.02, -length/2], [-8.23, 0.02, length/2],
-              [8.23, 0.02, length/2], [8.23, 0.02, -length/2],
-              [-8.23, 0.02, -length/2]
-            ]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Doubles court markings */}
-          <Line
-            points={[
-              [-width/2, 0.02, -length/2], [-width/2, 0.02, length/2],
-              [width/2, 0.02, length/2], [width/2, 0.02, -length/2],
-              [-width/2, 0.02, -length/2]
-            ]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Service boxes */}
-          <Line
-            points={[
-              [-8.23, 0.02, -6.4], [8.23, 0.02, -6.4],
-              [8.23, 0.02, 6.4], [-8.23, 0.02, 6.4],
-              [-8.23, 0.02, -6.4]
-            ]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Service line (center) */}
-          <Line
-            points={[[0, 0.02, -6.4], [0, 0.02, 6.4]]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Center service line */}
-          <Line
-            points={[[-8.23, 0.02, 0], [8.23, 0.02, 0]]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          
-          {/* Net */}
-          <Box args={[0.1, 0.91, length + 2]} position={[0, 0.45, 0]} >
-            <meshLambertMaterial color="#ffffff" wireframe />
-          </Box>
-          
-          {/* Net posts */}
-          <Box args={[0.1, 1.07, 0.1]} position={[0, 0.535, -length/2 - 0.5]} >
-            <meshLambertMaterial color="#8B4513" />
-          </Box>
-          <Box args={[0.1, 1.07, 0.1]} position={[0, 0.535, length/2 + 0.5]} >
-            <meshLambertMaterial color="#8B4513" />
-          </Box>
-          
-          {/* Baseline center marks */}
-          <Line
-            points={[[0, 0.02, -length/2], [0, 0.02, -length/2 + 0.1]]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-          <Line
-            points={[[0, 0.02, length/2], [0, 0.02, length/2 - 0.1]]}
-            color="#ffffff"
-            lineWidth={2}
-          />
-        </group>
-      );
-      
-    case 'swimmingPool':
-      return (
-        <group position={position}>
-          <ObjectBorder />
-          {/* Pool deck */}
-          <Plane
-            args={[width + 4, length + 4]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.01, 0]}
-          >
-            <meshLambertMaterial color="#e2e8f0" />
-          </Plane>
-          
-          {/* Pool water */}
-          <Plane
-            args={[width, length]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, -0.5, 0]}
-          >
-            <meshLambertMaterial color="#1e90ff" transparent opacity={0.8} />
-          </Plane>
-          
-          {/* Pool edge/coping */}
-          <Line
-            points={[
-              [-width/2, 0.02, -length/2], [width/2, 0.02, -length/2],
-              [width/2, 0.02, length/2], [-width/2, 0.02, length/2],
-              [-width/2, 0.02, -length/2]
-            ]}
-            color="#4a5568"
-            lineWidth={4}
-          />
-          
-          {/* Lane ropes */}
-          {Array.from({ length: 7 }, (_, i) => (
-            <Line
-              key={i}
-              points={[
-                [(-width/2) + ((i + 1) * width/8), -0.3, -length/2],
-                [(-width/2) + ((i + 1) * width/8), -0.3, length/2]
-              ]}
-              color="#ff0000"
-              lineWidth={2}
-            />
-          ))}
-          
-          {/* Lane markers on pool bottom */}
-          {Array.from({ length: 8 }, (_, i) => (
-            <Line
-              key={i}
-              points={[
-                [(-width/2) + (i * width/7), -0.48, -length/2],
-                [(-width/2) + (i * width/7), -0.48, length/2]
-              ]}
-              color="#000000"
-              lineWidth={1}
-            />
-          ))}
-          
-          {/* Starting blocks */}
-          {Array.from({ length: 8 }, (_, i) => (
-            <Box
-              key={i}
-              args={[1, 0.8, 1]}
-              position={[(-width/2) + (i * width/7), 0.4, -length/2 + 0.5]}
-            >
-              <meshLambertMaterial color="#0066cc" />
-            </Box>
-          ))}
-          
-          {/* Pool ladders */}
-          <Box args={[0.1, 1.5, 0.5]} position={[width/2 - 0.1, 0.25, length/2 - 1]} >
-            <meshLambertMaterial color="#c0c0c0" />
-          </Box>
-          <Box args={[0.1, 1.5, 0.5]} position={[-width/2 + 0.1, 0.25, length/2 - 1]} >
-            <meshLambertMaterial color="#c0c0c0" />
-          </Box>
-          
-          {/* Diving board */}
-          <Box args={[0.5, 0.1, 3]} position={[width/4, 1, length/2 - 1.5]} >
-            <meshLambertMaterial color="#8B4513" />
-          </Box>
-          <Box args={[0.2, 1.5, 0.2]} position={[width/4, 0.75, length/2 - 3]} >
-            <meshLambertMaterial color="#8B4513" />
-          </Box>
-        </group>
-      );
-      
-    case 'house':
-      return (
-        <group position={position}>
-          <ObjectBorder />
-          {/* Foundation/Lot */}
-          <Plane
-            args={[width, length]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.01, 0]}
-          >
-            <meshLambertMaterial color="#2d5a2d" />
-          </Plane>
-          
-          {/* Driveway */}
-          <Plane
-            args={[3, length/3]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[width/3, 0.015, -length/4]}
-          >
-            <meshLambertMaterial color="#4a5568" />
-          </Plane>
-          
-          {/* House base */}
-          <Box args={[width * 0.7, 3, length * 0.6]} position={[0, 1.5, 0]} >
-            <meshLambertMaterial color="#dc2626" />
-          </Box>
-          
-          {/* Roof */}
-          <Box args={[width * 0.75, 1.5, length * 0.65]} position={[0, 3.75, 0]} >
-            <meshLambertMaterial color="#7c2d12" />
-          </Box>
-          
-          {/* Chimney */}
-          <Box args={[1, 2, 1]} position={[width * 0.2, 5, length * 0.1]} >
-            <meshLambertMaterial color="#7c2d12" />
-          </Box>
-          
-          {/* Front door */}
-          <Box args={[1, 2, 0.1]} position={[0, 1, length * 0.3 + 0.05]} >
-            <meshLambertMaterial color="#7c2d12" />
-          </Box>
-          
-          {/* Door frame */}
-          <Box args={[1.2, 2.2, 0.05]} position={[0, 1.1, length * 0.3 + 0.08]} >
-            <meshLambertMaterial color="#ffffff" />
-          </Box>
-          
-          {/* Windows */}
-          <Box args={[1.2, 1.2, 0.05]} position={[-width * 0.2, 2, length * 0.3 + 0.05]} >
-            <meshLambertMaterial color="#87ceeb" />
-          </Box>
-          <Box args={[1.2, 1.2, 0.05]} position={[width * 0.2, 2, length * 0.3 + 0.05]} >
-            <meshLambertMaterial color="#87ceeb" />
-          </Box>
-          
-          {/* Window frames */}
-          <Box args={[1.4, 1.4, 0.02]} position={[-width * 0.2, 2, length * 0.3 + 0.08]} >
-            <meshLambertMaterial color="#ffffff" />
-          </Box>
-          <Box args={[1.4, 1.4, 0.02]} position={[width * 0.2, 2, length * 0.3 + 0.08]} >
-            <meshLambertMaterial color="#ffffff" />
-          </Box>
-          
-          {/* Garage */}
-          <Box args={[width * 0.4, 2.5, length * 0.4]} position={[width * 0.25, 1.25, -length * 0.15]} >
-            <meshLambertMaterial color="#dc2626" />
-          </Box>
-          
-          {/* Garage door */}
-          <Box args={[width * 0.35, 2, 0.05]} position={[width * 0.25, 1, -length * 0.15 + length * 0.2]} >
-            <meshLambertMaterial color="#4a5568" />
-          </Box>
-          
-          {/* Walkway */}
-          <Plane
-            args={[1.5, length * 0.4]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.02, length * 0.15]}
-          >
-            <meshLambertMaterial color="#e5e7eb" />
-          </Plane>
-          
-          {/* Landscaping */}
-          <Box args={[2, 0.5, 2]} position={[-width * 0.3, 0.25, length * 0.2]} >
-            <meshLambertMaterial color="#16a34a" />
-          </Box>
-          <Box args={[2, 0.5, 2]} position={[width * 0.3, 0.25, length * 0.2]} >
-            <meshLambertMaterial color="#16a34a" />
-          </Box>
-        </group>
-      );
-      
-    case 'parkingSpace':
-      return (
-        <group position={position}>
-          <ObjectBorder />
-          {/* Car body */}
-          <Box args={[width * 0.8, 0.6, length * 0.9]} position={[0, 0.3, 0]} >
-            <meshLambertMaterial color="#1f2937" />
-          </Box>
-          
-          {/* Car hood */}
-          <Box args={[width * 0.75, 0.4, length * 0.3]} position={[0, 0.7, length * 0.25]} >
-            <meshLambertMaterial color="#1f2937" />
-          </Box>
-          
-          {/* Car windshield */}
-          <Box args={[width * 0.7, 0.5, length * 0.15]} position={[0, 1.0, length * 0.1]} >
-            <meshLambertMaterial color="#87ceeb" transparent opacity={0.7} />
-          </Box>
-          
-          {/* Car rear window */}
-          <Box args={[width * 0.7, 0.4, length * 0.1]} position={[0, 0.9, -length * 0.2]} >
-            <meshLambertMaterial color="#87ceeb" transparent opacity={0.7} />
-          </Box>
-          
-          {/* Car side windows */}
-          <Box args={[width * 0.05, 0.4, length * 0.4]} position={[width * 0.375, 0.9, 0]} >
-            <meshLambertMaterial color="#87ceeb" transparent opacity={0.7} />
-          </Box>
-          <Box args={[width * 0.05, 0.4, length * 0.4]} position={[-width * 0.375, 0.9, 0]} >
-            <meshLambertMaterial color="#87ceeb" transparent opacity={0.7} />
-          </Box>
-          
-          {/* Car tires */}
-          <Box args={[width * 0.15, 0.4, width * 0.15]} position={[width * 0.25, 0.2, length * 0.28]} >
-            <meshLambertMaterial color="#000000" />
-          </Box>
-          <Box args={[width * 0.15, 0.4, width * 0.15]} position={[-width * 0.25, 0.2, length * 0.28]} >
-            <meshLambertMaterial color="#000000" />
-          </Box>
-          <Box args={[width * 0.15, 0.4, width * 0.15]} position={[width * 0.25, 0.2, -length * 0.28]} >
-            <meshLambertMaterial color="#000000" />
-          </Box>
-          <Box args={[width * 0.15, 0.4, width * 0.15]} position={[-width * 0.25, 0.2, -length * 0.28]} >
-            <meshLambertMaterial color="#000000" />
-          </Box>
-          
-          {/* Headlights */}
-          <Box args={[width * 0.12, 0.2, 0.1]} position={[width * 0.25, 0.6, length * 0.45]} >
-            <meshLambertMaterial color="#ffffff" />
-          </Box>
-          <Box args={[width * 0.12, 0.2, 0.1]} position={[-width * 0.25, 0.6, length * 0.45]} >
-            <meshLambertMaterial color="#ffffff" />
-          </Box>
-          
-          {/* Taillights */}
-          <Box args={[width * 0.1, 0.15, 0.08]} position={[width * 0.3, 0.5, -length * 0.45]} >
-            <meshLambertMaterial color="#ff0000" />
-          </Box>
-          <Box args={[width * 0.1, 0.15, 0.08]} position={[-width * 0.3, 0.5, -length * 0.45]} >
-            <meshLambertMaterial color="#ff0000" />
-          </Box>
-          
-          {/* Car grille */}
-          <Box args={[width * 0.6, 0.3, 0.05]} position={[0, 0.6, length * 0.45]} >
-            <meshLambertMaterial color="#333333" />
-          </Box>
-          
-          {/* Car bumpers */}
-          <Box args={[width * 0.8, 0.2, 0.1]} position={[0, 0.3, length * 0.45]} >
-            <meshLambertMaterial color="#1f2937" />
-          </Box>
-          <Box args={[width * 0.8, 0.2, 0.1]} position={[0, 0.3, -length * 0.45]} >
-            <meshLambertMaterial color="#1f2937" />
-          </Box>
-        </group>
-      );
-      
-    case 'boxingRing':
-      return (
-        <group position={position}>
-          <ObjectBorder />
-          {/* Boxing ring canvas */}
-          <Plane
-            args={[width, length]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.01, 0]}
-          >
-            <meshLambertMaterial color="#ADD8E6" />
-          </Plane>
-          
-          {/* Ring ropes - outer boundary */}
-          <Line
-            points={[
-              [-width/2, 1.2, -length/2], [width/2, 1.2, -length/2],
-              [width/2, 1.2, length/2], [-width/2, 1.2, length/2],
-              [-width/2, 1.2, -length/2]
-            ]}
-            color="#ffffff"
-            lineWidth={4}
-          />
-          
-          {/* Middle rope */}
-          <Line
-            points={[
-              [-width/2, 0.8, -length/2], [width/2, 0.8, -length/2],
-              [width/2, 0.8, length/2], [-width/2, 0.8, length/2],
-              [-width/2, 0.8, -length/2]
-            ]}
-            color="#ffffff"
-            lineWidth={4}
-          />
-          
-          {/* Lower rope */}
-          <Line
-            points={[
-              [-width/2, 0.4, -length/2], [width/2, 0.4, -length/2],
-              [width/2, 0.4, length/2], [-width/2, 0.4, length/2],
-              [-width/2, 0.4, -length/2]
-            ]}
-            color="#ffffff"
-            lineWidth={4}
-          />
-          
-          {/* Corner posts */}
-          {[[-width/2, -length/2], [width/2, -length/2], [width/2, length/2], [-width/2, length/2]].map((corner, index) => (
-            <Box key={index} args={[0.2, 1.5, 0.2]} position={[corner[0], 0.75, corner[1]]}>
-              <meshLambertMaterial color="#8b4513" />
-            </Box>
-          ))}
-        </group>
-      );
-      
-    default:
-      return (
-        <group position={position}>
-          <ObjectBorder />
-          <Plane
-            args={[width, length]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[0, 0.01, 0]}
-          >
-            <meshLambertMaterial color={color} transparent opacity={0.6} />
-          </Plane>
-        </group>
-      );
-  }
-}
+  // UI state
+  const [showMeasuringTape, setShowMeasuringTape] = useState(false);
+  const [showAreaCalculator, setShowAreaCalculator] = useState(false);
+  const [showCompassBearing, setShowCompassBearing] = useState(false);
+  const [showPresetSelector, setShowPresetSelector] = useState(false);
+  const [showAreaConfiguration, setShowAreaConfiguration] = useState(false);
+  const [showInsertAreaDropdown, setShowInsertAreaDropdown] = useState(false);
+  const [activeTool, setActiveTool] = useState(null);
+  const [isLeftSidebarExpanded, setIsLeftSidebarExpanded] = useState(false);
+  const [isPropertiesPanelExpanded, setIsPropertiesPanelExpanded] = useState(false);
+  
+  // Measuring state
+  const [tapeMeasurements, setTapeMeasurements] = useState([]);
+  const [selectedTapeMeasurement, setSelectedTapeMeasurement] = useState(null);
+  const [bearings, setBearings] = useState([]);
+  
+  // Terrain state
+  const [terrainEnabled, setTerrainEnabled] = useState(false);
+  const [terrainPreset, setTerrainPreset] = useState('hills');
+  const [terrainOpacity, setTerrainOpacity] = useState(0.5);
+  
+  // Manual input state
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualDimensions, setManualDimensions] = useState({ width: '', length: '', unit: 'm' });
+  
+  // Selection state
+  const [selectedSubdivision, setSelectedSubdivision] = useState(null);
+  
+  // History state for undo/redo
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  
+  // Toast state
+  const [toasts, setToasts] = useState([]);
 
-// Editable corner point component
-function EditableCornerPoint({ position, index, onDrag, isActive, onSelect, onDragStart, onDragEnd, drawingMode, isDragging, onPointerMove }) {
-  const [hovered, setHovered] = useState(false);
-  
-  const handlePointerDown = (event) => {
-    if (drawingMode !== 'select') return; // Only allow dragging in select mode
-    event.stopPropagation();
-    onSelect(index);
-    onDragStart(index);
-  };
-  
-  const handlePointerUp = () => {
-    if (isDragging) {
-      onDragEnd();
-    }
-  };
-  
-  // Show visual feedback for draggable state
-  const isSelectable = drawingMode === 'select';
-  
-  return (
-    <Box
-      args={[3, 5, 3]} // Larger size for easier dragging
-      position={[position.x, 2.5, position.z]}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
-    >
-      <meshLambertMaterial 
-        color={
-          !isSelectable ? "#94a3b8" : // Gray when not selectable
-          isActive ? "#3b82f6" : "#0066cc"
-        } 
-        transparent 
-        opacity={
-          !isSelectable ? 0.4 : // More transparent when not selectable
-          hovered ? 0.9 : 0.7
-        }
-      />
-    </Box>
-  );
-}
-
-// Dimension label component
-function DimensionLabel({ start, end, position, distance, darkMode }) {
-  return (
-    <group>
-      {/* Background for better visibility */}
-      <Plane
-        args={[distance.toFixed(1).length * 2 + 4, 4]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[position.x, 5.5, position.z]}
-      >
-        <meshBasicMaterial color={darkMode ? "#374151" : "#ffffff"} transparent opacity={0.9} />
-      </Plane>
-      <Text
-        position={[position.x, 6, position.z]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={4}
-        color={darkMode ? "#ffffff" : "#000000"}
-        anchorX="center"
-        anchorY="middle"
-        outlineWidth={0.5}
-        outlineColor={darkMode ? "#000000" : "#ffffff"}
-      >
-        {distance.toFixed(1)}m
-      </Text>
-    </group>
-  );
-}
-
-// Editable land shape component
-function EditableLandShape({ landShape, onUpdateShape, drawingMode, onDragStateChange, darkMode }) {
-  const [selectedCorner, setSelectedCorner] = useState(null);
-  const [draggingCorner, setDraggingCorner] = useState(null);
-  
-  const handleCornerDrag = (index, newX, newZ) => {
-    const newShape = [...landShape];
-    newShape[index] = { x: newX, z: newZ };
-    onUpdateShape(newShape);
-  };
-  
-  const handleDragStart = (index) => {
-    setDraggingCorner(index);
-    onDragStateChange(true);
-  };
-  
-  const handleDragEnd = () => {
-    setDraggingCorner(null);
-    onDragStateChange(false);
-  };
-  
-  const handlePointerMove = (event) => {
-    if (draggingCorner !== null && drawingMode === 'select') {
-      event.stopPropagation();
-      handleCornerDrag(draggingCorner, event.point.x, event.point.z);
-    }
-  };
-  
-  const calculateDistance = (point1, point2) => {
-    const dx = point2.x - point1.x;
-    const dz = point2.z - point1.z;
-    return Math.sqrt(dx * dx + dz * dz);
-  };
-  
-  const getMidpoint = (point1, point2) => {
-    return {
-      x: (point1.x + point2.x) / 2,
-      z: (point1.z + point2.z) / 2
+  // Calculate total area
+  const totalAreaInSqM = units.reduce((total, unit) => {
+    const conversionFactors = {
+      'm²': 1,
+      'ft²': 0.092903,
+      'hectares': 10000,
+      'acres': 4046.86,
+      'arpent': 3418.89,
+      'perche': 42.21,
+      'toise': 3.799
     };
-  };
-  
-  
-  // Create points for the land outline
-  const landPoints = [...landShape, landShape[0]].map(point => [point.x, 0.01, point.z]);
-  
-  return (
-    <group>
-      {/* Land area plane */}
-      <Plane 
-        args={[200, 200]} 
-        rotation={[-Math.PI / 2, 0, 0]} 
-        position={[0, 0.01, 0]}
-        onPointerMove={handlePointerMove}
-      >
-        <meshLambertMaterial color="#0066cc" transparent opacity={0.2} />
-      </Plane>
-      
-      {/* Land outline */}
-      <Line
-        points={landPoints}
-        color="#0066cc"
-        lineWidth={3}
-      />
-      
-      {/* Editable corner points */}
-      {landShape.map((corner, index) => (
-        <EditableCornerPoint
-          key={index}
-          position={corner}
-          index={index}
-          onDrag={handleCornerDrag}
-          isActive={selectedCorner === index}
-          onSelect={setSelectedCorner}
-          onDragStart={handleDragStart}
-          onDragEnd={handleDragEnd}
-          drawingMode={drawingMode}
-          isDragging={draggingCorner === index}
-        />
-      ))}
-      
-      {/* Dimension labels */}
-      {landShape.map((corner, index) => {
-        const nextCorner = landShape[(index + 1) % landShape.length];
-        const distance = calculateDistance(corner, nextCorner);
-        const midpoint = getMidpoint(corner, nextCorner);
-        
-        return (
-          <DimensionLabel
-            key={`dim-${index}`}
-            start={corner}
-            end={nextCorner}
-            position={midpoint}
-            distance={distance}
-            darkMode={darkMode}
-          />
-        );
-      })}
-    </group>
-  );
-}
+    return total + (unit.value * (conversionFactors[unit.unit] || 1));
+  }, 0);
 
-// Drawing mode component
-function DrawingPlane({ landShape, onAddSubdivision, drawingMode, subdivisions, setSubdivisions, onAddPolylinePoint, polylinePoints }) {
-  const [startPoint, setStartPoint] = useState(null);
-  const [currentPoint, setCurrentPoint] = useState(null);
-  const [isDrawing, setIsDrawing] = useState(false);
+  // Handlers
+  const toggleMeasuringTape = useCallback(() => {
+    setShowMeasuringTape(prev => !prev);
+    setActiveTool(prev => prev === 'measuring' ? null : 'measuring');
+  }, []);
 
-  // Check if a point is inside the land shape using ray casting algorithm
-  const isPointInLand = (x, z) => {
-    let inside = false;
-    const n = landShape.length;
-    
-    for (let i = 0, j = n - 1; i < n; j = i++) {
-      const xi = landShape[i].x, zi = landShape[i].z;
-      const xj = landShape[j].x, zj = landShape[j].z;
-      
-      if (((zi > z) !== (zj > z)) && (x < (xj - xi) * (z - zi) / (zj - zi) + xi)) {
-        inside = !inside;
-      }
+  const toggleAreaCalculator = useCallback(() => {
+    setShowAreaCalculator(prev => !prev);
+    setActiveTool(prev => prev === 'calculator' ? null : 'calculator');
+  }, []);
+
+  const toggleCompassBearing = useCallback(() => {
+    setShowCompassBearing(prev => !prev);
+    setActiveTool(prev => prev === 'compass' ? null : 'compass');
+  }, []);
+
+  const toggleDarkMode = useCallback(() => {
+    setDarkMode(prev => !prev);
+  }, []);
+
+  const toggleLeftSidebar = useCallback(() => {
+    setIsLeftSidebarExpanded(prev => !prev);
+  }, []);
+
+  const toggleRightSidebar = useCallback(() => {
+    setIsPropertiesPanelExpanded(prev => !prev);
+    // Clear active tool when collapsing right sidebar to avoid conflicts
+    if (isPropertiesPanelExpanded) {
+      setActiveTool(null);
     }
-    
-    return inside;
-  };
+  }, [isPropertiesPanelExpanded]);
 
-  const handlePointerDown = (event) => {
-    const point = event.point;
-    
-    if (drawingMode === 'rectangle') {
-      if (!isPointInLand(point.x, point.z)) return;
-      setStartPoint([point.x, point.z]);
-      setIsDrawing(true);
-    } else if (drawingMode === 'polyline') {
-      if (!isPointInLand(point.x, point.z)) return;
-      onAddPolylinePoint(point.x, point.z);
-    }
-  };
+  const handlePresetSelect = useCallback((preset) => {
+    setUnits([{ value: preset.value, unit: preset.unit }]);
+    setShowPresetSelector(false);
+  }, []);
 
-  const handlePointerMove = (event) => {
-    if (!isDrawing || drawingMode !== 'rectangle') return;
-    
-    const point = event.point;
-    setCurrentPoint([point.x, point.z]);
-  };
+  const handleDismissToast = useCallback((toastId) => {
+    setToasts(prev => prev.filter(toast => toast.id !== toastId));
+  }, []);
 
-  const handlePointerUp = (event) => {
-    if (!isDrawing || !startPoint || !currentPoint) return;
-    
-    const width = Math.abs(currentPoint[0] - startPoint[0]);
-    const length = Math.abs(currentPoint[1] - startPoint[1]);
-    const area = width * length;
-    
-    if (area > 0.1) { // Minimum area threshold
+  // Add toast function for user feedback
+  const addToast = useCallback((toast) => {
+    const newToast = {
+      id: Date.now(),
+      type: 'info',
+      duration: 4000,
+      ...toast
+    };
+    setToasts(prev => [...prev, newToast]);
+  }, []);
+
+  // Measuring tape handlers
+  const addTapeMeasurement = useCallback((measurement) => {
+    setTapeMeasurements(prev => [...prev, { id: Date.now(), ...measurement }]);
+  }, []);
+
+  const deleteTapeMeasurement = useCallback((id) => {
+    setTapeMeasurements(prev => prev.filter(m => m.id !== id));
+  }, []);
+
+  const selectTapeMeasurement = useCallback((id) => {
+    setSelectedTapeMeasurement(id);
+  }, []);
+
+  // Compass bearing handlers
+  const addBearing = useCallback((bearing) => {
+    setBearings(prev => [...prev, { id: Date.now(), ...bearing }]);
+  }, []);
+
+  const deleteBearing = useCallback((id) => {
+    setBearings(prev => prev.filter(b => b.id !== id));
+  }, []);
+
+  const clearAllBearings = useCallback(() => {
+    setBearings([]);
+  }, []);
+
+  // Area configuration handlers
+  const addUnit = useCallback((unit) => {
+    setUnits(prev => [...prev, unit]);
+  }, []);
+
+  const toggleAreaConfiguration = useCallback(() => {
+    setShowAreaConfiguration(prev => !prev);
+  }, []);
+
+  const toggleInsertAreaDropdown = useCallback(() => {
+    setShowInsertAreaDropdown(prev => !prev);
+  }, []);
+
+  const toggleTerrain = useCallback(() => {
+    setTerrainEnabled(prev => !prev);
+  }, []);
+
+  // Manual subdivision handler
+  const onAddManualSubdivision = useCallback(() => {
+    if (manualDimensions.width && manualDimensions.length) {
+      const area = parseFloat(manualDimensions.width) * parseFloat(manualDimensions.length);
       const newSubdivision = {
         id: Date.now(),
-        x: (startPoint[0] + currentPoint[0]) / 2,
-        z: (startPoint[1] + currentPoint[1]) / 2,
-        width: width,
-        length: length,
+        width: parseFloat(manualDimensions.width),
+        length: parseFloat(manualDimensions.length),
         area: area,
-        label: `Area ${subdivisions.length + 1}`,
+        label: `Manual ${subdivisions.length + 1}`,
         color: `hsl(${Math.random() * 360}, 70%, 50%)`
       };
-      
-      onAddSubdivision(newSubdivision);
+      setSubdivisions(prev => [...prev, newSubdivision]);
+      setManualDimensions({ width: '', length: '', unit: 'm' });
+      setShowManualInput(false);
     }
-    
-    setStartPoint(null);
-    setCurrentPoint(null);
-    setIsDrawing(false);
+  }, [manualDimensions, subdivisions.length]);
+
+  // Undo/Redo handlers
+  const canUndo = historyIndex >= 0;
+  const canRedo = historyIndex < history.length - 1;
+
+  const undo = useCallback(() => {
+    if (canUndo) {
+      setHistoryIndex(prev => prev - 1);
+      // Apply previous state
+    }
+  }, [canUndo]);
+
+  const redo = useCallback(() => {
+    if (canRedo) {
+      setHistoryIndex(prev => prev + 1);
+      // Apply next state
+    }
+  }, [canRedo]);
+
+  // Corner control handlers
+  const onAddCorner = useCallback(() => {
+    // Add corner functionality
+  }, []);
+
+  const onRemoveCorner = useCallback(() => {
+    // Remove corner functionality  
+  }, []);
+
+  // Export handler
+  const exportToExcel = useCallback(() => {
+    // Export functionality
+    console.log('Exporting to Excel...');
+  }, []);
+
+  // Default comparison options
+  const comparisonOptions = [
+    {
+      id: 'footballField',
+      name: 'Football Field',
+      area: 5351,
+      category: 'Sports',
+      color: '#22c55e'
+    },
+    {
+      id: 'basketballCourt',
+      name: 'Basketball Court',
+      area: 420,
+      category: 'Sports',
+      color: '#f97316'
+    },
+    {
+      id: 'tennisCourt',
+      name: 'Tennis Court',
+      area: 261,
+      category: 'Sports',
+      color: '#06b6d4'
+    },
+    {
+      id: 'swimmingPool',
+      name: 'Swimming Pool',
+      area: 375,
+      category: 'Recreation',
+      color: '#3b82f6'
+    },
+    {
+      id: 'house',
+      name: 'Average House',
+      area: 150,
+      category: 'Buildings',
+      color: '#8b5cf6'
+    },
+    {
+      id: 'parkingSpace',
+      name: 'Parking Space',
+      area: 12.5,
+      category: 'Transportation',
+      color: '#ef4444'
+    }
+  ];
+
+  // Unit conversions
+  const unitConversions = {
+    'm²': 1,
+    'ft²': 0.092903,
+    'hectares': 10000,
+    'acres': 4046.86,
+    'arpent': 3418.89,
+    'perche': 42.21,
+    'toise': 3.799
   };
 
-  return (
-    <>
-      <Plane 
-        args={[200, 200]} 
-        rotation={[-Math.PI / 2, 0, 0]} 
-        position={[0, 0.005, 0]}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-      >
-        <meshBasicMaterial transparent opacity={0} />
-      </Plane>
-      
-      {/* Preview rectangle while drawing */}
-      {isDrawing && startPoint && currentPoint && (
-        <group>
-          <Plane
-            args={[
-              Math.abs(currentPoint[0] - startPoint[0]),
-              Math.abs(currentPoint[1] - startPoint[1])
-            ]}
-            rotation={[-Math.PI / 2, 0, 0]}
-            position={[
-              (startPoint[0] + currentPoint[0]) / 2,
-              0.02,
-              (startPoint[1] + currentPoint[1]) / 2
-            ]}
-          >
-            <meshBasicMaterial color="#3b82f6" transparent opacity={0.3} />
-          </Plane>
-          <Line
-            points={[
-              [startPoint[0], 0.02, startPoint[1]],
-              [currentPoint[0], 0.02, startPoint[1]],
-              [currentPoint[0], 0.02, currentPoint[1]],
-              [startPoint[0], 0.02, currentPoint[1]],
-              [startPoint[0], 0.02, startPoint[1]]
-            ]}
-            color="#3b82f6"
-            lineWidth={2}
-          />
-        </group>
-      )}
-      
-      {/* Polyline points while drawing */}
-      {drawingMode === 'polyline' && polylinePoints.length > 0 && (
-        <group>
-          {/* Show polyline points */}
-          {polylinePoints.map((point, index) => (
-            <Box
-              key={index}
-              args={[1, 2, 1]}
-              position={[point.x, 1, point.z]}
-            >
-              <meshBasicMaterial color="#f59e0b" />
-            </Box>
-          ))}
-          
-          {/* Show polyline connections */}
-          {polylinePoints.length > 1 && (
-            <Line
-              points={polylinePoints.map(p => [p.x, 0.02, p.z])}
-              color="#f59e0b"
-              lineWidth={3}
-            />
-          )}
-        </group>
-      )}
-    </>
-  );
-}
+  // Comparison selection handler
+  const onComparisonSelect = useCallback((comparisonId) => {
+    setSelectedComparison(comparisonId);
+  }, []);
 
-// Measurement tools component
-function MeasurementPlane({ measurementMode, measurementPoints, onMeasurementPoint, measurements, onClearMeasurements, darkMode }) {
-  const handlePointerDown = (event) => {
-    if (!measurementMode) return;
+  // Comparison object component
+  const ComparisonObject = ({ comparison, position }) => {
+    if (!comparison) return null;
     
-    const point = event.point;
-    const worldPoint = { x: point.x, z: point.z };
-    
-    if (measurementMode === 'distance') {
-      if (measurementPoints.length === 0) {
-        onMeasurementPoint([worldPoint]);
-      } else if (measurementPoints.length === 1) {
-        onMeasurementPoint([measurementPoints[0], worldPoint]);
-      } else {
-        // Start new measurement
-        onMeasurementPoint([worldPoint]);
-      }
-    } else if (measurementMode === 'area') {
-      onMeasurementPoint([...measurementPoints, worldPoint]);
-    }
-  };
-  
-  return (
-    <>
-      {/* Invisible plane for measurement clicks */}
-      <Plane 
-        args={[400, 400]} 
-        rotation={[-Math.PI / 2, 0, 0]} 
-        position={[0, 0.001, 0]}
-        onPointerDown={handlePointerDown}
-      >
-        <meshBasicMaterial transparent opacity={0} />
-      </Plane>
-      
-      {/* Render measurement points */}
-      {measurementPoints.map((point, index) => (
-        <group key={index}>
-          <Box
-            args={[2, 2, 2]}
-            position={[point.x, 1, point.z]}
-          >
-            <meshBasicMaterial color="#ff6b6b" />
-          </Box>
-        </group>
-      ))}
-      
-      {/* Render distance line */}
-      {measurementMode === 'distance' && measurementPoints.length === 2 && (
-        <Line
-          points={[
-            [measurementPoints[0].x, 0.5, measurementPoints[0].z],
-            [measurementPoints[1].x, 0.5, measurementPoints[1].z]
-          ]}
-          color="#ff6b6b"
-          lineWidth={3}
-        />
-      )}
-      
-      {/* Render area polygon */}
-      {measurementMode === 'area' && measurementPoints.length >= 3 && (
-        <Line
-          points={[
-            ...measurementPoints.map(p => [p.x, 0.5, p.z]),
-            [measurementPoints[0].x, 0.5, measurementPoints[0].z] // Close the polygon
-          ]}
-          color="#ff6b6b"
-          lineWidth={3}
-        />
-      )}
-      
-      {/* Render saved measurements */}
-      {measurements.map((measurement, index) => (
-        <group key={index}>
-          {measurement.type === 'distance' && (
-            <>
-              <Line
-                points={[
-                  [measurement.points[0].x, 0.3, measurement.points[0].z],
-                  [measurement.points[1].x, 0.3, measurement.points[1].z]
-                ]}
-                color="#4ecdc4"
-                lineWidth={2}
-              />
-              {/* Background for text */}
-              <Plane
-                args={[6, 2]}
-                position={[
-                  (measurement.points[0].x + measurement.points[1].x) / 2,
-                  2.8,
-                  (measurement.points[0].z + measurement.points[1].z) / 2
-                ]}
-                rotation={[-Math.PI / 2, 0, 0]}
-              >
-                <meshLambertMaterial color={darkMode ? "#374151" : "white"} transparent opacity={0.9} />
-              </Plane>
-              <Text
-                position={[
-                  (measurement.points[0].x + measurement.points[1].x) / 2,
-                  3,
-                  (measurement.points[0].z + measurement.points[1].z) / 2
-                ]}
-                rotation={[-Math.PI / 2, 0, 0]}
-                fontSize={2}
-                color={darkMode ? "white" : "black"}
-                anchorX="center"
-                anchorY="middle"
-              >
-                {measurement.distance.toFixed(2)}m
-              </Text>
-            </>
-          )}
-          {measurement.type === 'area' && (
-            <>
-              <Line
-                points={[
-                  ...measurement.points.map(p => [p.x, 0.3, p.z]),
-                  [measurement.points[0].x, 0.3, measurement.points[0].z]
-                ]}
-                color="#4ecdc4"
-                lineWidth={2}
-              />
-              {/* Background for text */}
-              <Plane
-                args={[8, 2]}
-                position={[
-                  measurement.points.reduce((sum, p) => sum + p.x, 0) / measurement.points.length,
-                  2.8,
-                  measurement.points.reduce((sum, p) => sum + p.z, 0) / measurement.points.length
-                ]}
-                rotation={[-Math.PI / 2, 0, 0]}
-              >
-                <meshLambertMaterial color={darkMode ? "#374151" : "white"} transparent opacity={0.9} />
-              </Plane>
-              <Text
-                position={[
-                  measurement.points.reduce((sum, p) => sum + p.x, 0) / measurement.points.length,
-                  3,
-                  measurement.points.reduce((sum, p) => sum + p.z, 0) / measurement.points.length
-                ]}
-                rotation={[-Math.PI / 2, 0, 0]}
-                fontSize={2}
-                color={darkMode ? "white" : "black"}
-                anchorX="center"
-                anchorY="middle"
-              >
-                {measurement.area.toFixed(2)}m²
-              </Text>
-            </>
-          )}
-        </group>
-      ))}
-    </>
-  );
-}
-
-// Editable subdivision corner component
-function SubdivisionCornerPoint({ position, index, subdivisionId, onDrag, isActive, onSelect, onDragStart, onDragEnd, drawingMode, isDragging }) {
-  const [hovered, setHovered] = useState(false);
-  
-  const handlePointerDown = (event) => {
-    if (drawingMode !== 'select') return;
-    event.stopPropagation();
-    onSelect(index);
-    onDragStart(index);
-  };
-  
-  const handlePointerUp = () => {
-    if (isDragging) {
-      onDragEnd();
-    }
-  };
-  
-  const isSelectable = drawingMode === 'select';
-  
-  return (
-    <Box
-      args={[2, 3, 2]}
-      position={[position.x, 2, position.z]}
-      onPointerDown={handlePointerDown}
-      onPointerUp={handlePointerUp}
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
-    >
-      <meshLambertMaterial 
-        color={
-          !isSelectable ? "#94a3b8" : 
-          isActive ? "#f59e0b" : "#fbbf24"
-        } 
-        transparent 
-        opacity={
-          !isSelectable ? 0.4 : 
-          hovered ? 0.9 : 0.7
-        }
-      />
-    </Box>
-  );
-}
-
-// Subdivision component
-function Subdivision({ subdivision, onDelete, onEdit, isSelected, onSelect, onMove, drawingMode, onUpdateSubdivision, onSubdivisionCornerDragStateChange, darkMode }) {
-  const [hovered, setHovered] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const [selectedCorner, setSelectedCorner] = useState(null);
-  const [draggingCorner, setDraggingCorner] = useState(null);
-  
-  const handlePointerDown = (event) => {
-    if (drawingMode === 'select' && !draggingCorner) {
-      event.stopPropagation();
-      onSelect(subdivision.id);
-      setIsDragging(true);
-    }
-  };
-  
-  const handlePointerMove = (event) => {
-    if (isDragging && drawingMode === 'select' && !draggingCorner) {
-      event.stopPropagation();
-      if (subdivision.type === 'polyline') {
-        // For polylines, move to the new position
-        onMove(subdivision.id, event.point.x, event.point.z);
-      } else {
-        // For rectangles, move to the new position
-        onMove(subdivision.id, event.point.x, event.point.z);
-      }
-    } else if (draggingCorner !== null && drawingMode === 'select') {
-      event.stopPropagation();
-      handleCornerDrag(draggingCorner, event.point.x, event.point.z);
-    }
-  };
-  
-  const handlePointerUp = () => {
-    setIsDragging(false);
-  };
-  
-  const handleCornerDrag = (index, newX, newZ) => {
-    if (subdivision.type === 'polyline') {
-      const newPoints = [...subdivision.points];
-      newPoints[index] = { x: newX, z: newZ };
-      onUpdateSubdivision(subdivision.id, { points: newPoints });
-    } else {
-      // For rectangle subdivisions, convert to polyline format for corner editing
-      const currentCorners = [
-        { x: subdivision.x - subdivision.width/2, z: subdivision.z - subdivision.length/2 },
-        { x: subdivision.x + subdivision.width/2, z: subdivision.z - subdivision.length/2 },
-        { x: subdivision.x + subdivision.width/2, z: subdivision.z + subdivision.length/2 },
-        { x: subdivision.x - subdivision.width/2, z: subdivision.z + subdivision.length/2 }
-      ];
-      
-      const newCorners = [...currentCorners];
-      newCorners[index] = { x: newX, z: newZ };
-      
-      // Convert to polyline type with corner points
-      const calculatePolylineArea = (points) => {
-        let area = 0;
-        const n = points.length;
-        for (let i = 0; i < n; i++) {
-          const j = (i + 1) % n;
-          area += points[i].x * points[j].z;
-          area -= points[j].x * points[i].z;
-        }
-        return Math.abs(area) / 2;
-      };
-      
-      onUpdateSubdivision(subdivision.id, { 
-        type: 'polyline',
-        points: newCorners,
-        area: calculatePolylineArea(newCorners)
-      });
-    }
-  };
-  
-  const handleCornerDragStart = (index) => {
-    setDraggingCorner(index);
-  };
-  
-  const handleCornerDragEnd = () => {
-    setDraggingCorner(null);
-  };
-  
-  // Update the parent component about subdivision corner dragging
-  React.useEffect(() => {
-    if (typeof onSubdivisionCornerDragStateChange === 'function') {
-      onSubdivisionCornerDragStateChange(draggingCorner !== null);
-    }
-  }, [draggingCorner, onSubdivisionCornerDragStateChange]);
-  
-  if (subdivision.type === 'polyline') {
-    // Calculate centroid for label positioning
-    const centroid = subdivision.points.reduce(
-      (acc, point) => ({ x: acc.x + point.x, z: acc.z + point.z }),
-      { x: 0, z: 0 }
-    );
-    centroid.x /= subdivision.points.length;
-    centroid.z /= subdivision.points.length;
-    
-    // Create polyline points for border
-    const polylinePoints = [...subdivision.points, subdivision.points[0]].map(p => [p.x, 0.02, p.z]);
-    
-    // Create triangulated geometry for polyline shape using earcut algorithm
-    const createPolylineGeometry = () => {
-      // Convert points to flat array for earcut
-      const vertices = [];
-      subdivision.points.forEach(point => {
-        vertices.push(point.x, point.z);
-      });
-      
-      // Use earcut to triangulate the polygon
-      const triangles = THREE.ShapeUtils.triangulateShape(subdivision.points.map(p => new THREE.Vector2(p.x, p.z)), []);
-      
-      const geometry = new THREE.BufferGeometry();
-      const positions = [];
-      
-      // Convert triangles to 3D positions
-      triangles.forEach(triangle => {
-        triangle.forEach(vertex => {
-          positions.push(vertex.x, 0, vertex.y); // Note: y becomes z in 3D space
-        });
-      });
-      
-      geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-      geometry.computeVertexNormals();
-      
-      return geometry;
+    const dimensions = {
+      width: Math.sqrt(comparison.area * 0.7), // Rough approximation
+      length: Math.sqrt(comparison.area * 1.4)
     };
     
     return (
-      <group
-        onPointerOver={() => setHovered(true)}
-        onPointerOut={() => setHovered(false)}
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={handlePointerUp}
-      >
-        {/* Polyline fill using triangulated geometry */}
-        <mesh position={[0, 0.015, 0]}>
-          <primitive object={createPolylineGeometry()} />
+      <group position={position}>
+        {/* Object representation */}
+        <Plane 
+          args={[dimensions.width, dimensions.length]} 
+          rotation={[-Math.PI / 2, 0, 0]} 
+          position={[0, 0.002, 0]}
+        >
           <meshLambertMaterial 
-            color={subdivision.color} 
+            color={comparison.color} 
             transparent 
-            opacity={isSelected ? 0.7 : hovered ? 0.5 : 0.3}
-            side={THREE.DoubleSide}
+            opacity={0.7}
           />
-        </mesh>
+        </Plane>
         
-        {/* Border */}
+        {/* Object border */}
         <Line
-          points={polylinePoints}
-          color={isSelected ? "#ff6b6b" : subdivision.color}
-          lineWidth={isSelected ? 3 : 2}
+          points={[
+            [-dimensions.width/2, 0.003, -dimensions.length/2], 
+            [dimensions.width/2, 0.003, -dimensions.length/2],
+            [dimensions.width/2, 0.003, dimensions.length/2], 
+            [-dimensions.width/2, 0.003, dimensions.length/2],
+            [-dimensions.width/2, 0.003, -dimensions.length/2]
+          ]}
+          color="#000000"
+          lineWidth={2}
         />
         
         {/* Label */}
         <Text
-          position={[centroid.x, 0.5, centroid.z]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          fontSize={2}
-          color={darkMode ? "white" : "black"}
+          position={[0, 5, 0]}
+          rotation={[0, 0, 0]}
+          color={darkMode ? '#ffffff' : '#000000'}
           anchorX="center"
           anchorY="middle"
+          fontSize={3}
         >
-          {subdivision.label}
-          {'\n'}
-          {subdivision.area.toFixed(1)} m²
+          {comparison.name}
         </Text>
-        
-        {/* Editable corner points for polyline when selected */}
-        {isSelected && subdivision.points.map((point, index) => (
-          <SubdivisionCornerPoint
-            key={`${subdivision.id}-corner-${index}`}
-            position={point}
-            index={index}
-            subdivisionId={subdivision.id}
-            onDrag={handleCornerDrag}
-            isActive={selectedCorner === index}
-            onSelect={setSelectedCorner}
-            onDragStart={handleCornerDragStart}
-            onDragEnd={handleCornerDragEnd}
-            drawingMode={drawingMode}
-            isDragging={draggingCorner === index}
-          />
-        ))}
       </group>
     );
-  }
-  
-  // Rectangle subdivision (existing code)
-  return (
-    <group
-      onPointerOver={() => setHovered(true)}
-      onPointerOut={() => setHovered(false)}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      onPointerUp={handlePointerUp}
-    >
-      <Plane
-        args={[subdivision.width, subdivision.length]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        position={[subdivision.x, 0.015, subdivision.z]}
+  };
+
+  // Subdivision component
+  const Subdivision3D = ({ subdivision, index }) => (
+    <group position={[index * 15, 0, 0]}>
+      <Plane 
+        args={[subdivision.width || 10, subdivision.length || 10]} 
+        rotation={[-Math.PI / 2, 0, 0]} 
+        position={[0, 0.003, 0]}
       >
         <meshLambertMaterial 
           color={subdivision.color} 
           transparent 
-          opacity={isSelected ? 0.7 : hovered ? 0.5 : 0.3} 
+          opacity={0.6}
         />
       </Plane>
       
-      {/* Border */}
+      {/* Subdivision border */}
       <Line
         points={[
-          [subdivision.x - subdivision.width/2, 0.02, subdivision.z - subdivision.length/2],
-          [subdivision.x + subdivision.width/2, 0.02, subdivision.z - subdivision.length/2],
-          [subdivision.x + subdivision.width/2, 0.02, subdivision.z + subdivision.length/2],
-          [subdivision.x - subdivision.width/2, 0.02, subdivision.z + subdivision.length/2],
-          [subdivision.x - subdivision.width/2, 0.02, subdivision.z - subdivision.length/2]
+          [-(subdivision.width || 10)/2, 0.004, -(subdivision.length || 10)/2], 
+          [(subdivision.width || 10)/2, 0.004, -(subdivision.length || 10)/2],
+          [(subdivision.width || 10)/2, 0.004, (subdivision.length || 10)/2], 
+          [-(subdivision.width || 10)/2, 0.004, (subdivision.length || 10)/2],
+          [-(subdivision.width || 10)/2, 0.004, -(subdivision.length || 10)/2]
         ]}
-        color={isSelected ? "#ff6b6b" : subdivision.color}
-        lineWidth={isSelected ? 3 : 2}
+        color="#ffffff"
+        lineWidth={2}
       />
       
-      {/* Label */}
+      {/* Subdivision label */}
       <Text
-        position={[subdivision.x, 0.5, subdivision.z]}
-        rotation={[-Math.PI / 2, 0, 0]}
-        fontSize={2}
-        color={darkMode ? "white" : "black"}
+        position={[0, 3, 0]}
+        rotation={[0, 0, 0]}
+        color={darkMode ? '#ffffff' : '#000000'}
         anchorX="center"
         anchorY="middle"
+        fontSize={2}
       >
         {subdivision.label}
-        {'\n'}
-        {subdivision.area.toFixed(1)} m²
       </Text>
-      
-      {/* Editable corner points for rectangle when selected */}
-      {isSelected && (() => {
-        const corners = [
-          { x: subdivision.x - subdivision.width/2, z: subdivision.z - subdivision.length/2 },
-          { x: subdivision.x + subdivision.width/2, z: subdivision.z - subdivision.length/2 },
-          { x: subdivision.x + subdivision.width/2, z: subdivision.z + subdivision.length/2 },
-          { x: subdivision.x - subdivision.width/2, z: subdivision.z + subdivision.length/2 }
-        ];
-        
-        return corners.map((corner, index) => (
-          <SubdivisionCornerPoint
-            key={`${subdivision.id}-rect-corner-${index}`}
-            position={corner}
-            index={index}
-            subdivisionId={subdivision.id}
-            onDrag={handleCornerDrag}
-            isActive={selectedCorner === index}
-            onSelect={setSelectedCorner}
-            onDragStart={handleCornerDragStart}
-            onDragEnd={handleCornerDragEnd}
-            drawingMode={drawingMode}
-            isDragging={draggingCorner === index}
-          />
-        ));
-      })()}
     </group>
   );
-}
 
-function Scene({ landShape, onUpdateLandShape, environment, selectedComparison, comparisonOptions, totalAreaInSqM, drawingMode, subdivisions, setSubdivisions, isDraggingCorner, onDragStateChange, onAddPolylinePoint, polylinePoints, selectedSubdivision, onSubdivisionSelect, onSubdivisionMove, onUpdateSubdivision, isDraggingSubdivisionCorner, onSubdivisionCornerDragStateChange, measurementMode, measurementPoints, onMeasurementPoint, measurements, onClearMeasurements, darkMode }) {
-
-  const comparison = selectedComparison ? comparisonOptions.find(c => c.id === selectedComparison) : null;
-  
-  const handleAddSubdivision = (subdivision) => {
-    const newSubdivisions = [...subdivisions, subdivision];
-    setSubdivisions(newSubdivisions);
-    // Note: History is saved by the parent component, not here
-  };
-
-  const handleDeleteSubdivision = (id) => {
-    setSubdivisions(subdivisions.filter(s => s.id !== id));
-  };
-
-  const handleEditSubdivision = (id, newLabel) => {
-    setSubdivisions(subdivisions.map(s => 
-      s.id === id ? { ...s, label: newLabel } : s
-    ));
-  };
-  
-  return (
-    <>
-      {/* Lighting */}
-      <ambientLight intensity={darkMode ? 0.6 : 0.4} />
-      <directionalLight position={[100, 100, 50]} intensity={darkMode ? 1.0 : 0.8} castShadow />
-      <directionalLight position={[-50, 50, -50]} intensity={darkMode ? 0.5 : 0.3} />
-      
-      {/* Ground */}
-      <Plane 
-        args={[400, 400]} 
-        rotation={[-Math.PI / 2, 0, 0]} 
-        position={[0, 0, 0]}
-      >
-        <meshLambertMaterial color={darkMode ? "#2d3748" : "#4a7c59"} />
-      </Plane>
-      
-      {/* Grid */}
-      <Grid 
-        args={[400, 400]} 
-        cellSize={5} 
-        cellThickness={0.5} 
-        cellColor={darkMode ? "#4a5568" : "#888888"} 
-        sectionSize={25} 
-        sectionThickness={1} 
-        sectionColor={darkMode ? "#6b7280" : "#cccccc"} 
-        fadeDistance={200} 
-        infiniteGrid={false}
-        position={[0, 0.001, 0]}
-      />
-      
-      {/* Editable land shape */}
-      <EditableLandShape
-        landShape={landShape}
-        onUpdateShape={onUpdateLandShape}
-        drawingMode={drawingMode}
-        onDragStateChange={onDragStateChange}
-        darkMode={darkMode}
-      />
-      
-      {/* Drawing plane for subdivisions */}
-      <DrawingPlane 
-        landShape={landShape}
-        onAddSubdivision={handleAddSubdivision}
-        drawingMode={drawingMode}
-        subdivisions={subdivisions}
-        setSubdivisions={setSubdivisions}
-        onAddPolylinePoint={onAddPolylinePoint}
-        polylinePoints={polylinePoints}
-      />
-      
-      {/* Render subdivisions */}
-      {subdivisions.map(subdivision => (
-        <Subdivision
-          key={subdivision.id}
-          subdivision={subdivision}
-          onDelete={handleDeleteSubdivision}
-          onEdit={handleEditSubdivision}
-          isSelected={selectedSubdivision === subdivision.id}
-          onSelect={onSubdivisionSelect}
-          onMove={onSubdivisionMove}
-          drawingMode={drawingMode}
-          onUpdateSubdivision={onUpdateSubdivision}
-          onSubdivisionCornerDragStateChange={onSubdivisionCornerDragStateChange}
-          darkMode={darkMode}
-        />
-      ))}
-      
-      {/* Comparison objects - only show if not in drawing mode */}
-      {!drawingMode && comparison && (() => {
-        const numObjects = Math.floor(totalAreaInSqM / comparison.area);
-        
-        // Calculate land dimensions
-        const landSideLength = Math.sqrt(totalAreaInSqM);
-        
-        // Calculate how many objects can actually fit in each dimension
-        const objectsPerRowMax = Math.floor(landSideLength / comparison.dimensions.width);
-        const objectsPerColMax = Math.floor(landSideLength / comparison.dimensions.length);
-        const maxObjectsFit = objectsPerRowMax * objectsPerColMax;
-        
-        const objectsToShow = Math.min(numObjects, maxObjectsFit, 500);
-        const itemsPerRow = Math.min(Math.ceil(Math.sqrt(objectsToShow)), objectsPerRowMax);
-        const itemsPerCol = Math.ceil(objectsToShow / itemsPerRow);
-        
-        // Use exact dimensions for spacing - no gaps
-        const spacingX = comparison.dimensions.width;
-        const spacingZ = comparison.dimensions.length;
-        
-        const gridWidth = (itemsPerRow - 1) * spacingX;
-        const gridHeight = (itemsPerCol - 1) * spacingZ;
-        const startX = -gridWidth / 2;
-        const startZ = -gridHeight / 2;
-        
-        const objects = [];
-        
-        for (let i = 0; i < objectsToShow; i++) {
-          const row = Math.floor(i / itemsPerRow);
-          const col = i % itemsPerRow;
-          const xPos = startX + col * spacingX;
-          const zPos = startZ + row * spacingZ;
-          
-          objects.push(
-            <RealisticComparisonObject
-              key={i}
-              type={comparison.id}
-              position={[xPos, 0, zPos]}
-              dimensions={comparison.dimensions}
-              color={comparison.color}
-            />
-          );
-        }
-        
-        return objects;
-      })()}
-      
-      {/* Measurement plane */}
-      <MeasurementPlane
-        measurementMode={measurementMode}
-        measurementPoints={measurementPoints}
-        onMeasurementPoint={onMeasurementPoint}
-        measurements={measurements}
-        onClearMeasurements={onClearMeasurements}
-        darkMode={darkMode}
-      />
-      
-      {/* OrbitControls */}
-      <OrbitControls 
-        enableDamping 
-        dampingFactor={0.05}
-        minDistance={10}
-        maxDistance={200}
-        maxPolarAngle={Math.PI / 2}
-        enabled={drawingMode !== 'rectangle' && drawingMode !== 'select' && drawingMode !== 'polyline' && !isDraggingCorner && !isDraggingSubdivisionCorner && !measurementMode}
-      />
-    </>
-  );
-}
-
-// Check WebGL support
-const checkWebGLSupport = () => {
-  try {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl2') || canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    return !!gl;
-  } catch (e) {
-    return false;
-  }
-};
-
-const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
-  const [units, setUnits] = useState([{ value: 1000, unit: 'm²' }]);
-  const [selectedComparison, setSelectedComparison] = useState(null);
-  const [webGLSupported, setWebGLSupported] = useState(true);
-  const [showTraditionalInfo, setShowTraditionalInfo] = useState(false);
-  const [showShareModal, setShowShareModal] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const [drawingMode, setDrawingMode] = useState(null);
-  
-  // Custom Object States
-  const [showCustomObjectForm, setShowCustomObjectForm] = useState(false);
-  const [customObject, setCustomObject] = useState({
-    name: '',
-    width: '',
-    length: '',
-    icon: '📦',
-    color: 'purple'
-  });
-  const [customComparisons, setCustomComparisons] = useState([]);
-  
-  // Available colors for custom objects
-  const customObjectColors = ['purple', 'indigo', 'pink', 'red', 'orange', 'yellow', 'lime', 'teal', 'cyan'];
-  
-  // Color mapping for 3D visualization
-  const colorMap = {
-    'purple': '#8b5cf6',
-    'indigo': '#6366f1', 
-    'pink': '#ec4899',
-    'red': '#ef4444',
-    'orange': '#f97316',
-    'yellow': '#eab308',
-    'lime': '#84cc16',
-    'teal': '#14b8a6',
-    'cyan': '#06b6d4',
-    'emerald': '#10b981',
-    'amber': '#f59e0b',
-    'sky': '#0ea5e9',
-    'violet': '#8b5cf6',
-    'slate': '#64748b',
-    'lightblue': '#ADD8E6'
-  };
-  
-  // Premium Export System States
-  const [showPremiumExportModal, setShowPremiumExportModal] = useState(false);
-  const [selectedExportType, setSelectedExportType] = useState(null);
-  const [paymentStatus, setPaymentStatus] = useState('pending'); // pending, processing, success, failed
-  const [downloadToken, setDownloadToken] = useState(null);
-  const [exportHistory, setExportHistory] = useState([]);
-  const [selectedTier, setSelectedTier] = useState(null);
-  const [paymentMethod, setPaymentMethod] = useState('paypal');
-  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
-  
-  // Premium Export Tiers
-  const exportTiers = {
-    basic: {
-      id: 'basic',
-      name: 'Basic Export',
-      price: 5,
-      currency: 'USD',
-      description: 'Professional PDF report with your land analysis',
-      features: [
-        'High-resolution PDF (300 DPI)',
-        'Watermark-free export',
-        'Professional landscape design',
-        '3D visualization included',
-        'Full measurement data',
-        'Subdivision analysis'
-      ],
-      formats: ['PDF']
-    },
-    premium: {
-      id: 'premium', 
-      name: 'Premium Export Package',
-      price: 10,
-      currency: 'USD',
-      description: 'Complete export package with all formats',
-      features: [
-        'Everything in Basic Export',
-        'High-resolution PNG (4K)',
-        'CSV data export',
-        'Multiple format bundle',
-        'Print-ready files',
-        'Raw measurement data'
-      ],
-      formats: ['PDF', 'PNG', 'CSV']
-    }
-  };
-
-  const [subdivisions, setSubdivisions] = useState([]);
+  // Enhanced Drawing state
+  const [isDrawing, setIsDrawing] = useState(false);
+  const [drawingStart, setDrawingStart] = useState(null);
+  const [drawingCurrent, setDrawingCurrent] = useState(null);
+  const [drawingPreview, setDrawingPreview] = useState(null);
+  const [polygonPoints, setPolygonPoints] = useState([]);
+  const [hoveredSubdivision, setHoveredSubdivision] = useState(null);
   const [editingSubdivision, setEditingSubdivision] = useState(null);
-  const [editingLabel, setEditingLabel] = useState('');
-  const [showManualInput, setShowManualInput] = useState(false);
-  const [manualDimensions, setManualDimensions] = useState({ width: '', length: '', label: '' });
-  const [landShape, setLandShape] = useState([
-    { x: -50, z: -50 },
-    { x: 50, z: -50 },
-    { x: 50, z: 50 },
-    { x: -50, z: 50 }
-  ]);
-  const [polylinePoints, setPolylinePoints] = useState([]);
-  const [isUpdatingFromShape, setIsUpdatingFromShape] = useState(false);
-  const [isDraggingCorner, setIsDraggingCorner] = useState(false);
-  const [hasManuallyEditedShape, setHasManuallyEditedShape] = useState(false);
-  const [darkMode, setDarkMode] = useState(() => {
-    const saved = localStorage.getItem('landVisualizer-darkMode');
-    return saved ? JSON.parse(saved) : false;
-  });
-  const [showPdfCustomizer, setShowPdfCustomizer] = useState(false);
-  const [pdfSettings, setPdfSettings] = useState({
-    includeVisualization: true,
-    includeLandSummary: true,
-    includeSubdivisions: true,
-    includeComparisons: true,
-    includeConversions: true,
-    companyName: '',
-    reportTitle: 'Land Visualizer Report',
-    logoUrl: ''
-  });
+  const [dragHandle, setDragHandle] = useState(null);
   
-  // Measurement state
-  const [measurementMode, setMeasurementMode] = useState(null); // 'distance' or 'area'
-  const [measurementPoints, setMeasurementPoints] = useState([]);
-  const [measurements, setMeasurements] = useState([]);
-  
-  // History management for undo/redo
-  const [history, setHistory] = useState([]);
-  const [historyIndex, setHistoryIndex] = useState(-1);
-  
-  // Save initial state to history on component mount
-  useEffect(() => {
-    if (history.length === 0) {
-      const initialState = {
-        timestamp: Date.now(),
-        action: 'Initial State',
-        state: {
-          units: units,
-          subdivisions: subdivisions,
-          landShape: landShape,
-          hasManuallyEditedShape: hasManuallyEditedShape,
-          measurements: measurements
+  // Navigation state for infinite canvas
+  const [zoomLevel, setZoomLevel] = useState(50);
+  const [cameraPosition, setCameraPosition] = useState([50, 50, 50]);
+  const [currentZoom, setCurrentZoom] = useState(50);
+
+  // Enhanced Interactive Drawing Plane Component
+  const DrawingPlane = () => {
+    const meshRef = React.useRef();
+    const raycaster = React.useMemo(() => new THREE.Raycaster(), []);
+    const mouse = React.useMemo(() => new THREE.Vector2(), []);
+    
+    // Enhanced pointer down with better raycasting
+    const handlePointerDown = (event) => {
+      if (!drawingMode) return;
+      
+      event.stopPropagation();
+      const point = event.point;
+      
+      // Clear selection if clicking on empty space in select mode
+      if (drawingMode === 'select') {
+        setSelectedSubdivision(null);
+        return;
+      }
+      
+      if (drawingMode === 'rectangle') {
+        setIsDrawing(true);
+        setDrawingStart({ x: point.x, z: point.z });
+        setDrawingCurrent({ x: point.x, z: point.z });
+        addToast({
+          type: 'info',
+          message: 'Click and drag to create rectangle subdivision',
+          duration: 2000
+        });
+      } else if (drawingMode === 'polygon') {
+        const newPoint = { x: point.x, z: point.z };
+        setPolygonPoints(prev => [...prev, newPoint]);
+        
+        if (polygonPoints.length === 0) {
+          addToast({
+            type: 'info', 
+            message: 'Click to add points, double-click to finish polygon',
+            duration: 3000
+          });
         }
-      };
-      setHistory([initialState]);
-      setHistoryIndex(0);
-    }
-  }, [history.length, units, subdivisions, landShape, hasManuallyEditedShape, measurements]);
-  
-  // Save state to history
-  const saveToHistory = useCallback((action, newState) => {
-    const historyEntry = {
-      timestamp: Date.now(),
-      action,
-      state: {
-        units: newState.units || units,
-        subdivisions: newState.subdivisions || subdivisions,
-        landShape: newState.landShape || landShape,
-        hasManuallyEditedShape: newState.hasManuallyEditedShape !== undefined ? newState.hasManuallyEditedShape : hasManuallyEditedShape,
-        measurements: newState.measurements || measurements
+      } else if (drawingMode === 'polyline') {
+        // Freeform drawing mode
+        setIsDrawing(true);
+        setPolygonPoints([{ x: point.x, z: point.z }]);
       }
     };
-    
-    const newHistory = history.slice(0, historyIndex + 1);
-    newHistory.push(historyEntry);
-    
-    // Limit history to last 50 actions
-    if (newHistory.length > 50) {
-      newHistory.shift();
-    }
-    
-    setHistory(newHistory);
-    setHistoryIndex(newHistory.length - 1);
-  }, [history, historyIndex, units, subdivisions, landShape, hasManuallyEditedShape, measurements]);
-  
-  // Undo function
-  const undo = useCallback(() => {
-    if (historyIndex > 0) {
-      const prevState = history[historyIndex - 1].state;
-      setUnits(prevState.units);
-      setSubdivisions(prevState.subdivisions);
-      setLandShape(prevState.landShape);
-      setHasManuallyEditedShape(prevState.hasManuallyEditedShape);
-      if (prevState.measurements) {
-        setMeasurements(prevState.measurements);
-      }
-      setHistoryIndex(historyIndex - 1);
-    }
-  }, [historyIndex, history]);
-  
-  // Redo function
-  const redo = useCallback(() => {
-    if (historyIndex < history.length - 1) {
-      const nextState = history[historyIndex + 1].state;
-      setUnits(nextState.units);
-      setSubdivisions(nextState.subdivisions);
-      setLandShape(nextState.landShape);
-      setHasManuallyEditedShape(nextState.hasManuallyEditedShape);
-      if (nextState.measurements) {
-        setMeasurements(nextState.measurements);
-      }
-      setHistoryIndex(historyIndex + 1);
-    }
-  }, [historyIndex, history]);
 
-  // Dark mode toggle
-  const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+    // Enhanced pointer move with real-time feedback
+    const handlePointerMove = (event) => {
+      if (!drawingMode) return;
+      
+      const point = event.point;
+      
+      if (drawingMode === 'rectangle' && isDrawing && drawingStart) {
+        setDrawingCurrent({ x: point.x, z: point.z });
+        
+        // Create enhanced preview rectangle with measurements
+        const width = Math.abs(point.x - drawingStart.x);
+        const height = Math.abs(point.z - drawingStart.z);
+        const centerX = (drawingStart.x + point.x) / 2;
+        const centerZ = (drawingStart.z + point.z) / 2;
+        const area = width * height;
+        
+        setDrawingPreview({
+          type: 'rectangle',
+          position: { x: centerX, z: centerZ },
+          width: width,
+          height: height,
+          area: area,
+          measurements: {
+            width: width.toFixed(1),
+            height: height.toFixed(1),
+            area: area.toFixed(1)
+          }
+        });
+      } else if (drawingMode === 'polyline' && isDrawing) {
+        // Freeform drawing - add points as we move
+        const lastPoint = polygonPoints[polygonPoints.length - 1];
+        const distance = Math.sqrt(
+          Math.pow(point.x - lastPoint.x, 2) + Math.pow(point.z - lastPoint.z, 2)
+        );
+        
+        // Add point if moved enough distance (smoothing)
+        if (distance > 1) {
+          setPolygonPoints(prev => [...prev, { x: point.x, z: point.z }]);
+        }
+      }
+    };
+
+    // Enhanced pointer up with validation and feedback
+    const handlePointerUp = (event) => {
+      if (!drawingMode) return;
+      
+      if (drawingMode === 'rectangle' && isDrawing && drawingStart && drawingCurrent) {
+        const width = Math.abs(drawingCurrent.x - drawingStart.x);
+        const height = Math.abs(drawingCurrent.z - drawingStart.z);
+        
+        // Enhanced minimum size check with user feedback
+        if (width > 2 && height > 2) {
+          const centerX = (drawingStart.x + drawingCurrent.x) / 2;
+          const centerZ = (drawingStart.z + drawingCurrent.z) / 2;
+          const area = width * height;
+          
+          const newSubdivision = {
+            id: Date.now(),
+            type: 'rectangle',
+            position: { x: centerX, z: centerZ },
+            width: width,
+            height: height,
+            area: area,
+            label: `Subdivision ${subdivisions.length + 1}`,
+            color: `hsl(${(subdivisions.length * 137.5) % 360}, 70%, 50%)`,
+            created: new Date().toISOString(),
+            editable: true
+          };
+          
+          setSubdivisions(prev => [...prev, newSubdivision]);
+          setSelectedSubdivision(newSubdivision.id);
+          
+          addToast({
+            type: 'success',
+            message: `Rectangle created: ${width.toFixed(1)}m × ${height.toFixed(1)}m (${area.toFixed(1)} m²)`,
+            duration: 3000
+          });
+        } else {
+          addToast({
+            type: 'warning',
+            message: 'Rectangle too small. Minimum size is 2m × 2m',
+            duration: 2000
+          });
+        }
+        
+        // Reset drawing state
+        setIsDrawing(false);
+        setDrawingStart(null);
+        setDrawingCurrent(null);
+        setDrawingPreview(null);
+      } else if (drawingMode === 'polyline' && isDrawing) {
+        // Finish freeform drawing
+        if (polygonPoints.length >= 3) {
+          const area = calculatePolygonArea(polygonPoints);
+          const centroid = calculatePolygonCentroid(polygonPoints);
+          
+          if (area > 4) {
+            const newSubdivision = {
+              id: Date.now(),
+              type: 'freeform',
+              points: [...polygonPoints],
+              position: centroid,
+              area: area,
+              label: `Freeform ${subdivisions.length + 1}`,
+              color: `hsl(${(subdivisions.length * 137.5) % 360}, 70%, 50%)`,
+              created: new Date().toISOString(),
+              editable: true
+            };
+            
+            setSubdivisions(prev => [...prev, newSubdivision]);
+            setSelectedSubdivision(newSubdivision.id);
+            
+            addToast({
+              type: 'success',
+              message: `Freeform area created: ${area.toFixed(1)} m²`,
+              duration: 3000
+            });
+          }
+        }
+        
+        setIsDrawing(false);
+        setPolygonPoints([]);
+      }
+    };
+
+    // Enhanced double-click for polygon completion
+    const handleDoubleClick = (event) => {
+      event.stopPropagation();
+      
+      if (drawingMode === 'polygon' && polygonPoints.length >= 3) {
+        // Complete polygon with enhanced validation
+        const area = calculatePolygonArea(polygonPoints);
+        const centroid = calculatePolygonCentroid(polygonPoints);
+        
+        if (area > 4) {
+          const newSubdivision = {
+            id: Date.now(),
+            type: 'polygon',
+            points: [...polygonPoints],
+            position: centroid,
+            area: area,
+            label: `Polygon ${subdivisions.length + 1}`,
+            color: `hsl(${(subdivisions.length * 137.5) % 360}, 70%, 50%)`,
+            created: new Date().toISOString(),
+            editable: true
+          };
+          
+          setSubdivisions(prev => [...prev, newSubdivision]);
+          setSelectedSubdivision(newSubdivision.id);
+          
+          addToast({
+            type: 'success',
+            message: `Polygon created with ${polygonPoints.length} points (${area.toFixed(1)} m²)`,
+            duration: 3000
+          });
+        } else {
+          addToast({
+            type: 'warning',
+            message: 'Polygon too small. Minimum area is 4 m²',
+            duration: 2000
+          });
+        }
+        
+        setPolygonPoints([]);
+      }
+    };
+
+    return (
+      <Plane
+        ref={meshRef}
+        args={[400, 400]} // Larger drawing area
+        rotation={[-Math.PI / 2, 0, 0]}
+        position={[0, 0.005, 0]}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onDoubleClick={handleDoubleClick}
+      >
+        <meshBasicMaterial 
+          transparent 
+          opacity={0} 
+          depthWrite={false}
+        />
+      </Plane>
+    );
   };
 
-  // Persist dark mode preference
-  useEffect(() => {
-    localStorage.setItem('landVisualizer-darkMode', JSON.stringify(darkMode));
-  }, [darkMode]);
-  
-  // Delete subdivision function for keyboard shortcut
-  const deleteSubdivision = useCallback((subdivisionId) => {
-    const newSubdivisions = subdivisions.filter(s => s.id !== subdivisionId);
-    setSubdivisions(newSubdivisions);
-    saveToHistory('Delete Subdivision', { subdivisions: newSubdivisions });
-    setEditingSubdivision(null);
-  }, [subdivisions, saveToHistory]);
-  
-  // Distance calculation
-  const calculateDistance = (point1, point2) => {
-    const dx = point2.x - point1.x;
-    const dz = point2.z - point1.z;
-    return Math.sqrt(dx * dx + dz * dz);
+  // Enhanced Drawing Preview Component with measurements
+  const DrawingPreview = () => {
+    if (!drawingPreview) return null;
+
+    if (drawingPreview.type === 'rectangle') {
+      return (
+        <group position={[drawingPreview.position.x, 0.01, drawingPreview.position.z]}>
+          {/* Preview fill */}
+          <Plane
+            args={[drawingPreview.width, drawingPreview.height]}
+            rotation={[-Math.PI / 2, 0, 0]}
+          >
+            <meshLambertMaterial
+              color="#00ff88"
+              transparent
+              opacity={0.2}
+            />
+          </Plane>
+          
+          {/* Enhanced preview border with animation */}
+          <Line
+            points={[
+              [-drawingPreview.width/2, 0.001, -drawingPreview.height/2],
+              [drawingPreview.width/2, 0.001, -drawingPreview.height/2],
+              [drawingPreview.width/2, 0.001, drawingPreview.height/2],
+              [-drawingPreview.width/2, 0.001, drawingPreview.height/2],
+              [-drawingPreview.width/2, 0.001, -drawingPreview.height/2]
+            ]}
+            color="#00ff88"
+            lineWidth={3}
+            dashed
+          />
+          
+          {/* Live measurements display */}
+          {drawingPreview.measurements && (
+            <>
+              <Text
+                position={[0, 5, 0]}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="middle"
+                fontSize={2}
+                outlineWidth={0.1}
+                outlineColor="#000000"
+              >
+                {`${drawingPreview.measurements.width}m × ${drawingPreview.measurements.height}m`}
+              </Text>
+              <Text
+                position={[0, 2, 0]}
+                color="#ffff00"
+                anchorX="center"
+                anchorY="middle"
+                fontSize={1.5}
+                outlineWidth={0.05}
+                outlineColor="#000000"
+              >
+                {`${drawingPreview.measurements.area} m²`}
+              </Text>
+            </>
+          )}
+        </group>
+      );
+    }
+
+    return null;
   };
-  
-  // Area calculation for measurement polygon
-  const calculateMeasurementArea = (points) => {
-    if (points.length < 3) return 0;
+
+  // Enhanced Polygon Preview Component
+  const PolygonPreview = () => {
+    if (polygonPoints.length < 1) return null;
+
+    const linePoints = polygonPoints.map(p => [p.x, 0.006, p.z]);
+
+    return (
+      <group>
+        {/* Polygon line preview */}
+        {polygonPoints.length > 1 && (
+          <Line
+            points={linePoints}
+            color="#00ff88"
+            lineWidth={4}
+          />
+        )}
+        
+        {/* Point indicators */}
+        {polygonPoints.map((point, index) => (
+          <group key={index} position={[point.x, 0.5, point.z]}>
+            <Box args={[0.5, 1, 0.5]}>
+              <meshLambertMaterial 
+                color={index === 0 ? "#ff0000" : "#00ff88"} 
+                emissive={index === 0 ? "#440000" : "#004400"}
+              />
+            </Box>
+            <Text
+              position={[0, 2, 0]}
+              color="#ffffff"
+              anchorX="center"
+              anchorY="middle"
+              fontSize={1}
+              outlineWidth={0.05}
+              outlineColor="#000000"
+            >
+              {index + 1}
+            </Text>
+          </group>
+        ))}
+        
+        {/* Area preview for closed polygons */}
+        {polygonPoints.length >= 3 && (
+          <Text
+            position={[
+              polygonPoints.reduce((sum, p) => sum + p.x, 0) / polygonPoints.length,
+              8,
+              polygonPoints.reduce((sum, p) => sum + p.z, 0) / polygonPoints.length
+            ]}
+            color="#ffff00"
+            anchorX="center"
+            anchorY="middle"
+            fontSize={2}
+            outlineWidth={0.1}
+            outlineColor="#000000"
+          >
+            {`Points: ${polygonPoints.length}`}
+            {polygonPoints.length >= 3 && (
+              <Text
+                position={[0, -3, 0]}
+                color="#ffffff"
+                anchorX="center"
+                anchorY="middle"
+                fontSize={1.5}
+                outlineWidth={0.05}
+                outlineColor="#000000"
+              >
+                {`Area: ${calculatePolygonArea(polygonPoints).toFixed(1)} m²`}
+              </Text>
+            )}
+          </Text>
+        )}
+      </group>
+    );
+  };
+
+  // Performance-Optimized Subdivision Component with LOD
+  const EnhancedSubdivision3D = ({ subdivision, index, onEdit, onDelete, isSelected, camera }) => {
+    const [hovered, setHovered] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const subdivisionRef = React.useRef();
     
+    // Performance optimization: Calculate LOD based on distance
+    const getLOD = () => {
+      if (!camera || !subdivisionRef.current) return 'high';
+      
+      const distance = camera.position.distanceTo(
+        new THREE.Vector3(subdivision.position.x, 0, subdivision.position.z)
+      );
+      
+      if (distance < 50) return 'high';    // Show all details
+      if (distance < 200) return 'medium'; // Simplified details  
+      if (distance < 1000) return 'low';   // Basic shape only
+      return 'minimal'; // Just outline
+    };
+    
+    const lodLevel = getLOD();
+    
+    // Skip rendering if too far away
+    if (lodLevel === 'minimal') {
+      return null;
+    }
+    
+    const handleClick = (event) => {
+      event.stopPropagation();
+      if (drawingMode === 'select') {
+        setSelectedSubdivision(prevSelected => 
+          prevSelected === subdivision.id ? null : subdivision.id
+        );
+      }
+    };
+
+    const handleDoubleClick = (event) => {
+      event.stopPropagation();
+      if (onEdit) onEdit(subdivision.id);
+      
+      // Enable inline editing
+      setEditingSubdivision(subdivision.id);
+      addToast({
+        type: 'info',
+        message: 'Double-click to edit properties',
+        duration: 2000
+      });
+    };
+    
+    const handlePointerOver = () => {
+      setHovered(true);
+      setHoveredSubdivision(subdivision.id);
+    };
+    
+    const handlePointerOut = () => {
+      setHovered(false);
+      setHoveredSubdivision(null);
+    };
+
+    if (subdivision.type === 'polygon' || subdivision.type === 'freeform') {
+      // Render polygon subdivision
+      const points = subdivision.points.map(p => [p.x, 0.003, p.z]);
+      
+      return (
+        <group 
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+        >
+          {/* Enhanced polygon rendering - adapt line width based on LOD */}
+          <Line
+            points={[...points, points[0]]} // Close the polygon
+            color={isSelected ? "#ffffff" : subdivision.color}
+            lineWidth={
+              lodLevel === 'high' ? (hovered || isSelected ? 6 : 3) :
+              lodLevel === 'medium' ? 2 : 1
+            }
+          />
+          
+          {/* Fill effect for better visibility */}
+          {points.length >= 3 && (
+            <mesh position={[0, 0.002, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+              <planeGeometry args={[200, 200]} />
+              <meshLambertMaterial
+                color={subdivision.color}
+                transparent
+                opacity={hovered || isSelected ? 0.3 : 0.1}
+                depthWrite={false}
+              />
+            </mesh>
+          )}
+          
+          {/* Label - only show at high and medium LOD */}
+          {(lodLevel === 'high' || lodLevel === 'medium') && (
+            <Text
+              position={[subdivision.position.x, 3, subdivision.position.z]}
+              color={darkMode ? '#ffffff' : '#000000'}
+              anchorX="center"
+              anchorY="middle"
+              fontSize={lodLevel === 'high' ? 2 : 1.5}
+            >
+              {subdivision.label}
+            </Text>
+          )}
+
+          {/* Advanced edit handles for selected polygon - only at high LOD */}
+          {isSelected && drawingMode === 'select' && lodLevel === 'high' && (
+            <>
+              {subdivision.points.map((point, idx) => (
+                <group key={idx} position={[point.x, 0, point.z]}>
+                  {/* Handle sphere */}
+                  <mesh position={[0, 0.8, 0]}>
+                    <sphereGeometry args={[0.3, 16, 16]} />
+                    <meshLambertMaterial 
+                      color={idx === 0 ? "#ff4444" : "#4488ff"}
+                      emissive={idx === 0 ? "#220000" : "#002244"}
+                    />
+                  </mesh>
+                  
+                  {/* Handle number */}
+                  <Text
+                    position={[0, 2, 0]}
+                    color="#ffffff"
+                    anchorX="center"
+                    anchorY="middle"
+                    fontSize={1}
+                    outlineWidth={0.05}
+                    outlineColor="#000000"
+                  >
+                    {idx + 1}
+                  </Text>
+                  
+                  {/* Connection line to center */}
+                  <Line
+                    points={[
+                      [0, 0.003, 0],
+                      [subdivision.position.x - point.x, 0.003, subdivision.position.z - point.z]
+                    ]}
+                    color="#ffffff"
+                    lineWidth={1}
+                    transparent
+                    opacity={0.3}
+                  />
+                </group>
+              ))}
+              
+              {/* Center handle */}
+              <group position={[subdivision.position.x, 0, subdivision.position.z]}>
+                <mesh position={[0, 1.2, 0]}>
+                  <boxGeometry args={[0.8, 0.8, 0.8]} />
+                  <meshLambertMaterial 
+                    color="#ffff00"
+                    emissive="#444400"
+                  />
+                </mesh>
+                <Text
+                  position={[0, 3, 0]}
+                  color="#ffffff"
+                  anchorX="center"
+                  anchorY="middle"
+                  fontSize={1.2}
+                  outlineWidth={0.05}
+                  outlineColor="#000000"
+                >
+                  CENTER
+                </Text>
+              </group>
+            </>
+          )}
+        </group>
+      );
+    } else {
+      // Render rectangle subdivision
+      return (
+        <group 
+          position={[subdivision.position.x, 0, subdivision.position.z]}
+          onPointerOver={handlePointerOver}
+          onPointerOut={handlePointerOut}
+          onClick={handleClick}
+          onDoubleClick={handleDoubleClick}
+        >
+          <Plane
+            args={[subdivision.width, subdivision.height]}
+            rotation={[-Math.PI / 2, 0, 0]}
+            position={[0, 0.003, 0]}
+          >
+            <meshLambertMaterial
+              color={subdivision.color}
+              transparent
+              opacity={hovered || isSelected ? 0.8 : 0.6}
+            />
+          </Plane>
+          
+          {/* Border - adapt line width based on LOD */}
+          <Line
+            points={[
+              [-subdivision.width/2, 0.004, -subdivision.height/2],
+              [subdivision.width/2, 0.004, -subdivision.height/2],
+              [subdivision.width/2, 0.004, subdivision.height/2],
+              [-subdivision.width/2, 0.004, subdivision.height/2],
+              [-subdivision.width/2, 0.004, -subdivision.height/2]
+            ]}
+            color={hovered || isSelected ? "#ffffff" : "#cccccc"}
+            lineWidth={
+              lodLevel === 'high' ? (hovered || isSelected ? 3 : 2) :
+              lodLevel === 'medium' ? 1.5 : 1
+            }
+          />
+          
+          {/* Label - only show at high and medium LOD */}
+          {(lodLevel === 'high' || lodLevel === 'medium') && (
+            <Text
+              position={[0, 3, 0]}
+              color={darkMode ? '#ffffff' : '#000000'}
+              anchorX="center"
+              anchorY="middle"
+              fontSize={lodLevel === 'high' ? 2 : 1.5}
+            >
+              {subdivision.label}
+            </Text>
+          )}
+
+          {/* Edit handles for selected rectangle - only at high LOD */}
+          {isSelected && drawingMode === 'select' && lodLevel === 'high' && (
+            <>
+              {/* Corner handles */}
+              <Box args={[1, 1, 1]} position={[-subdivision.width/2, 0.5, -subdivision.height/2]}>
+                <meshLambertMaterial color="#ff0000" />
+              </Box>
+              <Box args={[1, 1, 1]} position={[subdivision.width/2, 0.5, -subdivision.height/2]}>
+                <meshLambertMaterial color="#ff0000" />
+              </Box>
+              <Box args={[1, 1, 1]} position={[subdivision.width/2, 0.5, subdivision.height/2]}>
+                <meshLambertMaterial color="#ff0000" />
+              </Box>
+              <Box args={[1, 1, 1]} position={[-subdivision.width/2, 0.5, subdivision.height/2]}>
+                <meshLambertMaterial color="#ff0000" />
+              </Box>
+            </>
+          )}
+        </group>
+      );
+    }
+  };
+
+  // Helper functions
+  const calculatePolygonArea = (points) => {
     let area = 0;
     for (let i = 0; i < points.length; i++) {
       const j = (i + 1) % points.length;
@@ -2112,1402 +1093,988 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
     }
     return Math.abs(area) / 2;
   };
-  
-  // Handle measurement point selection
-  const handleMeasurementPoint = (points) => {
-    if (measurementMode === 'distance' && points.length === 2) {
-      const distance = calculateDistance(points[0], points[1]);
-      const measurement = {
-        id: Date.now(),
-        type: 'distance',
-        points: points,
-        distance: distance
-      };
-      const newMeasurements = [...measurements, measurement];
-      setMeasurements(newMeasurements);
-      setMeasurementPoints([]);
-      
-      // Save to history
-      saveToHistory('Add Distance Measurement', { measurements: newMeasurements });
-    } else if (measurementMode === 'area' && points.length >= 3) {
-      setMeasurementPoints(points);
-    } else {
-      setMeasurementPoints(points);
+
+  const calculatePolygonCentroid = (points) => {
+    let cx = 0, cz = 0;
+    for (const point of points) {
+      cx += point.x;
+      cz += point.z;
     }
-  };
-  
-  // Complete area measurement
-  const completeAreaMeasurement = useCallback(() => {
-    if (measurementPoints.length >= 3) {
-      const area = calculateMeasurementArea(measurementPoints);
-      const measurement = {
-        id: Date.now(),
-        type: 'area',
-        points: measurementPoints,
-        area: area
-      };
-      const newMeasurements = [...measurements, measurement];
-      setMeasurements(newMeasurements);
-      setMeasurementPoints([]);
-      
-      // Save to history
-      saveToHistory('Add Area Measurement', { measurements: newMeasurements });
-    }
-  }, [measurementPoints, measurements, saveToHistory]);
-  
-  // Clear all measurements
-  const clearMeasurements = () => {
-    setMeasurements([]);
-    setMeasurementPoints([]);
-    
-    // Save to history
-    saveToHistory('Clear Measurements', { measurements: [] });
-  };
-  
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      } else if (e.ctrlKey && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-        e.preventDefault();
-        redo();
-      } else if (e.key === 'Escape') {
-        setDrawingMode(null);
-        setMeasurementMode(null);
-        setMeasurementPoints([]);
-      } else if (e.key === 'Delete' && editingSubdivision) {
-        deleteSubdivision(editingSubdivision);
-      } else if (e.key === 'Enter' && measurementMode === 'area' && measurementPoints.length >= 3) {
-        completeAreaMeasurement();
-      }
-    };
-    
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [historyIndex, history, drawingMode, editingSubdivision, measurementMode, measurementPoints, completeAreaMeasurement, deleteSubdivision, redo, undo]);
-  const [selectedSubdivision, setSelectedSubdivision] = useState(null);
-  const [isDraggingSubdivisionCorner, setIsDraggingSubdivisionCorner] = useState(false);
-
-  // Unit conversions to square meters (arranged by popularity, m² first)
-  const unitConversions = {
-    'm²': 1,                   // Square meters (most popular metric)
-    'ft²': 0.09290304,         // Square feet (most popular imperial)
-    'acres': 4046.86,          // Acres (very popular for land)
-    'hectares': 10000,         // Hectares (popular metric for large areas)
-    'yd²': 0.83612736,         // Square yards (common in US)
-    'km²': 1000000,            // Square kilometers (for very large areas)
-    'arpent': 3419,            // Arpent (traditional French/Louisiana)
-    'perche': 25.29285264,     // Perche (traditional British)
-    'toise': 3.7987            // Toise (historical French - least popular)
+    return { x: cx / points.length, z: cz / points.length };
   };
 
-  // Check browser compatibility on mount
-  useEffect(() => {
-    setWebGLSupported(checkWebGLSupport());
-  }, []);
-
-  // Load configuration from URL on mount
-  useEffect(() => {
-    const loadFromURL = () => {
-      const params = new URLSearchParams(window.location.search);
-      const config = params.get('config');
-      
-      if (config) {
-        try {
-          const decoded = JSON.parse(atob(config));
-          
-          // Validate and sanitize loaded data
-          if (decoded && typeof decoded === 'object') {
-            if (decoded.units && Array.isArray(decoded.units)) {
-              // Validate units array
-              const validUnits = decoded.units.filter(unit => 
-                unit && 
-                typeof unit === 'object' && 
-                typeof unit.value === 'number' && 
-                unit.value >= 0 && 
-                unit.value <= 1000000 && // Max 1M square meters
-                typeof unit.unit === 'string' && 
-                unitConversions.hasOwnProperty(unit.unit)
-              );
-              if (validUnits.length > 0) {
-                setUnits(validUnits);
-              }
-            }
-            if (decoded.comparison && typeof decoded.comparison === 'string') {
-              setSelectedComparison(decoded.comparison);
-            }
-            if (decoded.subdivisions && Array.isArray(decoded.subdivisions)) {
-              // Validate subdivisions
-              const validSubdivisions = decoded.subdivisions.filter(sub =>
-                sub &&
-                typeof sub === 'object' &&
-                typeof sub.id === 'string' &&
-                typeof sub.area === 'number' &&
-                sub.area >= 0 &&
-                sub.area <= 1000000
-              );
-              setSubdivisions(validSubdivisions);
-            }
-            if (decoded.landShape && Array.isArray(decoded.landShape)) {
-              // Validate landShape coordinates
-              const validLandShape = decoded.landShape.filter(point =>
-                point &&
-                typeof point === 'object' &&
-                typeof point.x === 'number' &&
-                typeof point.z === 'number' &&
-                Math.abs(point.x) <= 10000 &&
-                Math.abs(point.z) <= 10000
-              );
-              if (validLandShape.length >= 3) {
-                setLandShape(validLandShape);
-              }
-            }
-            if (typeof decoded.hasManuallyEditedShape === 'boolean') {
-              setHasManuallyEditedShape(decoded.hasManuallyEditedShape);
-            }
-          }
-        } catch (error) {
-          // Silently ignore malformed URL configurations
-        }
+  // Infinite Grid Component
+  const InfiniteGrid = ({ cellSize, sectionSize, gridSize, darkMode, camera }) => {
+    const gridRef = React.useRef();
+    
+    useFrame(() => {
+      if (gridRef.current) {
+        // Keep grid centered on camera position (rounded to grid cells)
+        const roundedX = Math.round(camera.position.x / cellSize) * cellSize;
+        const roundedZ = Math.round(camera.position.z / cellSize) * cellSize;
+        gridRef.current.position.set(roundedX, 0, roundedZ);
       }
-    };
-    
-    loadFromURL();
-  }, []);
-
-  // Generate shareable URL
-  const generateShareURL = () => {
-    const config = {
-      units: units,
-      comparison: selectedComparison,
-      subdivisions: subdivisions,
-      landShape: landShape,
-      hasManuallyEditedShape: hasManuallyEditedShape
-    };
-    
-    const encoded = btoa(JSON.stringify(config));
-    const url = `${window.location.origin}${window.location.pathname}?config=${encoded}`;
-    return url;
-  };
-
-  // Copy to clipboard with browser compatibility
-  const copyToClipboard = async () => {
-    const url = generateShareURL();
-    
-    // Check for modern clipboard API support
-    if (navigator.clipboard && window.isSecureContext) {
-      try {
-        await navigator.clipboard.writeText(url);
-        setCopied(true);
-        const timer = setTimeout(() => setCopied(false), 2000);
-        return () => clearTimeout(timer);
-      } catch (err) {
-        // Fall through to legacy method
-      }
-    }
-    
-    // Fallback for older browsers or non-secure contexts
-    try {
-      const textArea = document.createElement('textarea');
-      textArea.value = url;
-      textArea.style.position = 'fixed';
-      textArea.style.left = '-999999px';
-      textArea.style.top = '-999999px';
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      const successful = document.execCommand('copy');
-      document.body.removeChild(textArea);
-      
-      if (successful) {
-        setCopied(true);
-        const timer = setTimeout(() => setCopied(false), 2000);
-        return () => clearTimeout(timer);
-      } else {
-        // If copy failed, show the URL in an alert
-        alert(`Copy failed. Please copy this URL manually: ${url}`);
-      }
-    } catch (err) {
-      // Last resort - show URL in alert
-      alert(`Copy not supported. Please copy this URL manually: ${url}`);
-    }
-  };
-
-  // Premium Export Functions
-  const generateWatermarkedPreview = async () => {
-    // Generate a watermarked version for free preview
-    try {
-      // First capture the 3D scene
-      let sceneImageData = null;
-      try {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        const canvas = document.querySelector('canvas');
-        if (canvas) {
-          const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-          if (gl) {
-            gl.finish();
-            sceneImageData = canvas.toDataURL('image/png', 0.7); // Lower quality for preview
-          }
-        }
-      } catch (error) {
-        // Continue without 3D image
-      }
-
-      // Create watermarked PDF
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      
-      // Colors for landscape design
-      const colors = {
-        skyBlue: [135, 206, 250],
-        cloudWhite: [248, 250, 252],
-        hillGreen1: [34, 139, 34],
-        hillGreen2: [85, 107, 47],
-        hillGreen3: [107, 142, 35],
-        contentBg: [248, 250, 252],
-        headerGray: [156, 163, 175]
-      };
-      
-      // Add landscape header (simplified for watermarked version)
-      doc.setFillColor(...colors.headerGray);
-      doc.rect(0, 0, pageWidth, 30, 'F');
-      
-      // Title
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(18);
-      doc.setFont(undefined, 'bold');
-      doc.text('LAND VISUALIZER', 20, 20);
-      
-      // Add sky with simplified design
-      doc.setFillColor(...colors.skyBlue);
-      doc.rect(0, 30, pageWidth, 70, 'F');
-      
-      // Add rolling hills (simplified)
-      doc.setFillColor(...colors.hillGreen1);
-      const hill1Points = [];
-      for (let x = 0; x <= pageWidth; x += 10) {
-        const y = 100 + Math.sin(x * 0.02) * 8;
-        hill1Points.push([x, y]);
-      }
-      hill1Points.push([pageWidth, 150], [0, 150]);
-      doc.triangle(...hill1Points[0], ...hill1Points[hill1Points.length-2], ...hill1Points[hill1Points.length-1]);
-      
-      // Add content background
-      doc.setFillColor(...colors.contentBg);
-      doc.rect(0, 150, pageWidth, pageHeight - 180, 'F');
-      
-      // Add prominent watermarks
-      doc.setTextColor(200, 200, 200);
-      doc.setFontSize(40);
-      doc.setFont(undefined, 'bold');
-      
-      // Diagonal watermarks across the page
-      for (let i = 0; i < 3; i++) {
-        const x = (pageWidth / 4) * (i + 1);
-        const y = (pageHeight / 3) * 2;
-        doc.text('PREVIEW', x - 20, y, { angle: -45 });
-      }
-      
-      // Content with limited data
-      let yPosition = 160;
-      doc.setTextColor(34, 139, 34);
-      doc.setFontSize(16);
-      doc.text('LAND AREA SUMMARY', 20, yPosition);
-      yPosition += 15;
-      
-      doc.setFontSize(12);
-      doc.text(`TOTAL AREA: ${formatNumber(totalAreaInSqM)} m²`, 20, yPosition);
-      yPosition += 10;
-      doc.text('Purchase full export for complete analysis', 20, yPosition);
-      
-      // Add footer watermark
-      doc.setFillColor(...colors.headerGray);
-      doc.rect(0, pageHeight - 30, pageWidth, 30, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(10);
-      doc.text('PREVIEW ONLY - Purchase for full report', 20, pageHeight - 15);
-      doc.setTextColor(150, 150, 150);
-      doc.setFontSize(12);
-      doc.text('WATERMARKED PREVIEW - Purchase to remove', pageWidth/2, pageHeight - 40, { align: 'center' });
-
-      // Save preview
-      doc.save('LandVisualizer_Preview.pdf');
-      
-      // Track preview generation
-      const preview = {
-        id: Date.now(),
-        type: 'preview',
-        timestamp: new Date().toISOString(),
-        downloaded: true
-      };
-      setExportHistory(prev => [preview, ...prev]);
-      
-    } catch (error) {
-      alert('Failed to generate preview. Please try again.');
-    }
-  };
-
-  const initializePayPalPayment = async (tier) => {
-    setSelectedExportType(tier);
-    setPaymentStatus('processing');
-    
-    try {
-      // In a real implementation, you'd integrate with PayPal SDK
-      // For now, we'll simulate the payment flow
-      
-      // PayPal integration would look like this:
-      /*
-      const paypalResponse = await fetch('/api/create-paypal-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: tier.price,
-          currency: tier.currency,
-          description: tier.description,
-          exportData: {
-            units: units,
-            subdivisions: subdivisions,
-            selectedComparison: selectedComparison,
-            landShape: landShape
-          }
-        })
-      });
-      */
-      
-      // Simulate PayPal redirect (replace with actual PayPal integration)
-      const paypalUrl = `https://www.paypal.com/checkoutnow?token=SIMULATED_${tier.id}_${Date.now()}`;
-      
-      // For demo purposes, show payment simulation
-      const confirmPayment = window.confirm(
-        `This would redirect to PayPal to pay $${tier.price} for ${tier.name}.\n\n` +
-        `In production, you'll be redirected to PayPal's secure checkout.\n\n` +
-        `Click OK to simulate successful payment.`
-      );
-      
-      if (confirmPayment) {
-        // Simulate successful payment
-        setTimeout(() => {
-          const token = `premium_${tier.id}_${Date.now()}`;
-          setDownloadToken(token);
-          setPaymentStatus('success');
-          
-          // Add to export history
-          const exportRecord = {
-            id: Date.now(),
-            type: tier.id,
-            tier: tier,
-            token: token,
-            timestamp: new Date().toISOString(),
-            downloaded: false,
-            paymentId: `PAY_SIMULATED_${Date.now()}`
-          };
-          setExportHistory(prev => [exportRecord, ...prev]);
-          
-        }, 2000); // Simulate payment processing time
-      } else {
-        setPaymentStatus('failed');
-        setSelectedExportType(null);
-      }
-      
-    } catch (error) {
-      setPaymentStatus('failed');
-      alert('Payment failed. Please try again.');
-    }
-  };
-
-  const downloadPremiumExport = async (exportRecord) => {
-    if (!exportRecord.token) {
-      alert('Invalid download token. Please contact support.');
-      return;
-    }
-    
-    try {
-      const tier = exportRecord.tier;
-      
-      // Generate premium exports based on tier
-      if (tier.formats.includes('PDF')) {
-        await generatePremiumPDF(tier);
-      }
-      
-      if (tier.formats.includes('PNG')) {
-        await generatePremiumPNG();
-      }
-      
-      if (tier.formats.includes('CSV')) {
-        await generateCSVExport();
-      }
-      
-      // Mark as downloaded
-      setExportHistory(prev => 
-        prev.map(record => 
-          record.id === exportRecord.id 
-            ? { ...record, downloaded: true, downloadedAt: new Date().toISOString() }
-            : record
-        )
-      );
-      
-    } catch (error) {
-      alert('Download failed. Please try again or contact support.');
-    }
-  };
-
-  const generatePremiumPDF = async (tier) => {
-    // Generate high-quality, watermark-free PDF
-    // (This is the same as the existing exportToPDF but without watermarks)
-    return exportToPDF(); // Use existing function
-  };
-
-  const generatePremiumPNG = async () => {
-    try {
-      // Capture high-resolution 3D scene
-      await new Promise(resolve => setTimeout(resolve, 100));
-      const canvas = document.querySelector('canvas');
-      if (canvas) {
-        // Create high-res version
-        const link = document.createElement('a');
-        link.download = `LandVisualizer_Export_${new Date().toISOString().split('T')[0]}.png`;
-        link.href = canvas.toDataURL('image/png', 1.0); // Highest quality
-        link.click();
-      }
-    } catch (error) {
-      alert('Failed to generate PNG export.');
-    }
-  };
-
-  const generateCSVExport = () => {
-    try {
-      // Generate CSV with all measurement data
-      let csvContent = 'Land Visualization Data Export\n\n';
-      
-      // Basic measurements
-      csvContent += 'Type,Value,Unit\n';
-      csvContent += `Total Area,${totalAreaInSqM},m²\n`;
-      csvContent += `Total Area,${totalAreaInSqM * (1 / 10000)},hectares\n`;
-      csvContent += `Total Area,${totalAreaInSqM * (1 / 4046.86)},acres\n`;
-      csvContent += `Total Area,${totalAreaInSqM * (1 / 0.09290304)},ft²\n\n`;
-      
-      // Input units
-      csvContent += 'Input Units\n';
-      csvContent += 'Value,Unit,Square Meters\n';
-      units.forEach(unit => {
-        csvContent += `${unit.value},${unit.unit},${unit.value * unitConversions[unit.unit]}\n`;
-      });
-      csvContent += '\n';
-      
-      // Subdivisions
-      if (subdivisions.length > 0) {
-        csvContent += 'Subdivisions\n';
-        csvContent += 'Label,Area (m²),Area (acres),Area (hectares),Percentage of Total\n';
-        subdivisions.forEach(sub => {
-          const percentage = ((sub.area / totalAreaInSqM) * 100).toFixed(2);
-          csvContent += `${sub.label},${sub.area},${(sub.area * (1/4046.86)).toFixed(4)},${(sub.area * (1/10000)).toFixed(4)},${percentage}%\n`;
-        });
-        csvContent += '\n';
-      }
-      
-      // Export metadata
-      csvContent += 'Export Information\n';
-      csvContent += `Generated,${new Date().toISOString()}\n`;
-      csvContent += `Tool,Land Visualizer\n`;
-      csvContent += `Website,https://landvisualizer.com\n`;
-      
-      // Create and download file
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const link = document.createElement('a');
-      const url = URL.createObjectURL(blob);
-      link.setAttribute('href', url);
-      link.setAttribute('download', `LandVisualizer_Data_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-    } catch (error) {
-      alert('Failed to generate CSV export.');
-    }
-  };
-
-  const handlePaymentSuccess = (order) => {
-    console.log('handlePaymentSuccess called:', order);
-    const tier = exportTiers[selectedTier];
-    const token = `premium_${selectedTier}_${Date.now()}`;
-    
-    setDownloadToken(token);
-    setPaymentStatus('success');
-    
-    // Add to export history
-    const exportRecord = {
-      id: Date.now(),
-      format: tier.formats.join(', '),
-      status: 'completed',
-      token: token,
-      timestamp: Date.now(),
-      tier: selectedTier,
-      paymentMethod: 'paypal',
-      price: tier.price,
-      paypalOrderId: order.id
-    };
-    setExportHistory(prev => [exportRecord, ...prev]);
-    
-    // Close modal and reset states
-    setShowPremiumExportModal(false);
-    setSelectedTier(null);
-    setIsProcessingPayment(false);
-    
-    alert('Payment successful! Your premium exports are ready for download.');
-    
-    // Automatically trigger the download
-    downloadExport(exportRecord);
-  };
-
-  const downloadExport = async (exportRecord) => {
-    try {
-      const tier = exportTiers[exportRecord.tier];
-      
-      // Generate and download based on formats
-      if (tier.formats.includes('PDF')) {
-        await exportToPDF();
-      }
-      
-      if (tier.formats.includes('PNG')) {
-        await generatePremiumPNG();
-      }
-      
-      if (tier.formats.includes('CSV')) {
-        await generateCSVExport();
-      }
-      
-      // Mark as downloaded
-      setExportHistory(prev => 
-        prev.map(record => 
-          record.id === exportRecord.id 
-            ? { ...record, downloadedAt: Date.now() }
-            : record
-        )
-      );
-      
-    } catch (error) {
-      alert('Download failed. Please try again.');
-    }
-  };
-
-  // Calculate total area from units input
-  const totalAreaInSqM = units.reduce((total, unit) => {
-    return total + (unit.value * unitConversions[unit.unit]);
-  }, 0);
-  
-  // Update land shape to match the input area only if not manually edited
-  useEffect(() => {
-    if (totalAreaInSqM > 0 && !isUpdatingFromShape && !hasManuallyEditedShape) {
-      const sideLength = Math.sqrt(totalAreaInSqM);
-      const halfSide = sideLength / 2;
-      
-      setLandShape([
-        { x: -halfSide, z: -halfSide },
-        { x: halfSide, z: -halfSide },
-        { x: halfSide, z: halfSide },
-        { x: -halfSide, z: halfSide }
-      ]);
-    }
-  }, [totalAreaInSqM, isUpdatingFromShape, hasManuallyEditedShape]);
-
-  // Calculate conversions
-  const totalAcres = totalAreaInSqM / 4046.86;
-  const totalHectares = totalAreaInSqM / 10000;
-
-  // Calculate subdivisions total
-  const subdivisionsTotal = subdivisions.reduce((total, sub) => total + sub.area, 0);
-  const remainingArea = totalAreaInSqM - subdivisionsTotal;
-
-  // Comparison data
-  const defaultComparisons = [
-    { id: 'footballField', name: 'Football Field', area: 7140, icon: '⚽', color: colorMap.emerald, dimensions: { width: 105, length: 68 } },
-    { id: 'basketballCourt', name: 'Basketball Court', area: 420, icon: '🏀', color: colorMap.amber, dimensions: { width: 28, length: 15 } },
-    { id: 'tennisCourt', name: 'Tennis Court', area: 260.87, icon: '🎾', color: colorMap.sky, dimensions: { width: 23.77, length: 10.97 } },
-    { id: 'house', name: 'Average House', area: 150, icon: '🏠', color: colorMap.violet, dimensions: { width: 12, length: 12.5 } },
-    { id: 'parkingSpace', name: 'Parking Space', area: 12.5, icon: '🚗', color: colorMap.slate, dimensions: { width: 5, length: 2.5 } },
-    { id: 'swimmingPool', name: 'Swimming Pool', area: 163, icon: '🏊', color: colorMap.cyan, dimensions: { width: 25, length: 6.5 } },
-    { id: 'boxingRing', name: 'Boxing Ring', area: 37.21, icon: '🥊', color: colorMap.lightblue, dimensions: { width: 6.1, length: 6.1 } }
-  ];
-  
-  const comparisonOptions = [...defaultComparisons, ...customComparisons];
-
-  const addUnit = () => {
-    const newUnits = [...units, { value: 0, unit: 'm²' }];
-    setUnits(newUnits);
-    saveToHistory('Add Unit', { units: newUnits });
-  };
-
-  const removeUnit = (index) => {
-    if (units.length > 1) {
-      const newUnits = units.filter((_, i) => i !== index);
-      setUnits(newUnits);
-      saveToHistory('Remove Unit', { units: newUnits });
-      // Reset manual edit flag when removing a unit changes the total area
-      setHasManuallyEditedShape(false);
-    }
-  };
-
-  const updateUnit = (index, field, value) => {
-    const newUnits = [...units];
-    
-    if (field === 'value') {
-      // Validate numeric input
-      const numValue = Number(value);
-      if (isNaN(numValue) || numValue < 0 || numValue > 1000000) {
-        return; // Don't update if invalid
-      }
-      newUnits[index][field] = numValue;
-    } else if (field === 'unit') {
-      // Validate unit type
-      if (!unitConversions.hasOwnProperty(value)) {
-        return; // Don't update if invalid unit
-      }
-      newUnits[index][field] = value;
-    }
-    
-    setUnits(newUnits);
-    
-    // Reset manual edit flag when user changes area value input or unit type
-    if ((field === 'value' && value !== '' && Number(value) > 0) || field === 'unit') {
-      setHasManuallyEditedShape(false);
-    }
-  };
-
-  const formatNumber = (num) => {
-    return num.toLocaleString('en-US', { maximumFractionDigits: 2 });
-  };
-
-  // Custom Object Functions
-  const handleCustomObjectChange = (field, value) => {
-    setCustomObject(prev => ({
-      ...prev,
-      [field]: value
-    }));
-  };
-
-  const addCustomObject = () => {
-    const { name, width, length, icon } = customObject;
-    
-    // Validation
-    if (!name.trim() || !width || !length) {
-      alert('Please fill in all required fields (Name, Width, Length)');
-      return;
-    }
-    
-    const widthNum = parseFloat(width);
-    const lengthNum = parseFloat(length);
-    
-    if (isNaN(widthNum) || isNaN(lengthNum) || widthNum <= 0 || lengthNum <= 0) {
-      alert('Width and Length must be positive numbers');
-      return;
-    }
-    
-    const area = widthNum * lengthNum;
-    // Assign color based on current number of custom objects
-    const assignedColor = customObjectColors[customComparisons.length % customObjectColors.length];
-    
-    const newCustomObject = {
-      id: `custom_${Date.now()}`,
-      name: name.trim(),
-      area: area,
-      icon: icon || '📦',
-      color: colorMap[assignedColor] || '#8b5cf6',
-      dimensions: { width: widthNum, length: lengthNum },
-      isCustom: true
-    };
-    
-    setCustomComparisons(prev => [...prev, newCustomObject]);
-    
-    // Reset form
-    setCustomObject({
-      name: '',
-      width: '',
-      length: '',
-      icon: '📦',
-      color: 'purple'
     });
     
-    setShowCustomObjectForm(false);
-  };
-
-  const removeCustomObject = (id) => {
-    setCustomComparisons(prev => prev.filter(obj => obj.id !== id));
-    if (selectedComparison === id) {
-      setSelectedComparison(null);
-    }
-  };
-
-  const handleDeleteSubdivision = (id) => {
-    const newSubdivisions = subdivisions.filter(s => s.id !== id);
-    setSubdivisions(newSubdivisions);
-    saveToHistory('Delete Subdivision', { subdivisions: newSubdivisions });
-  };
-
-  const handleStartEdit = (subdivision) => {
-    setEditingSubdivision(subdivision.id);
-    setEditingLabel(subdivision.label);
-  };
-
-  const handleSaveEdit = (id) => {
-    const newSubdivisions = subdivisions.map(s => 
-      s.id === id ? { ...s, label: editingLabel } : s
+    return (
+      <group ref={gridRef}>
+        <Grid 
+          args={[gridSize, gridSize]} 
+          cellSize={cellSize} 
+          sectionSize={sectionSize} 
+          fadeDistance={gridSize * 0.4} 
+          fadeStrength={1}
+          cellThickness={0.3}
+          sectionThickness={0.8}
+          cellColor={darkMode ? '#374151' : '#64748b'}
+          sectionColor={darkMode ? '#4b5563' : '#475569'}
+          infiniteGrid={true}
+        />
+      </group>
     );
-    setSubdivisions(newSubdivisions);
-    saveToHistory('Edit Subdivision Label', { subdivisions: newSubdivisions });
-    setEditingSubdivision(null);
-    setEditingLabel('');
   };
 
-  const handleCancelEdit = () => {
-    setEditingSubdivision(null);
-    setEditingLabel('');
-  };
-
-  const clearAllSubdivisions = () => {
-    setSubdivisions([]);
-    saveToHistory('Clear All Subdivisions', { subdivisions: [] });
-    setDrawingMode(null);
-  };
-
-  // PDF Export functionality - Clean generation using jsPDF
-  const exportToPDF = async () => {
-    try {
-      // Starting PDF export with enhanced design
-      
-      // First capture the 3D scene with a small delay to ensure rendering
-      let sceneImageData = null;
-      try {
-        await new Promise(resolve => setTimeout(resolve, 100));
-        const canvas = document.querySelector('canvas');
-        if (canvas) {
-          const gl = canvas.getContext('webgl2') || canvas.getContext('webgl');
-          if (gl) {
-            gl.finish();
-            sceneImageData = canvas.toDataURL('image/png', 1.0);
-            // 3D scene captured successfully
-          }
-        }
-      } catch (error) {
-        // Failed to capture 3D scene - continuing without image
-      }
-
-      // Create new PDF with jsPDF
-      const doc = new jsPDF();
-      const pageWidth = doc.internal.pageSize.getWidth();
-      const pageHeight = doc.internal.pageSize.getHeight();
-      let yPosition = 0;
-
-      // Landscape-themed color scheme (matching your design)
-      const colors = {
-        headerGray: [160, 174, 166],     // Gray-green header
-        skyBlue: [173, 216, 230],        // Light blue sky
-        cloudWhite: [255, 255, 255],     // White clouds
-        hillDark: [107, 142, 35],        // Dark green hills
-        hillMid: [154, 205, 50],         // Medium green hills  
-        hillLight: [173, 255, 47],       // Light green hills
-        creamBg: [245, 245, 220],        // Cream content background
-        darkGreen: [34, 139, 34],        // Dark green for text/footer
-        brightGreen: [127, 255, 0],      // Bright green accents
-        yellow: [255, 255, 0],           // Yellow for conversions
-        text: [34, 139, 34],             // Dark green text
-        white: [255, 255, 255]           // White
-      };
-
-      // Landscape-themed helper functions
-      const addLandscapeHeader = async () => {
-        // Gray-green header band (matching design)
-        doc.setFillColor(...colors.headerGray);
-        doc.rect(0, 0, pageWidth, 30, 'F');
+  // Enhanced Drawing Plane with Infinite Support
+  const InfiniteDrawingPlane = () => {
+    const meshRef = React.useRef();
+    const { camera } = useThree();
+    
+    useFrame(() => {
+      if (meshRef.current) {
+        // Keep drawing plane centered on camera with large size
+        const distance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
+        const planeSize = Math.max(1000, distance * 4);
         
-        // Add actual logo (left side)
-        try {
-          // Convert logo to base64 for embedding
-          const logoResponse = await fetch('/logo512.png');
-          const logoBlob = await logoResponse.blob();
-          const logoBase64 = await new Promise((resolve) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(reader.result);
-            reader.readAsDataURL(logoBlob);
+        meshRef.current.position.set(camera.position.x, 0.006, camera.position.z);
+        meshRef.current.scale.setScalar(planeSize / 1000);
+      }
+    });
+    
+    const handlePointerDown = (event) => {
+      if (!drawingMode) return;
+      
+      event.stopPropagation();
+      const point = event.point;
+      
+      if (drawingMode === 'select') {
+        setSelectedSubdivision(null);
+        return;
+      }
+      
+      if (drawingMode === 'rectangle') {
+        setIsDrawing(true);
+        setDrawingStart({ x: point.x, z: point.z });
+        setDrawingCurrent({ x: point.x, z: point.z });
+        addToast({
+          type: 'info',
+          message: 'Click and drag to create rectangle subdivision',
+          duration: 2000
+        });
+      } else if (drawingMode === 'polygon') {
+        const newPoint = { x: point.x, z: point.z };
+        setPolygonPoints(prev => [...prev, newPoint]);
+        
+        if (polygonPoints.length === 0) {
+          addToast({
+            type: 'info', 
+            message: 'Click to add points, double-click to finish polygon',
+            duration: 3000
           });
-          
-          // Add logo to PDF
-          const logoSize = 16;
-          doc.addImage(logoBase64, 'PNG', 15, 7, logoSize, logoSize);
-        } catch (error) {
-          // Fallback to simple circle if logo fails to load
-          doc.setFillColor(...colors.darkGreen);
-          doc.circle(25, 15, 8, 'F');
-          doc.setFillColor(...colors.white);
-          doc.setFontSize(8);
-          doc.setFont(undefined, 'bold');
-          doc.text('LV', 22, 17);
         }
-        
-        // Company name
-        doc.setTextColor(...colors.text);
-        doc.setFontSize(12);
-        doc.text('LAND VISUALIZER', 40, 18);
-        
-        // Company/Date info (right side)
-        doc.setFontSize(10);
-        if (pdfSettings.companyName) {
-          doc.text(`{{${pdfSettings.companyName}}}`, pageWidth - 20, 12, { align: 'right' });
-        }
-        doc.text(`{{${new Date().toLocaleDateString()}}}`, pageWidth - 20, 22, { align: 'right' });
-        
-        yPosition = 35;
-      };
-
-      const addSkyAndCloudsWithVisualization = (sceneImageData) => {
-        // Sky background
-        doc.setFillColor(...colors.skyBlue);
-        doc.rect(0, 30, pageWidth, 80, 'F'); // Taller sky area for 3D image
-        
-        // Simple cloud shapes around the 3D visualization
-        const addCloud = (x, y, size = 1) => {
-          doc.setFillColor(...colors.cloudWhite);
-          // Main cloud body
-          doc.ellipse(x, y, 8 * size, 4 * size, 'F');
-          doc.ellipse(x - 6 * size, y, 6 * size, 3 * size, 'F');
-          doc.ellipse(x + 6 * size, y, 6 * size, 3 * size, 'F');
-          doc.ellipse(x - 3 * size, y - 2 * size, 4 * size, 2 * size, 'F');
-          doc.ellipse(x + 3 * size, y - 2 * size, 4 * size, 2 * size, 'F');
-        };
-        
-        // Add clouds around the visualization area
-        addCloud(40, 50, 0.6);   // Left side
-        addCloud(160, 45, 0.8);  // Right side  
-        addCloud(30, 75, 0.5);   // Lower left
-        addCloud(170, 70, 0.7);  // Lower right
-        
-        // Center area for 3D visualization
-        if (sceneImageData) {
-          const imageWidth = 120;
-          const imageHeight = 70;
-          const imageX = (pageWidth - imageWidth) / 2;
-          const imageY = 45; // Centered in sky area
-          
-          try {
-            // Add subtle border/frame for the 3D image
-            doc.setDrawColor(...colors.darkGreen);
-            doc.setLineWidth(1);
-            doc.rect(imageX - 2, imageY - 2, imageWidth + 4, imageHeight + 4);
-            
-            // Add the actual 3D screenshot
-            doc.addImage(sceneImageData, 'PNG', imageX, imageY, imageWidth, imageHeight);
-            
-          } catch (imageError) {
-            // Fallback: show placeholder in styled box
-            doc.setFillColor(...colors.creamBg);
-            doc.rect(imageX, imageY, imageWidth, imageHeight, 'F');
-            doc.setDrawColor(...colors.darkGreen);
-            doc.setLineWidth(2);
-            doc.rect(imageX, imageY, imageWidth, imageHeight);
-            
-            doc.setTextColor(...colors.text);
-            doc.setFontSize(16);
-            doc.setFont(undefined, 'bold');
-            doc.text('{{3D_IMAGE}}', imageX + imageWidth/2 - 25, imageY + imageHeight/2);
-          }
-        } else {
-          // No 3D data - show placeholder
-          const imageWidth = 120;
-          const imageHeight = 70;
-          const imageX = (pageWidth - imageWidth) / 2;
-          const imageY = 45;
-          
-          doc.setFillColor(...colors.creamBg);
-          doc.rect(imageX, imageY, imageWidth, imageHeight, 'F');
-          doc.setDrawColor(...colors.darkGreen);
-          doc.setLineWidth(2);
-          doc.rect(imageX, imageY, imageWidth, imageHeight);
-          
-          doc.setTextColor(...colors.text);
-          doc.setFontSize(16);
-          doc.setFont(undefined, 'bold');
-          doc.text('{{3D_IMAGE}}', imageX + imageWidth/2 - 25, imageY + imageHeight/2);
-        }
-        
-        yPosition = 115; // Position after taller sky area
-      };
-
-      const addRollingHills = () => {
-        // Create rolling hills using curves
-        const hillHeight = 40;
-        const hillY = yPosition - 5;
-        
-        // Back hills (darker)
-        doc.setFillColor(...colors.hillDark);
-        doc.moveTo(0, hillY + hillHeight);
-        doc.curveTo(30, hillY + 10, 80, hillY + 5, 120, hillY + 15);
-        doc.curveTo(150, hillY + 25, 180, hillY + 10, pageWidth, hillY + 20);
-        doc.lineTo(pageWidth, hillY + hillHeight);
-        doc.lineTo(0, hillY + hillHeight);
-        doc.fill();
-        
-        // Mid hills (medium green)
-        doc.setFillColor(...colors.hillMid);
-        doc.moveTo(0, hillY + hillHeight - 5);
-        doc.curveTo(40, hillY + 20, 90, hillY + 15, 140, hillY + 25);
-        doc.curveTo(170, hillY + 35, 190, hillY + 25, pageWidth, hillY + 30);
-        doc.lineTo(pageWidth, hillY + hillHeight);
-        doc.lineTo(0, hillY + hillHeight);
-        doc.fill();
-        
-        // Front hills (lightest)
-        doc.setFillColor(...colors.hillLight);
-        doc.moveTo(0, hillY + hillHeight - 2);
-        doc.curveTo(50, hillY + 30, 100, hillY + 25, 150, hillY + 35);
-        doc.curveTo(180, hillY + 40, 200, hillY + 30, pageWidth, hillY + 35);
-        doc.lineTo(pageWidth, hillY + hillHeight);
-        doc.lineTo(0, hillY + hillHeight);
-        doc.fill();
-        
-        yPosition += hillHeight + 10;
-      };
-
-      const addContentBackground = () => {
-        // Cream background for content area
-        doc.setFillColor(...colors.creamBg);
-        doc.rect(0, yPosition, pageWidth, pageHeight - yPosition - 25, 'F');
-        yPosition += 10;
-      };
-
-      const addLandscapeFooter = () => {
-        // Dark green footer band (matching design)
-        doc.setFillColor(...colors.darkGreen);
-        doc.rect(0, pageHeight - 25, pageWidth, 25, 'F');
-        
-        // Website with globe icon
-        doc.setTextColor(...colors.white);
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'bold');
-        
-        // Simple globe icon
-        doc.setFillColor(...colors.brightGreen);
-        doc.circle(pageWidth/2 - 30, pageHeight - 12, 4, 'F');
-        doc.setTextColor(...colors.white);
-        doc.setFontSize(6);
-        doc.text('🌍', pageWidth/2 - 32, pageHeight - 10);
-        
-        doc.setFontSize(10);
-        doc.text('www.landvisualizer.com', pageWidth/2 - 20, pageHeight - 9);
-      };
-
-      const addLandscapeSectionHeader = (title) => {
-        if (yPosition > pageHeight - 60) {
-          doc.addPage();
-          addContentBackground();
-        }
-        
-        // Natural section header with green styling
-        doc.setFontSize(16);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(...colors.darkGreen);
-        doc.text(title, 20, yPosition);
-        
-        // Underline with natural green
-        doc.setDrawColor(...colors.hillMid);
-        doc.setLineWidth(2);
-        doc.line(20, yPosition + 2, 20 + (title.length * 4), yPosition + 2);
-        
-        yPosition += 20;
-      };
-
-      const addUnitConversionsBox = (startY, conversions) => {
-        // Sidebar-style unit conversions box (like in design)
-        const boxX = pageWidth - 80;
-        const boxY = startY;
-        const boxWidth = 65;
-        const boxHeight = Object.keys(conversions).length * 8 + 20;
-        
-        // Dark green header
-        doc.setFillColor(...colors.darkGreen);
-        doc.rect(boxX, boxY, boxWidth, 15, 'F');
-        
-        // Yellow/green content area
-        doc.setFillColor(...colors.yellow);
-        doc.rect(boxX, boxY + 15, boxWidth, boxHeight - 15, 'F');
-        
-        // Header text
-        doc.setTextColor(...colors.white);
-        doc.setFontSize(10);
-        doc.setFont(undefined, 'bold');
-        doc.text('Unit Conversions', boxX + 2, boxY + 10);
-        
-        // Conversion values
-        doc.setTextColor(...colors.darkGreen);
-        doc.setFont(undefined, 'normal');
-        doc.setFontSize(8);
-        
-        let textY = boxY + 25;
-        Object.entries(conversions).forEach(([unit, value]) => {
-          doc.text(unit, boxX + 2, textY);
-          textY += 8;
-        });
-        
-        return boxHeight;
-      };
-
-      const addText = (text, fontSize = 10, isBold = false, align = 'left', color = colors.text, indent = 0) => {
-        if (yPosition > pageHeight - 25) {
-          doc.addPage();
-          yPosition = 20;
-        }
-        
-        doc.setFontSize(fontSize);
-        doc.setFont(undefined, isBold ? 'bold' : 'normal');
-        doc.setTextColor(...color);
-        
-        const xPos = 20 + indent;
-        if (align === 'center') {
-          doc.text(text, pageWidth / 2, yPosition, { align: 'center' });
-        } else if (align === 'right') {
-          doc.text(text, pageWidth - 20, yPosition, { align: 'right' });
-        } else {
-          doc.text(text, xPos, yPosition);
-        }
-        yPosition += fontSize * 1.4;
-      };
-
-      const addDataRow = (label, value, isSubtotal = false) => {
-        if (yPosition > pageHeight - 25) {
-          doc.addPage();
-          yPosition = 20;
-        }
-
-        const fontSize = isSubtotal ? 11 : 10;
-        const fontWeight = isSubtotal ? 'bold' : 'normal';
-        const textColor = isSubtotal ? colors.primary : colors.text;
-        
-        doc.setFontSize(fontSize);
-        doc.setFont(undefined, fontWeight);
-        doc.setTextColor(...textColor);
-        
-        // Add subtle background for subtotals
-        if (isSubtotal) {
-          doc.setFillColor(248, 250, 252);
-          doc.rect(15, yPosition - 4, pageWidth - 30, 12, 'F');
-        }
-        
-        doc.text(label, 25, yPosition);
-        doc.text(value, pageWidth - 25, yPosition, { align: 'right' });
-        yPosition += fontSize * 1.4;
-      };
-
-      const addDivider = () => {
-        doc.setDrawColor(...colors.lightGray);
-        doc.setLineWidth(0.3);
-        doc.line(20, yPosition, pageWidth - 20, yPosition);
-        yPosition += 8;
-      };
-
-      // Prepare data
-      const totalSubdivided = subdivisions.reduce((sum, sub) => sum + sub.area, 0);
-      const comparisonObj = selectedComparison ? comparisonOptions.find(c => c.id === selectedComparison) : null;
-
-      // LANDSCAPE-THEMED PAGE DESIGN
-      
-      // Create the beautiful landscape layout with integrated 3D visualization
-      await addLandscapeHeader();
-      
-      // Add sky with 3D visualization as centerpiece (matching your design)
-      const include3D = pdfSettings.includeVisualization && sceneImageData;
-      addSkyAndCloudsWithVisualization(include3D ? sceneImageData : null);
-      
-      addRollingHills();
-      addContentBackground();
-
-      // Main content area with natural styling
-      addLandscapeSectionHeader('LAND AREA SUMMARY');
-      
-      // Create unit conversions sidebar (matching design)
-      const conversionsData = {
-        'm²': formatNumber(totalAreaInSqM),
-        'acres': formatNumber(totalAreaInSqM * (1 / 4046.86)),
-        'hectares': formatNumber(totalAreaInSqM * (1 / 10000)),
-        'ft²': formatNumber(totalAreaInSqM * (1 / 0.09290304))
-      };
-      
-      const conversionsBoxHeight = addUnitConversionsBox(yPosition - 15, conversionsData);
-      
-      // Main content (left side, not overlapping with sidebar)
-      const contentWidth = pageWidth - 100; // Leave space for sidebar
-      
-      addText(`TOTAL AREA: {{${formatNumber(totalAreaInSqM)}_SQM}} | {{${formatNumber(totalAcres)}}}`, 
-        12, true, 'left', colors.text);
-      yPosition += 15;
-      
-      // Add subdivisions with natural dot indicators (matching design)
-      if (pdfSettings.includeSubdivisions && subdivisions.length > 0) {
-        subdivisions.forEach((subdivision, index) => {
-          // Subdivision name and area
-          addText(`{{${subdivision.label.toUpperCase()}_NAME}}`, 11, true, 'left', colors.darkGreen);
-          addText(`{{${subdivision.label.toUpperCase()}_AREA}}`, 10, false, 'left', colors.text);
-          yPosition += 5;
-        });
-        
-        yPosition += 15;
-        
-        // Natural dot pattern (like in design)
-        const dotY = yPosition;
-        for (let i = 0; i < 14; i++) {
-          const dotX = 20 + (i * 8);
-          doc.setFillColor(...colors.darkGreen);
-          doc.circle(dotX, dotY, 1.5, 'F');
-        }
-        yPosition += 10;
-        
-        // Second row of dots  
-        const dotY2 = yPosition;
-        for (let i = 0; i < 14; i++) {
-          const dotX = 20 + (i * 8);
-          doc.setFillColor(...colors.darkGreen);
-          doc.circle(dotX, dotY2, 1.5, 'F');
-        }
-        yPosition += 20;
+      } else if (drawingMode === 'polyline') {
+        setIsDrawing(true);
+        setPolygonPoints([{ x: point.x, z: point.z }]);
       }
-
-      // Add the beautiful landscape footer
-      addLandscapeFooter();
-
-      // Save PDF with landscape-themed filename
-      const timestamp = new Date().toISOString().split('T')[0];
-      const fileName = `LandVisualizer_Report_${timestamp}.pdf`;
-      doc.save(fileName);
-      
-      // PDF generated successfully with jsPDF
-
-    } catch (error) {
-      // PDF generation failed
-      alert(`Failed to generate PDF: ${error.message}`);
-    }
-  };
-
-  const handleUpdateLandShape = (newShape) => {
-    setLandShape(newShape);
-    setHasManuallyEditedShape(true); // Mark that user has manually edited the shape
-    
-    // Calculate area from the new shape and update units
-    const calculateShapeArea = () => {
-      let area = 0;
-      const n = newShape.length;
-      for (let i = 0; i < n; i++) {
-        const j = (i + 1) % n;
-        area += newShape[i].x * newShape[j].z;
-        area -= newShape[j].x * newShape[i].z;
-      }
-      return Math.abs(area) / 2;
     };
-    
-    const newArea = calculateShapeArea();
-    if (newArea > 0) {
-      setIsUpdatingFromShape(true);
-      const newUnits = [{ value: newArea, unit: 'm²' }];
-      setUnits(newUnits);
-      
-      // Save to history
-      saveToHistory('Update Land Shape', { 
-        landShape: newShape, 
-        hasManuallyEditedShape: true,
-        units: newUnits
-      });
-      
-      setTimeout(() => setIsUpdatingFromShape(false), 100);
-    }
-  };
 
-  const handleDragStateChange = (isDragging) => {
-    setIsDraggingCorner(isDragging);
-  };
-
-  const resetToSquareShape = () => {
-    setHasManuallyEditedShape(false);
-    setPolylinePoints([]);
-    // This will trigger the useEffect to recreate a square shape
-  };
-
-  const addCorner = () => {
-    const newCorner = { x: 0, z: 0 }; // Add corner at center
-    const newShape = [...landShape, newCorner];
-    setLandShape(newShape);
-    setHasManuallyEditedShape(true);
-    
-    // Save to history
-    saveToHistory('Add Corner', { 
-      landShape: newShape, 
-      hasManuallyEditedShape: true
-    });
-  };
-
-  const removeCorner = () => {
-    if (landShape.length > 3) { // Minimum 3 corners for a polygon
-      const newShape = landShape.slice(0, -1);
-      setLandShape(newShape);
-      setHasManuallyEditedShape(true);
+    const handlePointerMove = (event) => {
+      if (!drawingMode) return;
       
-      // Save to history
-      saveToHistory('Remove Corner', { 
-        landShape: newShape, 
-        hasManuallyEditedShape: true
-      });
-    }
-  };
-
-  const finishPolylineDrawing = () => {
-    if (polylinePoints.length >= 3) {
-      // Calculate area of polyline using shoelace formula
-      const calculatePolylineArea = (points) => {
-        let area = 0;
-        const n = points.length;
-        for (let i = 0; i < n; i++) {
-          const j = (i + 1) % n;
-          area += points[i].x * points[j].z;
-          area -= points[j].x * points[i].z;
-        }
-        return Math.abs(area) / 2;
-      };
+      const point = event.point;
       
-      const area = calculatePolylineArea(polylinePoints);
-      
-      // Create a subdivision instead of replacing the main land area
-      const newSubdivision = {
-        id: Date.now(),
-        points: polylinePoints,
-        area: area,
-        label: `Polyline Area ${subdivisions.length + 1}`,
-        color: `hsl(${Math.random() * 360}, 70%, 50%)`,
-        type: 'polyline'
-      };
-      
-      const newSubdivisions = [...subdivisions, newSubdivision];
-      setSubdivisions(newSubdivisions);
-      
-      // Save to history
-      saveToHistory('Add Polyline Subdivision', { subdivisions: newSubdivisions });
-    }
-    setPolylinePoints([]);
-    setDrawingMode(null);
-  };
-
-  const addPolylinePoint = (x, z) => {
-    // Check if clicking on an existing point to close the shape
-    const clickThreshold = 3; // Distance threshold for clicking on existing points
-    const existingPointIndex = polylinePoints.findIndex(point => {
-      const distance = Math.sqrt(Math.pow(point.x - x, 2) + Math.pow(point.z - z, 2));
-      return distance < clickThreshold;
-    });
-    
-    if (existingPointIndex !== -1 && polylinePoints.length >= 3) {
-      // Close the shape by finishing the polyline
-      finishPolylineDrawing();
-      return;
-    }
-    
-    const newPoint = { x, z };
-    setPolylinePoints([...polylinePoints, newPoint]);
-  };
-
-  const handleManualAdd = () => {
-    const width = parseFloat(manualDimensions.width);
-    const length = parseFloat(manualDimensions.length);
-    
-    if (width > 0 && length > 0) {
-      const area = width * length;
-      const newSubdivision = {
-        id: Date.now(),
-        x: 0,
-        z: 0,
-        width: width,
-        length: length,
-        area: area,
-        label: manualDimensions.label || `Area ${subdivisions.length + 1}`,
-        color: `hsl(${Math.random() * 360}, 70%, 50%)`
-      };
-      
-      const newSubdivisions = [...subdivisions, newSubdivision];
-      setSubdivisions(newSubdivisions);
-      
-      // Save to history
-      saveToHistory('Add Manual Subdivision', { subdivisions: newSubdivisions });
-      
-      setManualDimensions({ width: '', length: '', label: '' });
-      setShowManualInput(false);
-    }
-  };
-  
-  const handleSubdivisionSelect = (subdivisionId) => {
-    setSelectedSubdivision(subdivisionId);
-  };
-  
-  const handleSubdivisionCornerDragStateChange = (isDragging) => {
-    setIsDraggingSubdivisionCorner(isDragging);
-  };
-  
-  const handleSubdivisionMove = (subdivisionId, newX, newZ) => {
-    setSubdivisions(subdivisions.map(sub => {
-      if (sub.id === subdivisionId) {
-        if (sub.type === 'polyline') {
-          // Calculate the centroid of the current polyline
-          const currentCentroid = sub.points.reduce(
-            (acc, point) => ({ x: acc.x + point.x, z: acc.z + point.z }),
-            { x: 0, z: 0 }
-          );
-          currentCentroid.x /= sub.points.length;
-          currentCentroid.z /= sub.points.length;
-          
-          // Calculate the offset from current centroid to new position
-          const deltaX = newX - currentCentroid.x;
-          const deltaZ = newZ - currentCentroid.z;
-          
-          // Move all points by the offset
-          const newPoints = sub.points.map(point => ({
-            x: point.x + deltaX,
-            z: point.z + deltaZ
-          }));
-          return { ...sub, points: newPoints };
-        } else {
-          // Move rectangle subdivision
-          return { ...sub, x: newX, z: newZ };
+      if (drawingMode === 'rectangle' && isDrawing && drawingStart) {
+        setDrawingCurrent({ x: point.x, z: point.z });
+        
+        const width = Math.abs(point.x - drawingStart.x);
+        const height = Math.abs(point.z - drawingStart.z);
+        const centerX = (drawingStart.x + point.x) / 2;
+        const centerZ = (drawingStart.z + point.z) / 2;
+        const area = width * height;
+        
+        setDrawingPreview({
+          type: 'rectangle',
+          position: { x: centerX, z: centerZ },
+          width: width,
+          height: height,
+          area: area,
+          measurements: {
+            width: width.toFixed(1),
+            height: height.toFixed(1),
+            area: area.toFixed(1)
+          }
+        });
+      } else if (drawingMode === 'polyline' && isDrawing) {
+        const lastPoint = polygonPoints[polygonPoints.length - 1];
+        const distance = Math.sqrt(
+          Math.pow(point.x - lastPoint.x, 2) + Math.pow(point.z - lastPoint.z, 2)
+        );
+        
+        if (distance > 1) {
+          setPolygonPoints(prev => [...prev, { x: point.x, z: point.z }]);
         }
       }
-      return sub;
-    }));
-  };
-  
-  const handleUpdateSubdivision = (subdivisionId, updates) => {
-    setSubdivisions(subdivisions.map(sub => {
-      if (sub.id === subdivisionId) {
-        const updatedSub = { ...sub, ...updates };
+    };
+
+    const handlePointerUp = (event) => {
+      if (!drawingMode) return;
+      
+      if (drawingMode === 'rectangle' && isDrawing && drawingStart && drawingCurrent) {
+        const width = Math.abs(drawingCurrent.x - drawingStart.x);
+        const height = Math.abs(drawingCurrent.z - drawingStart.z);
         
-        // Recalculate area if points were updated
-        if (updates.points && updatedSub.type === 'polyline') {
-          const calculatePolylineArea = (points) => {
-            let area = 0;
-            const n = points.length;
-            for (let i = 0; i < n; i++) {
-              const j = (i + 1) % n;
-              area += points[i].x * points[j].z;
-              area -= points[j].x * points[i].z;
-            }
-            return Math.abs(area) / 2;
+        if (width > 2 && height > 2) {
+          const centerX = (drawingStart.x + drawingCurrent.x) / 2;
+          const centerZ = (drawingStart.z + drawingCurrent.z) / 2;
+          const area = width * height;
+          
+          const newSubdivision = {
+            id: Date.now(),
+            type: 'rectangle',
+            position: { x: centerX, z: centerZ },
+            width: width,
+            height: height,
+            area: area,
+            label: `Subdivision ${subdivisions.length + 1}`,
+            color: `hsl(${(subdivisions.length * 137.5) % 360}, 70%, 50%)`,
+            created: new Date().toISOString(),
+            editable: true
           };
           
-          updatedSub.area = calculatePolylineArea(updates.points);
+          setSubdivisions(prev => [...prev, newSubdivision]);
+          setSelectedSubdivision(newSubdivision.id);
+          
+          addToast({
+            type: 'success',
+            message: `Rectangle created: ${width.toFixed(1)}m × ${height.toFixed(1)}m (${area.toFixed(1)} m²)`,
+            duration: 3000
+          });
+        } else {
+          addToast({
+            type: 'warning',
+            message: 'Rectangle too small. Minimum size is 2m × 2m',
+            duration: 2000
+          });
         }
         
-        return updatedSub;
+        setIsDrawing(false);
+        setDrawingStart(null);
+        setDrawingCurrent(null);
+        setDrawingPreview(null);
+      } else if (drawingMode === 'polyline' && isDrawing) {
+        if (polygonPoints.length >= 3) {
+          const area = calculatePolygonArea(polygonPoints);
+          const centroid = calculatePolygonCentroid(polygonPoints);
+          
+          if (area > 4) {
+            const newSubdivision = {
+              id: Date.now(),
+              type: 'freeform',
+              points: [...polygonPoints],
+              position: centroid,
+              area: area,
+              label: `Freeform ${subdivisions.length + 1}`,
+              color: `hsl(${(subdivisions.length * 137.5) % 360}, 70%, 50%)`,
+              created: new Date().toISOString(),
+              editable: true
+            };
+            
+            setSubdivisions(prev => [...prev, newSubdivision]);
+            setSelectedSubdivision(newSubdivision.id);
+            
+            addToast({
+              type: 'success',
+              message: `Freeform area created: ${area.toFixed(1)} m²`,
+              duration: 3000
+            });
+          }
+        }
+        
+        setIsDrawing(false);
+        setPolygonPoints([]);
       }
-      return sub;
-    }));
+    };
+
+    const handleDoubleClick = (event) => {
+      event.stopPropagation();
+      
+      if (drawingMode === 'polygon' && polygonPoints.length >= 3) {
+        const area = calculatePolygonArea(polygonPoints);
+        const centroid = calculatePolygonCentroid(polygonPoints);
+        
+        if (area > 4) {
+          const newSubdivision = {
+            id: Date.now(),
+            type: 'polygon',
+            points: [...polygonPoints],
+            position: centroid,
+            area: area,
+            label: `Polygon ${subdivisions.length + 1}`,
+            color: `hsl(${(subdivisions.length * 137.5) % 360}, 70%, 50%)`,
+            created: new Date().toISOString(),
+            editable: true
+          };
+          
+          setSubdivisions(prev => [...prev, newSubdivision]);
+          setSelectedSubdivision(newSubdivision.id);
+          
+          addToast({
+            type: 'success',
+            message: `Polygon created with ${polygonPoints.length} points (${area.toFixed(1)} m²)`,
+            duration: 3000
+          });
+        } else {
+          addToast({
+            type: 'warning',
+            message: 'Polygon too small. Minimum area is 4 m²',
+            duration: 2000
+          });
+        }
+        
+        setPolygonPoints([]);
+      }
+    };
+    
+    return (
+      <mesh
+        ref={meshRef}
+        rotation={[-Math.PI / 2, 0, 0]}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onDoubleClick={handleDoubleClick}
+      >
+        <planeGeometry args={[1000, 1000]} />
+        <meshBasicMaterial 
+          transparent 
+          opacity={0} 
+          depthWrite={false}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+    );
+  };
+
+  // Performance-Optimized Navigation Controls
+  const EnhancedNavigationControls = ({ 
+    drawingMode, 
+    onCameraChange, 
+    onZoomChange, 
+    darkMode,
+    zoomLevel,
+    setZoomLevel 
+  }) => {
+    const { camera, gl, scene } = useThree();
+    const [isSpacePressed, setIsSpacePressed] = useState(false);
+    const [isDragging, setIsDragging] = useState(false);
+    const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+    const [cameraTarget, setCameraTarget] = useState(new THREE.Vector3(0, 0, 0));
+    const controlsRef = React.useRef();
+    
+    // Performance optimization: Enable frustum culling globally
+    React.useEffect(() => {
+      scene.autoUpdate = true;
+      scene.matrixAutoUpdate = true;
+    }, [scene]);
+    
+    // Handle keyboard events for spacebar navigation
+    useEffect(() => {
+      const handleKeyDown = (event) => {
+        if (event.code === 'Space' && !event.repeat) {
+          event.preventDefault();
+          setIsSpacePressed(true);
+          gl.domElement.style.cursor = 'grab';
+        }
+      };
+      
+      const handleKeyUp = (event) => {
+        if (event.code === 'Space') {
+          event.preventDefault();
+          setIsSpacePressed(false);
+          setIsDragging(false);
+          gl.domElement.style.cursor = 'default';
+          // Re-enable OrbitControls when space is released
+          if (controlsRef.current) {
+            controlsRef.current.enabled = true;
+          }
+        }
+      };
+      
+      window.addEventListener('keydown', handleKeyDown);
+      window.addEventListener('keyup', handleKeyUp);
+      
+      return () => {
+        window.removeEventListener('keydown', handleKeyDown);
+        window.removeEventListener('keyup', handleKeyUp);
+      };
+    }, [gl.domElement]);
+
+    // Handle mouse events for dragging
+    useEffect(() => {
+      const handleMouseDown = (event) => {
+        if (isSpacePressed && event.button === 0) { // Left mouse button
+          setIsDragging(true);
+          setDragStart({ x: event.clientX, y: event.clientY });
+          gl.domElement.style.cursor = 'grabbing';
+          event.preventDefault();
+          // Disable OrbitControls while space+drag is active
+          if (controlsRef.current) {
+            controlsRef.current.enabled = false;
+          }
+        }
+      };
+      
+      const handleMouseMove = (event) => {
+        if (isDragging && isSpacePressed) {
+          const deltaX = (event.clientX - dragStart.x) * 0.01;
+          const deltaY = (event.clientY - dragStart.y) * 0.01;
+          
+          // Calculate pan movement relative to camera orientation
+          const distance = camera.position.distanceTo(cameraTarget);
+          const panScale = distance * 0.001;
+          
+          const panOffset = new THREE.Vector3();
+          panOffset.setFromMatrixColumn(camera.matrix, 0); // x-axis
+          panOffset.multiplyScalar(-deltaX * panScale);
+          
+          const panOffsetY = new THREE.Vector3();
+          panOffsetY.setFromMatrixColumn(camera.matrix, 1); // y-axis  
+          panOffsetY.multiplyScalar(deltaY * panScale);
+          
+          panOffset.add(panOffsetY);
+          
+          // Update both camera and target positions
+          const newTarget = cameraTarget.clone().add(panOffset);
+          const newPosition = camera.position.clone().add(panOffset);
+          
+          camera.position.copy(newPosition);
+          setCameraTarget(newTarget);
+          camera.lookAt(newTarget);
+          
+          setDragStart({ x: event.clientX, y: event.clientY });
+          event.preventDefault();
+        }
+      };
+      
+      const handleMouseUp = (event) => {
+        if (event.button === 0) {
+          setIsDragging(false);
+          // Re-enable OrbitControls
+          if (controlsRef.current) {
+            controlsRef.current.enabled = true;
+          }
+          if (isSpacePressed) {
+            gl.domElement.style.cursor = 'grab';
+          } else {
+            gl.domElement.style.cursor = 'default';
+          }
+        }
+      };
+      
+      gl.domElement.addEventListener('mousedown', handleMouseDown);
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+      
+      return () => {
+        gl.domElement.removeEventListener('mousedown', handleMouseDown);
+        window.removeEventListener('mousemove', handleMouseMove);
+        window.removeEventListener('mouseup', handleMouseUp);
+      };
+    }, [isSpacePressed, isDragging, dragStart, camera, cameraTarget, gl.domElement]);
+
+    // Handle scroll zoom (no Ctrl required) with performance optimization
+    useEffect(() => {
+      const handleWheel = (event) => {
+        // Always handle zoom, no Ctrl required
+        event.preventDefault();
+        
+        // Optimized zoom calculation
+        const zoomDelta = event.deltaY > 0 ? 1.15 : 0.87;
+        const currentDistance = camera.position.distanceTo(cameraTarget);
+        const newDistance = Math.max(0.5, Math.min(20000, currentDistance * zoomDelta));
+        
+        // Batch updates for better performance
+        requestAnimationFrame(() => {
+          // Update camera position maintaining direction
+          const direction = camera.position.clone().sub(cameraTarget).normalize();
+          const newPosition = cameraTarget.clone().add(direction.multiplyScalar(newDistance));
+          
+          camera.position.copy(newPosition);
+          camera.lookAt(cameraTarget);
+          
+          setZoomLevel(newDistance);
+          onZoomChange(newDistance);
+        });
+      };
+      
+      gl.domElement.addEventListener('wheel', handleWheel, { passive: false });
+      
+      return () => {
+        gl.domElement.removeEventListener('wheel', handleWheel);
+      };
+    }, [camera, cameraTarget, gl.domElement, onZoomChange, setZoomLevel]);
+
+    // Update camera tracking
+    useFrame(() => {
+      const distance = camera.position.distanceTo(cameraTarget);
+      onCameraChange([camera.position.x, camera.position.y, camera.position.z]);
+      onZoomChange(distance);
+    });
+
+    // Handle zoom level changes from slider
+    useEffect(() => {
+      const direction = camera.position.clone().sub(cameraTarget).normalize();
+      const newPosition = cameraTarget.clone().add(direction.multiplyScalar(zoomLevel));
+      camera.position.copy(newPosition);
+      camera.lookAt(cameraTarget);
+    }, [zoomLevel, camera, cameraTarget]);
+
+    // Optimized OrbitControls with new mouse scheme
+    return (
+      <OrbitControls 
+        ref={controlsRef}
+        enablePan={true} // Enable middle mouse panning
+        enableZoom={false} // Disable default zoom (we handle scroll)
+        enableRotate={!drawingMode || drawingMode === 'select'}
+        mouseButtons={{
+          LEFT: THREE.MOUSE.ROTATE, // Left click to rotate
+          MIDDLE: THREE.MOUSE.PAN,   // Middle mouse to pan
+          RIGHT: null // Disable right click
+        }}
+        maxPolarAngle={Math.PI / 2.05} // Slight adjustment for better angle
+        minDistance={5}
+        maxDistance={500}
+        enableDamping={true}
+        dampingFactor={0.08} // More responsive damping
+        panSpeed={2.0} // Faster panning
+        rotateSpeed={0.8} // More responsive rotation
+        target={cameraTarget}
+        onStart={() => {
+          gl.domElement.style.cursor = 'grabbing';
+        }}
+        onEnd={() => {
+          gl.domElement.style.cursor = 'default';
+        }}
+        // Performance optimizations
+        screenSpacePanning={true}
+        keyPanSpeed={7.0}
+      />
+    );
+  };
+
+  // Camera Position Tracker
+  const CameraPositionTracker = ({ onPositionChange, onZoomChange }) => {
+    const { camera } = useThree();
+    
+    useFrame(() => {
+      onPositionChange([camera.position.x, camera.position.y, camera.position.z]);
+      const distance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
+      onZoomChange(distance);
+    });
+    
+    return null;
+  };
+
+  // Infinite Canvas 3D Scene Component
+  const Scene = () => {
+    const selectedComparisonData = comparisonOptions.find(c => c.id === selectedComparison);
+    const { camera } = useThree();
+    
+    // Dynamic grid scaling based on zoom level
+    const getGridScale = () => {
+      const distance = Math.sqrt(
+        camera.position.x ** 2 + camera.position.y ** 2 + camera.position.z ** 2
+      );
+      
+      // Dynamic scaling: closer = smaller grid cells, farther = larger grid cells
+      if (distance < 50) return { cellSize: 1, sectionSize: 10, gridSize: 500 };
+      if (distance < 200) return { cellSize: 5, sectionSize: 25, gridSize: 1000 };
+      if (distance < 1000) return { cellSize: 25, sectionSize: 100, gridSize: 5000 };
+      return { cellSize: 100, sectionSize: 500, gridSize: 20000 };
+    };
+    
+    const gridProps = getGridScale();
+    
+    return (
+      <>
+        {/* Enhanced Lighting System */}
+        <ambientLight intensity={darkMode ? 0.4 : 0.3} />
+        <directionalLight 
+          position={[500, 500, 200]} 
+          intensity={darkMode ? 1.2 : 1.0} 
+          castShadow
+          shadow-mapSize={[2048, 2048]}
+          shadow-camera-far={2000}
+          shadow-camera-left={-500}
+          shadow-camera-right={500}
+          shadow-camera-top={500}
+          shadow-camera-bottom={-500}
+        />
+        <directionalLight position={[-200, 200, -200]} intensity={darkMode ? 0.6 : 0.4} />
+        <hemisphereLight
+          skyColor={darkMode ? '#1e293b' : '#87ceeb'}
+          groundColor={darkMode ? '#0f172a' : '#90ee90'}
+          intensity={0.3}
+        />
+        
+        {/* Infinite Ground Plane */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+          <planeGeometry args={[gridProps.gridSize * 2, gridProps.gridSize * 2]} />
+          <meshLambertMaterial 
+            color={darkMode ? "#1f2937" : "#16a34a"}
+            transparent
+            opacity={0.8}
+          />
+        </mesh>
+        
+        {/* Dynamic Infinite Grid System */}
+        <InfiniteGrid 
+          cellSize={gridProps.cellSize}
+          sectionSize={gridProps.sectionSize}
+          gridSize={gridProps.gridSize}
+          darkMode={darkMode}
+          camera={camera}
+        />
+        
+        {/* Main land area with dynamic sizing */}
+        {totalAreaInSqM > 0 && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+            <planeGeometry args={[Math.sqrt(totalAreaInSqM), Math.sqrt(totalAreaInSqM)]} />
+            <meshLambertMaterial 
+              color="#3b82f6" 
+              transparent 
+              opacity={0.4}
+              side={THREE.DoubleSide}
+            />
+          </mesh>
+        )}
+        
+        {/* Enhanced Infinite Drawing Plane */}
+        <InfiniteDrawingPlane />
+        
+        {/* Drawing Preview with enhanced visuals */}
+        <DrawingPreview />
+        <PolygonPreview />
+        
+        {/* Comparison object with better positioning */}
+        {selectedComparisonData && (
+          <ComparisonObject 
+            comparison={selectedComparisonData} 
+            position={[
+              Math.sqrt(totalAreaInSqM) * 0.4, 
+              0, 
+              Math.sqrt(totalAreaInSqM) * 0.2
+            ]} 
+          />
+        )}
+        
+        {/* Enhanced Subdivisions with LOD (Level of Detail) */}
+        {subdivisions.map((subdivision, index) => (
+          <EnhancedSubdivision3D 
+            key={subdivision.id} 
+            subdivision={subdivision} 
+            index={index}
+            isSelected={selectedSubdivision === subdivision.id}
+            camera={camera}
+            onEdit={(id) => {
+              console.log('Editing subdivision:', id);
+              setEditingSubdivision(id);
+            }}
+            onDelete={(id) => {
+              setSubdivisions(prev => prev.filter(s => s.id !== id));
+              addToast({
+                type: 'success',
+                message: `Subdivision ${subdivision.label || id} deleted`,
+                duration: 2000
+              });
+            }}
+          />
+        ))}
+        
+        {/* Enhanced Navigation Controls */}
+        <EnhancedNavigationControls 
+          drawingMode={drawingMode}
+          onCameraChange={setCameraPosition}
+          onZoomChange={setCurrentZoom}
+          darkMode={darkMode}
+          zoomLevel={zoomLevel}
+          setZoomLevel={setZoomLevel}
+        />
+      </>
+    );
+  };
+
+  // Page content for SEO
+  const pageContent = {
+    '/': {
+      heading: 'Professional Land Area Calculator',
+      content: `Transform complex land measurements into clear, visual understanding. Perfect for surveyors, real estate professionals, architects, and property developers who need precise area calculations and professional reporting.
+
+Features include advanced unit conversions, interactive 3D visualization, subdivision drawing tools, and comprehensive export capabilities for professional documentation.
+
+• Multiple unit support (metric, imperial, traditional)
+• Interactive 3D land visualization with terrain
+• Professional subdivision drawing and labeling
+• Visual size comparisons with familiar objects
+• Comprehensive export options (PDF, Excel, CAD)
+• Real-time area calculations and conversions
+• Professional survey integration capabilities
+• Mobile-responsive design for field work
+
+Professional survey integration supports data import from total stations, GPS units, and existing survey files. Export boundary data to CAD systems, GIS platforms, and legal documentation software for seamless workflow integration.`
+    }
+  };
+
+  const location = useLocation();
+  const currentPath = location.pathname;
+  const content = pageContent[currentPath] || pageContent['/'];
+
+  // Drawing Mode Info Overlay Component
+  const DrawingModeInfo = () => {
+    if (!drawingMode) return null;
+    
+    const getModeInfo = () => {
+      switch (drawingMode) {
+        case 'rectangle':
+          return {
+            title: 'Rectangle Drawing Mode',
+            instructions: 'Click and drag to create rectangular subdivisions',
+            icon: '■',
+            color: '#4488ff'
+          };
+        case 'polygon':
+          return {
+            title: 'Polygon Drawing Mode', 
+            instructions: 'Click to add points, double-click to finish polygon',
+            icon: '▲',
+            color: '#88ff44',
+            extra: polygonPoints.length > 0 ? `Points: ${polygonPoints.length}` : ''
+          };
+        case 'polyline':
+          return {
+            title: 'Freeform Drawing Mode',
+            instructions: 'Click and drag to draw freeform shapes',
+            icon: '∿',
+            color: '#ff8844'
+          };
+        case 'select':
+          return {
+            title: 'Selection Mode',
+            instructions: 'Click to select subdivisions, double-click to edit',
+            icon: '↖',
+            color: '#ffff44',
+            extra: selectedSubdivision ? 'Subdivision Selected' : ''
+          };
+        default:
+          return null;
+      }
+    };
+    
+    const modeInfo = getModeInfo();
+    if (!modeInfo) return null;
+    
+    return (
+      <div className={`
+        fixed top-24 left-1/2 transform -translate-x-1/2 z-50
+        px-6 py-3 rounded-lg shadow-lg border-2
+        ${darkMode
+          ? 'bg-gray-800 border-gray-600 text-white'
+          : 'bg-white border-gray-300 text-gray-900'
+        }
+      `} style={{ borderColor: modeInfo.color }}>
+        <div className="flex items-center gap-3">
+          <div 
+            className="text-2xl font-bold"
+            style={{ color: modeInfo.color }}
+          >
+            {modeInfo.icon}
+          </div>
+          <div>
+            <div className="font-semibold text-sm">
+              {modeInfo.title}
+            </div>
+            <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+              {modeInfo.instructions}
+            </div>
+            {modeInfo.extra && (
+              <div className="text-xs mt-1" style={{ color: modeInfo.color }}>
+                {modeInfo.extra}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  // Selected Subdivision Info Panel
+  const SelectedSubdivisionInfo = () => {
+    if (!selectedSubdivision) return null;
+    
+    const subdivision = subdivisions.find(s => s.id === selectedSubdivision);
+    if (!subdivision) return null;
+    
+    return (
+      <div className={`
+        fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50
+        px-6 py-4 rounded-lg shadow-lg border max-w-sm
+        ${darkMode
+          ? 'bg-gray-800 border-gray-600 text-white'
+          : 'bg-white border-gray-300 text-gray-900'
+        }
+      `}>
+        <div className="text-center">
+          <div className="font-semibold text-lg mb-2">
+            {subdivision.label}
+          </div>
+          <div className="space-y-1 text-sm">
+            <div>Type: <span className="font-mono">{subdivision.type}</span></div>
+            {subdivision.type === 'rectangle' && (
+              <>
+                <div>Dimensions: {subdivision.width?.toFixed(1)}m × {subdivision.height?.toFixed(1)}m</div>
+                <div>Area: <span className="font-semibold text-blue-500">{subdivision.area?.toFixed(1)} m²</span></div>
+              </>
+            )}
+            {subdivision.type === 'polygon' && (
+              <>
+                <div>Points: {subdivision.points?.length}</div>
+                <div>Area: <span className="font-semibold text-green-500">{subdivision.area?.toFixed(1)} m²</span></div>
+              </>
+            )}
+            <div className="flex justify-center gap-2 mt-3">
+              <button
+                onClick={() => setEditingSubdivision(subdivision.id)}
+                className="px-3 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600"
+              >
+                Edit
+              </button>
+              <button
+                onClick={() => {
+                  setSubdivisions(prev => prev.filter(s => s.id !== subdivision.id));
+                  setSelectedSubdivision(null);
+                  addToast({
+                    type: 'success',
+                    message: `${subdivision.label} deleted`,
+                    duration: 2000
+                  });
+                }}
+                className="px-3 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Infinite Canvas UI Info Component
+  const InfiniteCanvasInfo = ({ cameraPosition, currentZoom }) => {
+    const [showInfo, setShowInfo] = useState(false);
+    
+    return (
+      <div className={`
+        fixed top-28 right-4 z-40
+        ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}
+        rounded-lg shadow-lg border p-3 transition-all duration-200
+        ${showInfo ? 'w-64' : 'w-12'}
+      `}>
+        <div className="flex items-center justify-between">
+          <button
+            onClick={() => setShowInfo(!showInfo)}
+            className={`
+              w-6 h-6 rounded flex items-center justify-center text-xs font-mono
+              ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}
+              hover:opacity-80 transition-opacity
+            `}
+            title={showInfo ? 'Hide canvas info' : 'Show canvas info'}
+          >
+            {showInfo ? '−' : '+'}
+          </button>
+        </div>
+        
+        {showInfo && (
+          <div className="mt-2 space-y-1 text-xs font-mono">
+            <div className="flex justify-between">
+              <span className="text-gray-500">Position:</span>
+            </div>
+            <div className="pl-2">
+              <div>X: {cameraPosition[0]?.toFixed(1) || '0.0'}</div>
+              <div>Y: {cameraPosition[1]?.toFixed(1) || '0.0'}</div>
+              <div>Z: {cameraPosition[2]?.toFixed(1) || '0.0'}</div>
+            </div>
+            <div className="flex justify-between pt-1">
+              <span className="text-gray-500">Zoom:</span>
+              <span>{currentZoom?.toFixed(1) || '0.0'}m</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500">Grid:</span>
+              <span>
+                {currentZoom < 50 ? '1m' : 
+                 currentZoom < 200 ? '5m' : 
+                 currentZoom < 1000 ? '25m' : '100m'}
+              </span>
+            </div>
+            {subdivisions.length > 0 && (
+              <div className="flex justify-between pt-1">
+                <span className="text-gray-500">Objects:</span>
+                <span>{subdivisions.length}</span>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Bottom Zoom Slider Component
+  const ZoomSlider = ({ zoomLevel, setZoomLevel, darkMode }) => {
+    const [isDragging, setIsDragging] = useState(false);
+    
+    // Convert zoom level to slider position (logarithmic scale)
+    const zoomToSlider = (zoom) => {
+      const min = Math.log(1);
+      const max = Math.log(10000);
+      const current = Math.log(zoom);
+      return ((current - min) / (max - min)) * 100;
+    };
+    
+    // Convert slider position to zoom level
+    const sliderToZoom = (slider) => {
+      const min = Math.log(1);
+      const max = Math.log(10000);
+      const position = slider / 100;
+      return Math.exp(min + position * (max - min));
+    };
+    
+    const sliderPosition = zoomToSlider(zoomLevel);
+    
+    const getZoomLabel = (zoom) => {
+      if (zoom < 10) return `${zoom.toFixed(1)}m`;
+      if (zoom < 100) return `${zoom.toFixed(0)}m`;
+      if (zoom < 1000) return `${(zoom / 100).toFixed(1)}hm`;
+      return `${(zoom / 1000).toFixed(1)}km`;
+    };
+    
+    return (
+      <div className={`
+        fixed bottom-4 right-4 z-50
+        flex items-center gap-4 px-6 py-3 rounded-full shadow-lg border
+        ${darkMode ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}
+      `}>
+        {/* Zoom Out Button */}
+        <button
+          onClick={() => setZoomLevel(Math.min(10000, zoomLevel * 1.5))}
+          className={`
+            w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold
+            ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
+            transition-colors duration-200
+          `}
+          title="Zoom Out"
+        >
+          −
+        </button>
+        
+        {/* Zoom Slider */}
+        <div className="relative w-48 h-6 flex items-center">
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value={sliderPosition}
+            onChange={(e) => {
+              const newZoom = sliderToZoom(parseFloat(e.target.value));
+              setZoomLevel(newZoom);
+            }}
+            onMouseDown={() => setIsDragging(true)}
+            onMouseUp={() => setIsDragging(false)}
+            className={`
+              w-full h-2 rounded-lg appearance-none cursor-pointer
+              ${darkMode ? 'bg-gray-600' : 'bg-gray-300'}
+              slider
+            `}
+            style={{
+              background: `linear-gradient(to right, 
+                ${darkMode ? '#3B82F6' : '#2563EB'} ${sliderPosition}%, 
+                ${darkMode ? '#4B5563' : '#D1D5DB'} ${sliderPosition}%
+              )`
+            }}
+          />
+          
+          {/* Zoom Level Display */}
+          <div className={`
+            absolute -top-8 left-0 right-0 text-center text-xs font-mono
+            ${darkMode ? 'text-gray-300' : 'text-gray-600'}
+          `}>
+            {getZoomLabel(zoomLevel)}
+          </div>
+          
+          {/* Scale Markers */}
+          <div className="absolute -bottom-6 left-0 right-0 flex justify-between text-xs font-mono">
+            <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}>1m</span>
+            <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}>10m</span>
+            <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}>100m</span>
+            <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}>1km</span>
+            <span className={darkMode ? 'text-gray-500' : 'text-gray-400'}>10km</span>
+          </div>
+        </div>
+        
+        {/* Zoom In Button */}
+        <button
+          onClick={() => setZoomLevel(Math.max(1, zoomLevel * 0.67))}
+          className={`
+            w-8 h-8 rounded-full flex items-center justify-center text-lg font-bold
+            ${darkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-600'}
+            transition-colors duration-200
+          `}
+          title="Zoom In"
+        >
+          +
+        </button>
+        
+        {/* Navigation Help */}
+        <div className={`
+          ml-4 pl-4 border-l text-xs
+          ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500'}
+        `}>
+          <div><kbd className={`px-1 rounded text-xs ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>Ctrl</kbd> + scroll to zoom</div>
+        </div>
+      </div>
+    );
+  };
+
+  // Navigation Status Indicator
+  const NavigationStatus = ({ isSpacePressed, isDragging, darkMode }) => {
+    if (!isSpacePressed && !isDragging) return null;
+    
+    return (
+      <div className={`
+        fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50
+        px-4 py-2 rounded-lg shadow-lg border
+        ${darkMode ? 'bg-gray-800 border-gray-600 text-white' : 'bg-white border-gray-300 text-gray-900'}
+      `}>
+        <div className="flex items-center gap-2">
+          <div className="w-3 h-3 bg-blue-500 rounded-full animate-pulse"></div>
+          <span className="text-sm font-medium">
+            {isSpacePressed ? (isDragging ? 'Panning...' : 'Ready to Pan') : 'Navigating...'}
+          </span>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className={`min-h-screen ${darkMode ? 'bg-gray-900' : 'bg-slate-50'}`}>
+    <div className={`h-screen flex flex-col ${darkMode ? 'bg-gray-900' : 'bg-slate-50'}`}>
       {/* Header */}
       <div className={`shadow-sm border-b ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -3544,23 +2111,15 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
                       : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                   }`}
                 >
-                  {darkMode ? <Sun size={16} className="mr-2" aria-label="Switch to light mode" /> : <Moon size={16} className="mr-2" aria-label="Switch to dark mode" />}
+                  {darkMode ? <Sun size={16} className="mr-2" /> : <Moon size={16} className="mr-2" />}
                   {darkMode ? 'Light' : 'Dark'}
                 </button>
-                <div className="hidden lg:flex items-center space-x-6">
-                  <div className="text-center">
-                    <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{formatNumber(totalAreaInSqM)}</div>
-                    <div className={`text-xs uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>Square Meters</div>
+                <div className="text-center">
+                  <div className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>
+                    {totalAreaInSqM.toLocaleString()}
                   </div>
-                  <div className={`h-12 w-px ${darkMode ? 'bg-gray-600' : 'bg-slate-200'}`}></div>
-                  <div className="text-center">
-                    <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{formatNumber(totalHectares)}</div>
-                    <div className={`text-xs uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>Hectares</div>
-                  </div>
-                  <div className={`h-12 w-px ${darkMode ? 'bg-gray-600' : 'bg-slate-200'}`}></div>
-                  <div className="text-center">
-                    <div className={`text-2xl font-bold ${darkMode ? 'text-white' : 'text-slate-900'}`}>{formatNumber(totalAcres)}</div>
-                    <div className={`text-xs uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>Acres</div>
+                  <div className={`text-xs uppercase tracking-wide ${darkMode ? 'text-gray-400' : 'text-slate-500'}`}>
+                    Square Meters
                   </div>
                 </div>
               </div>
@@ -3569,1557 +2128,343 @@ const LandVisualizer = ({ isExpanded, setIsExpanded }) => {
         </div>
       </div>
 
-      {/* Share Modal */}
-      {showShareModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`rounded-xl shadow-xl max-w-md w-full mx-4 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className="p-6">
-              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Share Your Land Configuration</h3>
-              <p className={`text-sm mb-4 ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>
-                Copy this link to share your current land configuration with others:
-              </p>
-              <div className="flex items-center space-x-2">
-                <input
-                  type="text"
-                  value={generateShareURL()}
-                  readOnly
-                  className={`flex-1 px-3 py-2 border rounded-lg text-sm ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 text-gray-200' 
-                      : 'bg-slate-50 border-slate-300 text-slate-900'
-                  }`}
-                />
-                <button
-                  onClick={copyToClipboard}
-                  className={`inline-flex items-center px-4 py-2 text-sm font-medium rounded-lg transition-all ${
-                    copied 
-                      ? 'bg-green-600 text-white' 
-                      : 'text-white  text-white'
-                  }`}
-                >
-                  {copied ? (
-                    <>
-                      <Check size={16} className="mr-2" />
-                      Copied!
-                    </>
-                  ) : (
-                    <>
-                      <Copy size={16} className="mr-2" aria-label="Copy share link" />
-                      Copy
-                    </>
-                  )}
-                </button>
-              </div>
-              <div className="mt-4 flex justify-end">
-                <button
-                  onClick={() => setShowShareModal(false)}
-                  className={`px-4 py-2 text-sm font-medium ${
-                    darkMode 
-                      ? 'text-gray-300 hover:text-white' 
-                      : 'text-slate-700 hover:text-slate-900'
-                  }`}
-                >
-                  Close
-                </button>
-              </div>
+      {/* Expandable Learn More Content */}
+      {isExpanded && (
+        <div className={`border-b transition-all duration-300 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="mb-4">
+              <h2 className={`text-xl font-bold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                {content.heading}
+              </h2>
+            </div>
+            <div 
+              id="content-details"
+              className={`text-sm leading-relaxed whitespace-pre-line ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}
+            >
+              {content.content}
             </div>
           </div>
         </div>
       )}
 
-      {/* Manual Input Modal */}
-      {showManualInput && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className={`rounded-xl shadow-xl max-w-md w-full mx-4 ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-            <div className="p-6">
-              <h3 className={`text-lg font-semibold mb-4 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Add Subdivision by Dimensions</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-slate-700'}`}>
-                    Label (optional)
-                  </label>
-                  <input
-                    type="text"
-                    value={manualDimensions.label}
-                    onChange={(e) => setManualDimensions({...manualDimensions, label: e.target.value})}
-                    placeholder={`Area ${subdivisions.length + 1}`}
-                    className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-green-500 focus:border-transparent ${
-                      darkMode 
-                        ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' 
-                        : 'bg-white border-slate-300 text-slate-900'
-                    }`}
-                  />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-slate-700'}`}>
-                      Width (m)
-                    </label>
-                    <input
-                      type="number"
-                      value={manualDimensions.width}
-                      onChange={(e) => setManualDimensions({...manualDimensions, width: e.target.value})}
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-green-500 focus:border-transparent ${
-                        darkMode 
-                          ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' 
-                          : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    />
-                  </div>
-                  <div>
-                    <label className={`block text-sm font-medium mb-1 ${darkMode ? 'text-gray-300' : 'text-slate-700'}`}>
-                      Length (m)
-                    </label>
-                    <input
-                      type="number"
-                      value={manualDimensions.length}
-                      onChange={(e) => setManualDimensions({...manualDimensions, length: e.target.value})}
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                      className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-green-500 focus:border-transparent ${
-                        darkMode 
-                          ? 'bg-gray-700 border-gray-600 text-gray-200 placeholder-gray-400' 
-                          : 'bg-white border-slate-300 text-slate-900'
-                      }`}
-                    />
-                  </div>
-                </div>
-                {manualDimensions.width && manualDimensions.length && (
-                  <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>
-                    Area: {formatNumber(parseFloat(manualDimensions.width) * parseFloat(manualDimensions.length))} m²
-                  </div>
-                )}
-              </div>
-              <div className="mt-6 flex justify-end space-x-2">
-                <button
-                  onClick={() => {
-                    setShowManualInput(false);
-                    setManualDimensions({ width: '', length: '', label: '' });
-                  }}
-                  className={`px-4 py-2 text-sm font-medium ${
-                    darkMode 
-                      ? 'text-gray-300 hover:text-white' 
-                      : 'text-slate-700 hover:text-slate-900'
-                  }`}
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={handleManualAdd}
-                  disabled={!manualDimensions.width || !manualDimensions.length}
-                  className="px-4 py-2 disabled:bg-slate-400 text-white text-sm font-medium rounded-lg transition-colors"
-                  style={{backgroundColor: '#2E6D5A'}}
-                  onMouseEnter={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#245549')}
-                  onMouseLeave={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#2E6D5A')}
-                >
-                  Add Subdivision
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Left Sidebar */}
+      <LeftSidebar
+        darkMode={darkMode}
+        comparisonOptions={comparisonOptions}
+        selectedComparison={selectedComparison}
+        onComparisonSelect={onComparisonSelect}
+        customComparisons={[]}
+        onAddCustomComparison={() => {}}
+        onRemoveCustomComparison={() => {}}
+        unitConversions={unitConversions}
+        onSidebarExpansionChange={setIsLeftSidebarExpanded}
+        onToggleLeftSidebar={toggleLeftSidebar}
+        isLeftSidebarExpanded={isLeftSidebarExpanded}
+      />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-        {/* Control Panel */}
-        <div className={`rounded-xl shadow-sm border mb-6 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className={`text-lg font-semibold flex items-center ${darkMode ? 'text-white' : 'text-slate-900'}`}>
-                <Activity className={`w-5 h-5 mr-2 ${darkMode ? 'text-gray-400' : 'text-slate-600'}`} aria-label="Land area calculations" />
+      {/* Main Content Area - Account for fixed positioned sidebars */}
+      <div 
+        className={`flex-1 flex flex-col overflow-hidden transition-all duration-200 ease-out ${
+          isLeftSidebarExpanded ? 'ml-80' : 'ml-20'
+        } ${
+          isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
+        }`}
+      >
+          {/* Tools Ribbon */}
+          <Ribbon
+            darkMode={darkMode}
+            drawingMode={drawingMode}
+            setDrawingMode={setDrawingMode}
+            showMeasuringTape={showMeasuringTape}
+            toggleMeasuringTape={toggleMeasuringTape}
+            showAreaCalculator={showAreaCalculator}
+            toggleAreaCalculator={toggleAreaCalculator}
+            showCompassBearing={showCompassBearing}
+            toggleCompassBearing={toggleCompassBearing}
+            terrainEnabled={terrainEnabled}
+            toggleTerrain={toggleTerrain}
+            exportToExcel={exportToExcel}
+            selectedSubdivision={selectedSubdivision}
+            showAreaConfiguration={showAreaConfiguration}
+            toggleAreaConfiguration={toggleAreaConfiguration}
+            addUnit={addUnit}
+            showInsertAreaDropdown={showInsertAreaDropdown}
+            toggleInsertAreaDropdown={toggleInsertAreaDropdown}
+            showPresetSelector={showPresetSelector}
+            togglePresetSelector={() => setShowPresetSelector(!showPresetSelector)}
+            onAddCorner={onAddCorner}
+            onRemoveCorner={onRemoveCorner}
+            onUndo={undo}
+            onRedo={redo}
+            canUndo={canUndo}
+            canRedo={canRedo}
+            activeTool={activeTool}
+            setActiveTool={setActiveTool}
+            isLeftSidebarExpanded={isLeftSidebarExpanded}
+            isPropertiesPanelExpanded={isPropertiesPanelExpanded}
+            onToggleLeftSidebar={toggleLeftSidebar}
+            onToggleRightSidebar={toggleRightSidebar}
+          />
+          {/* Area Configuration Section */}
+          <div className={`p-2 border-b ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
+            <div className="max-w-4xl mx-auto">
+              <h2 className={`text-sm font-semibold mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>
                 Area Configuration
               </h2>
-              <button
-                onClick={addUnit}
-                className="inline-flex items-center px-4 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
-                style={{backgroundColor: '#2E6D5A'}}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
-              >
-                <Plus size={16} className="mr-2" aria-label="Add land area" />
-                Add Component
-              </button>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {units.map((unitItem, index) => (
-                <div key={index} className="relative group">
-                  <div className={`rounded-lg p-4 border hover:border-slate-300 transition-colors ${
-                    darkMode 
-                      ? 'bg-gray-700 border-gray-600 hover:border-gray-500' 
-                      : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-1">
-                        <label htmlFor={`area-value-${index}`} className={`block text-xs font-medium mb-1 ${
-                          darkMode ? 'text-gray-300' : 'text-slate-700'
-                        }`}>
-                          Area Value
-                        </label>
-                        <input
-                          type="number"
-                          value={unitItem.value}
-                          onChange={(e) => updateUnit(index, 'value', e.target.value)}
-                          className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all ${
-                            darkMode 
-                              ? 'bg-gray-600 border-gray-500 text-gray-200 placeholder-gray-400' 
-                              : 'bg-white border-slate-300 text-slate-900'
-                          }`}
-                          min="0"
-                          max="1000000"
-                          step="0.01"
-                          placeholder="0.00"
-                          id={`area-value-${index}`}
-                          name={`area-value-${index}`}
-                          aria-label={`Area value in ${unitItem.unit}`}
-                          aria-describedby={`unit-conversion-${index}`}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label htmlFor={`unit-type-${index}`} className={`block text-xs font-medium mb-1 ${
-                          darkMode ? 'text-gray-300' : 'text-slate-700'
-                        }`}>
-                          Unit Type
-                        </label>
-                        <select
-                          value={unitItem.unit}
-                          onChange={(e) => updateUnit(index, 'unit', e.target.value)}
-                          className={`w-full px-3 py-2 border rounded-lg text-sm focus:ring-2 focus:ring-2 focus:ring-green-500 focus:border-transparent transition-all appearance-none ${
-                            darkMode 
-                              ? 'bg-gray-600 border-gray-500 text-gray-200' 
-                              : 'bg-white border-slate-300 text-slate-900'
-                          }`}
-                          id={`unit-type-${index}`}
-                          name={`unit-type-${index}`}
-                          aria-label={`Unit type for area ${index + 1}`}
-                        >
-                          <option value="m²">m²</option>
-                          <option value="ft²">ft²</option>
-                          <option value="yd²">yd²</option>
-                          <option value="hectares">hectares</option>
-                          <option value="acres">acres</option>
-                          <option value="km²">km²</option>
-                          <option value="arpent">arpent</option>
-                          <option value="perche">perche</option>
-                          <option value="toise">toise</option>
-                        </select>
-                      </div>
-                      {units.length > 1 && (
-                        <button
-                          onClick={() => removeUnit(index)}
-                          className={`p-2 text-red-500 hover:text-red-700 rounded-lg transition-all opacity-0 group-hover:opacity-100 ${
-                            darkMode ? 'hover:bg-red-900/20' : 'hover:bg-red-50'
-                          }`}
-                        >
-                          <Minus size={18} aria-label="Remove land area" />
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            {/* All Conversions */}
-            <div className="mt-6 pt-6 border-t border-slate-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className={`text-sm font-semibold uppercase tracking-wide ${darkMode ? 'text-white' : 'text-slate-700'}`}>All Conversions</h3>
-              </div>
               
-              <div className="grid grid-cols-3 gap-3">
-                {Object.entries(unitConversions).map(([unit, conversion]) => (
-                  <div key={unit} className={`flex flex-col items-center py-2 px-2 rounded-lg border ${
-                    darkMode 
-                      ? 'bg-gray-800 border-gray-600' 
-                      : 'bg-slate-50 border-slate-200'
-                  }`}>
-                    <span className={`text-xs font-medium uppercase tracking-wide ${
-                      darkMode ? 'text-gray-300' : 'text-slate-600'
-                    }`}>{unit}</span>
-                    <span className={`text-sm font-mono font-semibold mt-1 ${
-                      darkMode ? 'text-white' : 'text-slate-900'
-                    }`}>
-                      {formatNumber(totalAreaInSqM / conversion)}
-                    </span>
+              {/* Units Input */}
+              <div className="space-y-2">
+                {units.map((unit, index) => (
+                  <div key={index} className="flex items-center gap-3">
+                    <input
+                      type="number"
+                      value={unit.value}
+                      onChange={(e) => {
+                        const newUnits = [...units];
+                        newUnits[index] = { ...unit, value: parseFloat(e.target.value) || 0 };
+                        setUnits(newUnits);
+                      }}
+                      className={`flex-1 px-2 py-1 border rounded-md text-sm ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-slate-300'
+                      }`}
+                      placeholder="Enter area value"
+                    />
+                    <select
+                      value={unit.unit}
+                      onChange={(e) => {
+                        const newUnits = [...units];
+                        newUnits[index] = { ...unit, unit: e.target.value };
+                        setUnits(newUnits);
+                      }}
+                      className={`px-2 py-1 border rounded-md text-sm ${
+                        darkMode 
+                          ? 'bg-gray-700 border-gray-600 text-white' 
+                          : 'bg-white border-slate-300'
+                      }`}
+                    >
+                      <option value="m²">m²</option>
+                      <option value="ft²">ft²</option>
+                      <option value="hectares">hectares</option>
+                      <option value="acres">acres</option>
+                      <option value="arpent">arpent</option>
+                      <option value="perche">perche</option>
+                      <option value="toise">toise</option>
+                    </select>
+                    {units.length > 1 && (
+                      <button
+                        onClick={() => {
+                          const newUnits = units.filter((_, i) => i !== index);
+                          setUnits(newUnits);
+                        }}
+                        className={`p-2 rounded-md ${
+                          darkMode 
+                            ? 'text-red-400 hover:bg-gray-700' 
+                            : 'text-red-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        <X size={16} />
+                      </button>
+                    )}
                   </div>
                 ))}
+                
+                <button
+                  onClick={() => setUnits([...units, { value: 0, unit: 'm²' }])}
+                  className={`flex items-center gap-2 px-2 py-1 rounded-md border-2 border-dashed transition-colors text-sm ${
+                    darkMode 
+                      ? 'border-gray-600 text-gray-400 hover:border-gray-500 hover:text-gray-300' 
+                      : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-700'
+                  }`}
+                >
+                  <Plus size={16} />
+                  Add Another Area
+                </button>
               </div>
             </div>
-            
-            {/* Traditional Units Info */}
-            <div className={`mt-6 pt-6 border-t ${darkMode ? 'border-gray-600' : 'border-slate-200'}`}>
-              <button
-                onClick={() => setShowTraditionalInfo(!showTraditionalInfo)}
-                className={`flex items-center text-sm font-medium transition-colors ${
-                  darkMode 
-                    ? 'text-gray-300 hover:text-white' 
-                    : 'text-slate-700 hover:text-slate-900'
-                }`}
-              >
-                <Info size={16} className="mr-2" />
-               Traditional Units Information
-             </button>
-             
-             {showTraditionalInfo && (
-               <div className={`mt-3 p-4 rounded-lg border ${
-                 darkMode 
-                   ? 'bg-blue-900/20 border-blue-700' 
-                   : 'bg-blue-50 border-blue-200'
-               }`}>
-                 <h4 className={`font-semibold mb-2 ${darkMode ? 'text-white' : 'text-slate-900'}`}>Traditional Units:</h4>
-                 <ul className={`space-y-2 text-sm ${darkMode ? 'text-gray-300' : 'text-slate-700'}`}>
-                   <li>
-                     <strong>Arpent:</strong> French colonial unit, varies by region (Louisiana ≈ 0.84 acres)
-                   </li>
-                   <li>
-                     <strong>Perche:</strong> Traditional British unit, also called "rod" or "pole"
-                   </li>
-                   <li>
-                     <strong>Toise:</strong> Historical French unit of length and area
-                   </li>
-                 </ul>
-               </div>
-             )}
-             
-             <div className="mt-4 flex items-center justify-between">
-               <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>
-                 <Maximize2 size={16} className="inline mr-1" />
-                 Total land area: {totalAreaInSqM.toFixed(1)} m²
-               </span>
-             </div>
-           </div>
-         </div>
-       </div>
+          </div>
 
-       <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-         {/* 3D Visualization */}
-         <div className="xl:col-span-3">
-           <div className={`rounded-xl shadow-sm border overflow-hidden ${
-             darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'
-           }`}>
-             <div className={`p-4 border-b ${
-               darkMode 
-                 ? 'bg-gradient-to-r from-gray-700 to-gray-800 border-gray-600' 
-                 : 'bg-gradient-to-r from-slate-50 to-slate-100 border-slate-200'
-             }`}>
-               <div className="flex items-center justify-between">
-                 <div>
-                   <h2 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>3D Visualization</h2>
-                   <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-slate-600'}`}>
-                     {drawingMode === 'rectangle' 
-                       ? 'Click and drag to draw subdivisions'
-                       : drawingMode === 'polyline'
-                       ? 'Click to add points, double-click to finish drawing'
-                       : measurementMode === 'distance'
-                       ? 'Click two points to measure distance'
-                       : measurementMode === 'area'
-                       ? 'Click points to outline area, double-click to finish'
-                       : 'Drag to rotate • Scroll to zoom'
-                     }
-                   </p>
-                 </div>
-                 <div className="flex items-center gap-3">
-                   {/* Share Button */}
-                   <button
-                     onClick={() => setShowShareModal(true)}
-                     className="inline-flex items-center px-3 py-2 text-white text-sm font-medium rounded-lg transition-colors duration-150 shadow-sm"
-                     style={{backgroundColor: '#2E6D5A'}}
-                     onMouseEnter={(e) => e.target.style.backgroundColor = '#245549'}
-                     onMouseLeave={(e) => e.target.style.backgroundColor = '#2E6D5A'}
-                   >
-                     <Share2 size={14} className="mr-2" aria-label="Share configuration" />
-                     Share
-                   </button>
-                   
-                   {/* Free Preview Button */}
-                   <button
-                     onClick={generateWatermarkedPreview}
-                     className={`flex items-center px-3 py-2 rounded-md transition-colors text-sm font-medium border ${
-                       darkMode 
-                         ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
-                         : 'border-slate-300 text-slate-700 hover:bg-slate-50'
-                     }`}
-                   >
-                     <FileDown size={14} className="mr-2" />
-                     Free Preview
-                   </button>
-                   
-                   {/* Premium Export Button */}
-                   <button
-                     onClick={() => setShowPremiumExportModal(true)}
-                     className="flex items-center px-4 py-2 bg-gradient-to-r from-green-600 to-blue-600 text-white rounded-md hover:from-green-700 hover:to-blue-700 transition-all text-sm font-medium shadow-lg"
-                   >
-                     <FileDown size={14} className="mr-2" />
-                     Premium Export
-                     <span className="ml-2 bg-white text-green-600 px-2 py-0.5 rounded text-xs font-bold">$5-$10</span>
-                   </button>
-                 </div>
-               </div>
-             </div>
-             <div style={{ width: '100%', height: '500px', backgroundColor: darkMode ? '#1f2937' : '#f8fafc' }}>
-               {webGLSupported ? (
-                 <Canvas 
-                   camera={{ position: [50, 50, 50], fov: 75 }}
-                   gl={{ preserveDrawingBuffer: true }}
-                   aria-label="Interactive 3D land visualization showing property boundaries, subdivisions, and measurement tools"
-                   role="img"
-                   tabIndex={0}
-                 >
-                   <Scene 
-                     landShape={landShape}
-                     onUpdateLandShape={handleUpdateLandShape}
-                     environment="outdoor" 
-                     selectedComparison={selectedComparison}
-                     comparisonOptions={comparisonOptions}
-                     totalAreaInSqM={totalAreaInSqM}
-                     drawingMode={drawingMode}
-                     darkMode={darkMode}
-                     subdivisions={subdivisions}
-                     setSubdivisions={setSubdivisions}
-                     isDraggingCorner={isDraggingCorner}
-                     onDragStateChange={handleDragStateChange}
-                     onAddPolylinePoint={addPolylinePoint}
-                     polylinePoints={polylinePoints}
-                     selectedSubdivision={selectedSubdivision}
-                     onSubdivisionSelect={handleSubdivisionSelect}
-                     onSubdivisionMove={handleSubdivisionMove}
-                     onUpdateSubdivision={handleUpdateSubdivision}
-                     isDraggingSubdivisionCorner={isDraggingSubdivisionCorner}
-                     onSubdivisionCornerDragStateChange={handleSubdivisionCornerDragStateChange}
-                     measurementMode={measurementMode}
-                     measurementPoints={measurementPoints}
-                     onMeasurementPoint={handleMeasurementPoint}
-                     measurements={measurements}
-                     onClearMeasurements={clearMeasurements}
-                   />
-                 </Canvas>
-               ) : (
-                 <div className={`flex items-center justify-center h-full text-center p-8 ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
-                   <div>
-                     <h3 className="text-lg font-semibold mb-2">3D Visualization Not Available</h3>
-                     <p className="mb-2">Your browser doesn't support WebGL, which is required for 3D visualization.</p>
-                     <p className="text-sm">Please use a modern browser like Chrome, Firefox, Safari, or Edge.</p>
-                     <p className="text-sm mt-2">You can still use all other features including area calculations and PDF export.</p>
-                   </div>
-                 </div>
-               )}
-             </div>
-           </div>
-           
-           {/* Drawing Tools */}
-           <div className={`rounded-xl shadow-sm border mt-4 ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'}`}>
-             <div className={`p-4 border-b ${darkMode ? 'border-gray-600' : 'border-slate-200'}`}>
-               <div className="flex items-center justify-between">
-                 <h3 className={`text-lg font-semibold ${darkMode ? 'text-white' : 'text-slate-900'}`}>Drawing Tools</h3>
-                 <div className="flex items-center space-x-2">
-                   <button
-                     onClick={undo}
-                     disabled={historyIndex <= 0}
-                     className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ${
-                       historyIndex <= 0
-                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                         : darkMode
-                           ? 'bg-gray-600 hover:bg-gray-500 text-gray-200'
-                           : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                     }`}
-                     title="Undo (Ctrl+Z)"
-                   >
-                     <RotateCcw size={16} />
-                   </button>
-                   
-                   <button
-                     onClick={redo}
-                     disabled={historyIndex >= history.length - 1}
-                     className={`inline-flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-colors duration-150 ${
-                       historyIndex >= history.length - 1
-                         ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-                         : darkMode
-                           ? 'bg-gray-600 hover:bg-gray-500 text-gray-200'
-                           : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                     }`}
-                     title="Redo (Ctrl+Y)"
-                   >
-                     <RotateCw size={16} />
-                   </button>
-                   
-                   {subdivisions.length > 0 && (
-                     <button
-                       onClick={clearAllSubdivisions}
-                       className={`text-sm flex items-center ${
-                         darkMode 
-                           ? 'text-red-400 hover:text-red-300' 
-                           : 'text-red-600 hover:text-red-700'
-                       }`}
-                     >
-                       <Trash2 size={14} className="mr-1" />
-                       Clear All
-                     </button>
-                   )}
-                 </div>
-               </div>
-             </div>
-             <div className="p-4">
-               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                 <button
-                   onClick={() => {
-                     setDrawingMode(drawingMode === 'select' ? null : 'select');
-                     setSelectedSubdivision(null);
-                     setMeasurementMode(null); // Auto-deselect measurement mode
-                   }}
-                   className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                     drawingMode === 'select'
-                       ? 'text-white'
-                       : darkMode
-                         ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                   }`}
-                   style={drawingMode === 'select' ? {backgroundColor: '#2E6D5A'} : {}}
-                 >
-                   <MousePointer size={16} className="mr-2" />
-                   Select
-                 </button>
-                 
-                 <button
-                   onClick={() => {
-                     setDrawingMode(drawingMode === 'rectangle' ? null : 'rectangle');
-                     setMeasurementMode(null); // Auto-deselect measurement mode
-                   }}
-                   className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                     drawingMode === 'rectangle'
-                       ? 'text-white'
-                       : darkMode
-                         ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                   }`}
-                   style={drawingMode === 'rectangle' ? {backgroundColor: '#2E6D5A'} : {}}
-                 >
-                   <SquareIcon size={16} className="mr-2" />
-                   Draw Rectangle
-                 </button>
-                 
-                 <button
-                   onClick={() => {
-                     setDrawingMode(drawingMode === 'polyline' ? null : 'polyline');
-                     setMeasurementMode(null); // Auto-deselect measurement mode
-                   }}
-                   className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                     drawingMode === 'polyline'
-                       ? 'text-white'
-                       : darkMode
-                         ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                         : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                   }`}
-                   style={drawingMode === 'polyline' ? {backgroundColor: '#2E6D5A'} : {}}
-                 >
-                   <Edit3 size={16} className="mr-2" />
-                   Draw Polyline
-                 </button>
-                 
-                 <button
-                   onClick={() => setShowManualInput(true)}
-                   className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                     darkMode
-                       ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                       : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                   }`}
-                 >
-                   <Edit3 size={16} className="mr-2" />
-                   Enter Dimensions
-                 </button>
-               </div>
-               
-               {/* Measurement Tools */}
-               <div className={`mt-4 pt-4 border-t ${
-                 darkMode ? 'border-gray-600' : 'border-slate-200'
-               }`}>
-                 <h4 className={`text-sm font-medium mb-3 ${
-                   darkMode ? 'text-white' : 'text-slate-700'
-                 }`}>Measurement Tools</h4>
-                 <div className="grid grid-cols-3 gap-2">
-                   <button
-                     onClick={() => {
-                       setMeasurementMode(measurementMode === 'distance' ? null : 'distance');
-                       setDrawingMode(null); // Auto-deselect drawing mode
-                     }}
-                     className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                       measurementMode === 'distance'
-                         ? 'bg-green-600 text-white'
-                         : darkMode
-                           ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                           : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                     }`}
-                   >
-                     <Ruler size={16} className="mr-2" />
-                     Distance
-                   </button>
-                   
-                   <button
-                     onClick={() => {
-                       setMeasurementMode(measurementMode === 'area' ? null : 'area');
-                       setDrawingMode(null); // Auto-deselect drawing mode
-                     }}
-                     className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                       measurementMode === 'area'
-                         ? 'bg-green-600 text-white'
-                         : darkMode
-                           ? 'bg-gray-700 hover:bg-gray-600 text-white'
-                           : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-                     }`}
-                   >
-                     <SquareIcon size={16} className="mr-2" />
-                     Area
-                   </button>
-                   
-                   <button
-                     onClick={clearMeasurements}
-                     className={`inline-flex items-center justify-center px-4 py-3 text-sm font-medium rounded-lg transition-all ${
-                     darkMode
-                       ? 'bg-red-800/30 hover:bg-red-700/40 text-red-300'
-                       : 'bg-red-200 hover:bg-red-300 text-red-700'
-                   }`}
-                   >
-                     <Trash2 size={16} className="mr-2" />
-                     Clear
-                   </button>
-                 </div>
-                 
-                 {measurementMode === 'distance' && (
-                   <div className={`mt-3 p-3 rounded-lg ${
-                     darkMode ? 'bg-green-900/20' : 'bg-green-50'
-                   }`}>
-                     <p className={`text-sm ${
-                       darkMode ? 'text-green-300' : 'text-green-800'
-                     }`}>
-                       Click two points to measure distance
-                     </p>
-                   </div>
-                 )}
-                 
-                 {measurementMode === 'area' && (
-                   <div className={`mt-3 p-3 rounded-lg ${
-                     darkMode ? 'bg-green-900/20' : 'bg-green-50'
-                   }`}>
-                     <p className={`text-sm ${
-                       darkMode ? 'text-green-300' : 'text-green-800'
-                     }`}>
-                       Click points to create polygon. Press Enter to complete.
-                     </p>
-                     {measurementPoints.length >= 3 && (
-                       <button
-                         onClick={completeAreaMeasurement}
-                         className="mt-2 inline-flex items-center px-3 py-1 text-sm font-medium rounded-md bg-green-600 text-white hover:bg-green-700"
-                       >
-                         Complete Area
-                       </button>
-                     )}
-                   </div>
-                 )}
-               </div>
-               
-               {/* Corner Controls - Available for rectangle, polyline, and dimensions modes */}
-               {(drawingMode === 'rectangle' || drawingMode === 'polyline' || drawingMode === null) && (
-                 <div className={`mt-4 pt-4 border-t ${
-                   darkMode ? 'border-gray-600' : 'border-slate-200'
-                 }`}>
-                   <h4 className={`text-sm font-medium mb-3 ${
-                     darkMode ? 'text-white' : 'text-slate-700'
-                   }`}>Corner Controls</h4>
-                   <div className="flex items-center gap-2">
-                     <button
-                       onClick={addCorner}
-                       className="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-all"
-                     >
-                       <Plus size={14} className="mr-1" />
-                       Add Corner
-                     </button>
-                     
-                     <button
-                       onClick={removeCorner}
-                       disabled={landShape.length <= 3}
-                       className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-all"
-                     >
-                       <Minus size={14} className="mr-1" />
-                       Remove Corner
-                     </button>
-                     
-                     {hasManuallyEditedShape && (
-                       <button
-                         onClick={resetToSquareShape}
-                         className="inline-flex items-center px-3 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 text-sm font-medium rounded-lg transition-all"
-                       >
-                         <SquareIcon size={14} className="mr-1" />
-                         Reset to Square
-                       </button>
-                     )}
-                   </div>
-                 </div>
-               )}
-               
-               {/* Polyline Controls */}
-               {drawingMode === 'polyline' && (
-                 <div className="mt-4 pt-4 border-t border-slate-200">
-                   <div className="flex items-center justify-between">
-                     <span className="text-sm text-slate-600">
-                       Click on the land to add points. Need at least 3 points.
-                     </span>
-                     <button
-                       onClick={finishPolylineDrawing}
-                       disabled={polylinePoints.length < 3}
-                       className="inline-flex items-center px-3 py-2 disabled:bg-gray-400 text-white text-sm font-medium rounded-lg transition-all"
-                       style={{backgroundColor: '#2E6D5A'}}
-                       onMouseEnter={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#245549')}
-                       onMouseLeave={(e) => !e.target.disabled && (e.target.style.backgroundColor = '#2E6D5A')}
-                     >
-                       Finish Shape
-                     </button>
-                   </div>
-                   {polylinePoints.length > 0 && (
-                     <div className="mt-2 text-sm text-slate-500">
-                       Points: {polylinePoints.length}
-                     </div>
-                   )}
-                 </div>
-               )}
-               
-               {drawingMode === 'rectangle' && (
-                 <div className={`mt-4 pt-4 border-t ${
-                   darkMode ? 'border-gray-600' : 'border-slate-200'
-                 }`}>
-                   <span className={`text-sm ${
-                     darkMode ? 'text-gray-300' : 'text-slate-600'
-                   }`}>
-                     Click and drag on the land to draw a subdivision
-                   </span>
-                 </div>
-               )}
-             </div>
-           </div>
-           
-           {/* Subdivisions List */}
-           {subdivisions.length > 0 && (
-             <div className={`rounded-xl shadow-sm border mt-4 ${
-               darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-slate-200'
-             }`}>
-               <div className={`p-4 border-b ${
-                 darkMode ? 'border-gray-600' : 'border-slate-200'
-               }`}>
-                 <h3 className={`text-lg font-semibold ${
-                   darkMode ? 'text-white' : 'text-slate-900'
-                 }`}>Subdivisions</h3>
-                 <p className={`text-sm mt-1 ${
-                   darkMode ? 'text-gray-300' : 'text-slate-600'
-                 }`}>
-                   Total subdivided: {formatNumber(subdivisionsTotal)} m² • 
-                   Remaining: {formatNumber(remainingArea)} m²
-                 </p>
-               </div>
-               <div className="p-4">
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                   {subdivisions.map((subdivision) => (
-                     <div
-                       key={subdivision.id}
-                       className={`rounded-lg p-3 border transition-colors ${
-                         darkMode 
-                           ? 'bg-gray-700 border-gray-600 hover:border-gray-500' 
-                           : 'bg-slate-50 border-slate-200 hover:border-slate-300'
-                       }`}
-                     >
-                       <div className="flex items-center justify-between mb-2">
-                         <div 
-                           className="w-4 h-4 rounded"
-                           style={{ backgroundColor: subdivision.color }}
-                         />
-                         {editingSubdivision === subdivision.id ? (
-                           <div className="flex items-center flex-1 mx-2">
-                             <input
-                               type="text"
-                               value={editingLabel}
-                               onChange={(e) => setEditingLabel(e.target.value)}
-                               className={`flex-1 px-2 py-1 text-sm border rounded ${
-                                 darkMode 
-                                   ? 'bg-gray-600 border-gray-500 text-white' 
-                                   : 'bg-white border-slate-300 text-slate-900'
-                               }`}
-                               autoFocus
-                             />
-                             <button
-                               onClick={() => handleSaveEdit(subdivision.id)}
-                               className="ml-1 p-1 text-green-600 hover:text-green-700"
-                             >
-                               <Save size={14} />
-                             </button>
-                             <button
-                               onClick={handleCancelEdit}
-                               className="ml-1 p-1 text-slate-600 hover:text-slate-700"
-                             >
-                               <X size={14} />
-                             </button>
-                           </div>
-                         ) : (
-                           <span className={`flex-1 mx-2 font-medium ${
-                             darkMode ? 'text-white' : 'text-slate-900'
-                           }`}>
-                             {subdivision.label}
-                           </span>
-                         )}
-                         {editingSubdivision !== subdivision.id && (
-                           <div className="flex items-center gap-1">
-                             <button
-                               onClick={() => handleStartEdit(subdivision)}
-                               className={`p-1 ${
-                                 darkMode 
-                                   ? 'text-gray-400 hover:text-white' 
-                                   : 'text-slate-600 hover:text-slate-900'
-                               }`}
-                             >
-                               <Edit3 size={14} />
-                             </button>
-                             <button
-                               onClick={() => handleDeleteSubdivision(subdivision.id)}
-                               className={`p-1 ${
-                                 darkMode 
-                                   ? 'text-red-400 hover:text-red-300' 
-                                   : 'text-red-600 hover:text-red-700'
-                               }`}
-                             >
-                               <Trash2 size={14} />
-                             </button>
-                           </div>
-                         )}
-                       </div>
-                       <div className={`text-sm ${
-                         darkMode ? 'text-gray-300' : 'text-slate-600'
-                       }`}>
-                         Area: {formatNumber(subdivision.area)} m²
-                       </div>
-                       <div className={`text-xs mt-1 ${
-                         darkMode ? 'text-gray-400' : 'text-slate-500'
-                       }`}>
-                         {subdivision.type === 'polyline' 
-                           ? `Polyline (${subdivision.points.length} points)`
-                           : `${subdivision.width.toFixed(1)}m × ${subdivision.length.toFixed(1)}m`
-                         }
-                       </div>
-                     </div>
-                   ))}
-                 </div>
-               </div>
-             </div>
-           )}
-         </div>
+          {/* 3D Visualization */}
+          <div className="flex-1 relative">
+            {/* Drawing Mode Indicator */}
+            {drawingMode && drawingMode !== 'select' && (
+              <div className={`absolute top-4 left-4 z-10 px-4 py-2 rounded-lg shadow-lg ${
+                darkMode ? 'bg-gray-800 text-white border border-gray-600' : 'bg-white text-gray-900 border border-gray-300'
+              }`}>
+                <div className="flex items-center gap-2">
+                  <div className={`w-3 h-3 rounded-full ${
+                    drawingMode === 'rectangle' ? 'bg-blue-500' : 
+                    drawingMode === 'polygon' ? 'bg-green-500' : 
+                    'bg-gray-400'
+                  }`}></div>
+                  <span className="font-medium">
+                    {drawingMode === 'rectangle' && 'Rectangle Mode'}
+                    {drawingMode === 'polygon' && 'Polygon Mode'}
+                    {drawingMode === 'freeform' && 'Freeform Mode'}
+                  </span>
+                </div>
+                <div className={`text-xs mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {drawingMode === 'rectangle' && 'Click and drag to draw rectangles'}
+                  {drawingMode === 'polygon' && 'Click points to create polygon, double-click to finish'}
+                  {drawingMode === 'freeform' && 'Draw irregular shapes with mouse'}
+                </div>
+              </div>
+            )}
 
-         {/* Sidebar */}
-         <div className="space-y-6">
-           {/* Size Comparisons */}
-           <div className={`rounded-xl shadow-sm border ${
-           darkMode 
-             ? 'bg-gray-800 border-gray-600' 
-             : 'bg-white border-slate-200'
-         }`}>
-             <div className={`p-4 border-b ${
-               darkMode ? 'border-gray-600' : 'border-slate-200'
-             }`}>
-               <h3 className={`text-lg font-semibold ${
-                 darkMode ? 'text-white' : 'text-slate-900'
-               }`}>Visual Comparisons</h3>
-               <p className={`text-sm mt-1 ${
-                 darkMode ? 'text-gray-300' : 'text-slate-600'
-               }`}>Click to overlay comparison objects</p>
-             </div>
-             <div className="p-4 space-y-3 overflow-y-auto" style={{ height: '500px' }}>
-               {/* Add Custom Object Button */}
-               {!showCustomObjectForm ? (
-                 <button
-                   onClick={() => setShowCustomObjectForm(true)}
-                   className={`w-full p-2 rounded-lg border text-center transition-all font-medium text-sm ${
-                     darkMode 
-                       ? 'border-gray-600 bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white' 
-                       : 'border-gray-300 bg-gray-100 text-gray-700 hover:bg-gray-200 hover:text-gray-900'
-                   }`}
-                 >
-                   <span className="text-lg mr-2">+</span>
-                   Add Custom Object
-                 </button>
-               ) : (
-                 <div className={`p-4 rounded-xl border-2 ${
-                   darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-300 bg-gray-50'
-                 }`}>
-                   <h4 className={`text-lg font-semibold mb-3 ${
-                     darkMode ? 'text-white' : 'text-slate-900'
-                   }`}>Add Custom Object</h4>
-                   
-                   <div className="space-y-3">
-                     {/* Name Input */}
-                     <div>
-                       <label className={`block text-sm font-medium mb-1 ${
-                         darkMode ? 'text-gray-300' : 'text-slate-700'
-                       }`}>Name *</label>
-                       <input
-                         type="text"
-                         value={customObject.name}
-                         onChange={(e) => handleCustomObjectChange('name', e.target.value)}
-                         placeholder="e.g., My Building"
-                         className={`w-full px-3 py-2 border rounded-lg text-sm ${
-                           darkMode 
-                             ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' 
-                             : 'bg-white border-gray-300 text-slate-900 placeholder-gray-500'
-                         }`}
-                       />
-                     </div>
-                     
-                     {/* Width and Length Inputs */}
-                     <div className="grid grid-cols-2 gap-3">
-                       <div>
-                         <label className={`block text-sm font-medium mb-1 ${
-                           darkMode ? 'text-gray-300' : 'text-slate-700'
-                         }`}>Width (m) *</label>
-                         <input
-                           type="number"
-                           value={customObject.width}
-                           onChange={(e) => handleCustomObjectChange('width', e.target.value)}
-                           placeholder="10"
-                           min="0"
-                           step="0.1"
-                           className={`w-full px-3 py-2 border rounded-lg text-sm ${
-                             darkMode 
-                               ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' 
-                               : 'bg-white border-gray-300 text-slate-900 placeholder-gray-500'
-                           }`}
-                         />
-                       </div>
-                       <div>
-                         <label className={`block text-sm font-medium mb-1 ${
-                           darkMode ? 'text-gray-300' : 'text-slate-700'
-                         }`}>Length (m) *</label>
-                         <input
-                           type="number"
-                           value={customObject.length}
-                           onChange={(e) => handleCustomObjectChange('length', e.target.value)}
-                           placeholder="20"
-                           min="0"
-                           step="0.1"
-                           className={`w-full px-3 py-2 border rounded-lg text-sm ${
-                             darkMode 
-                               ? 'bg-gray-600 border-gray-500 text-white placeholder-gray-400' 
-                               : 'bg-white border-gray-300 text-slate-900 placeholder-gray-500'
-                           }`}
-                         />
-                       </div>
-                     </div>
-                     
-                     {/* Icon Selector */}
-                     <div>
-                       <label className={`block text-sm font-medium mb-2 ${
-                         darkMode ? 'text-gray-300' : 'text-slate-700'
-                       }`}>Icon</label>
-                       <div className="grid grid-cols-5 gap-2">
-                         {['📦', '🏢', '🏭', '🏘️', '🎯'].map((iconOption) => (
-                           <button
-                             key={iconOption}
-                             type="button"
-                             onClick={() => handleCustomObjectChange('icon', iconOption)}
-                             className={`p-2 rounded-lg border-2 text-2xl transition-all ${
-                               customObject.icon === iconOption
-                                 ? 'border-green-500 bg-green-50 dark:bg-green-900/20'
-                                 : darkMode
-                                   ? 'border-gray-600 hover:border-gray-500 bg-gray-700 hover:bg-gray-600'
-                                   : 'border-gray-300 hover:border-gray-400 bg-white hover:bg-gray-50'
-                             }`}
-                           >
-                             {iconOption}
-                           </button>
-                         ))}
-                       </div>
-                     </div>
-                     
-                     {/* Buttons */}
-                     <div className="flex gap-2 pt-2">
-                       <button
-                         onClick={addCustomObject}
-                         className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-                       >
-                         Add Object
-                       </button>
-                       <button
-                         onClick={() => {
-                           setShowCustomObjectForm(false);
-                           setCustomObject({ name: '', width: '', length: '', icon: '📦', color: 'purple' });
-                         }}
-                         className={`flex-1 px-4 py-2 rounded-lg transition-colors text-sm font-medium ${
-                           darkMode 
-                             ? 'bg-gray-600 text-white hover:bg-gray-500' 
-                             : 'bg-gray-200 text-gray-800 hover:bg-gray-300'
-                         }`}
-                       >
-                         Cancel
-                       </button>
-                     </div>
-                   </div>
-                 </div>
-               )}
-               
-               {comparisonOptions.map((comparison) => {
-                 const count = totalAreaInSqM / comparison.area;
-                 return (
-                   <button
-                     key={comparison.id}
-                     className={`w-full p-3 rounded-xl border-2 text-left transition-all transform hover:scale-[1.02] ${
-                       selectedComparison === comparison.id
-                         ? darkMode
-                           ? 'border-green-500 bg-gradient-to-r from-green-900/30 to-green-800/30 shadow-md'
-                           : 'border-green-500 bg-gradient-to-r from-green-50 to-green-100 shadow-md'
-                         : darkMode
-                           ? 'border-gray-600 hover:border-gray-500 hover:bg-gray-700/50 hover:shadow-sm'
-                           : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50 hover:shadow-sm'
-                     }`}
-                     onClick={() => setSelectedComparison(
-                       selectedComparison === comparison.id ? null : comparison.id
-                     )}
-                     disabled={drawingMode === 'rectangle'}
-                   >
-                     <div className="flex items-center justify-between">
-                       <div className="flex items-center space-x-2">
-                         <div className="text-2xl">
-                           {comparison.icon}
-                         </div>
-                         <div>
-                           <div className={`font-semibold ${
-                             darkMode ? 'text-white' : 'text-slate-900'
-                           }`}>{comparison.name}</div>
-                           <div className={`text-sm ${
-                             darkMode ? 'text-gray-300' : 'text-slate-600'
-                           }`}>
-                             {count >= 1 
-                               ? `${count.toFixed(1)} fit${count === 1 ? 's' : ''}`
-                               : `Need ${(1/count).toFixed(1)}x area`}
-                           </div>
-                           <div className={`text-xs mt-1 ${
-                             darkMode ? 'text-gray-400' : 'text-slate-500'
-                           }`}>
-                             {comparison.dimensions.width}m × {comparison.dimensions.length}m
-                           </div>
-                         </div>
-                       </div>
-                       <div className="flex flex-col items-end">
-                         {comparison.isCustom ? (
-                           <button
-                             onClick={(e) => {
-                               e.stopPropagation();
-                               removeCustomObject(comparison.id);
-                             }}
-                             className={`text-xs px-2 py-1 rounded transition-colors ${
-                               darkMode 
-                                 ? 'text-red-400 hover:text-red-300 hover:bg-red-900/20' 
-                                 : 'text-red-600 hover:text-red-700 hover:bg-red-50'
-                             }`}
-                           >
-                             Remove
-                           </button>
-                         ) : (
-                           <div className={`w-4 h-4 rounded-full transition-all ${
-                             selectedComparison === comparison.id 
-                               ? 'text-white ring-4 ring-green-200' 
-                               : 'bg-slate-300'
-                           }`} />
-                         )}
-                         <div className={`text-xs mt-1 ${
-                           darkMode ? 'text-gray-400' : 'text-slate-500'
-                         }`}>
-                           {formatNumber(comparison.area)} m²
-                         </div>
-                       </div>
-                     </div>
-                   </button>
-                 );
-               })}
-             </div>
-           </div>
+            {/* Polygon Points Counter */}
+            {drawingMode === 'polygon' && polygonPoints.length > 0 && (
+              <div className={`absolute top-4 right-4 z-10 px-3 py-2 rounded-lg shadow-lg ${
+                darkMode ? 'bg-gray-800 text-white border border-gray-600' : 'bg-white text-gray-900 border border-gray-300'
+              }`}>
+                <div className="text-sm font-medium">
+                  Points: {polygonPoints.length}
+                </div>
+                <div className={`text-xs ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  {polygonPoints.length < 3 ? 'Need 3+ points' : 'Double-click to finish'}
+                </div>
+              </div>
+            )}
 
-           
-           {/* Area Summary */}
-           {subdivisions.length > 0 && (
-             <div className={`rounded-xl shadow-sm border ${
-               darkMode ? 'bg-gray-800 border-gray-600' : 'bg-white border-slate-200'
-             }`}>
-               <div className={`p-4 border-b ${
-                 darkMode ? 'border-gray-600' : 'border-slate-200'
-               }`}>
-                 <h3 className={`text-lg font-semibold ${
-                   darkMode ? 'text-white' : 'text-slate-900'
-                 }`}>Area Summary</h3>
-               </div>
-               <div className="p-4 space-y-3">
-                 <div className="flex justify-between items-center">
-                   <span className={`text-sm font-medium ${
-                     darkMode ? 'text-gray-300' : 'text-slate-700'
-                   }`}>Total Area</span>
-                   <span className={`text-sm font-mono ${
-                     darkMode ? 'text-white' : 'text-slate-900'
-                   }`}>
-                     {formatNumber(totalAreaInSqM)} m²
-                   </span>
-                 </div>
-                 <div className="flex justify-between items-center">
-                   <span className={`text-sm font-medium ${
-                     darkMode ? 'text-gray-300' : 'text-slate-700'
-                   }`}>Subdivided</span>
-                   <span className={`text-sm font-mono ${
-                     darkMode ? 'text-green-400' : 'text-green-600'
-                   }`}>
-                     {formatNumber(subdivisionsTotal)} m²
-                   </span>
-                 </div>
-                 <div className={`flex justify-between items-center pt-2 border-t ${
-                   darkMode ? 'border-gray-600' : 'border-slate-200'
-                 }`}>
-                   <span className={`text-sm font-medium ${
-                     darkMode ? 'text-gray-300' : 'text-slate-700'
-                   }`}>Remaining</span>
-                   <span className={`text-sm font-mono ${
-                     darkMode ? 'text-green-600' : 'text-green-600'
-                   }`}>
-                     {formatNumber(remainingArea)} m²
-                   </span>
-                 </div>
-                 <div className={`text-xs mt-2 ${
-                   darkMode ? 'text-gray-400' : 'text-slate-500'
-                 }`}>
-                   {((subdivisionsTotal / totalAreaInSqM) * 100).toFixed(1)}% subdivided
-                 </div>
-               </div>
-             </div>
-           )}
-         </div>
-       </div>
-     </div>
+            {/* Selected Subdivision Info */}
+            {selectedSubdivision && subdivisions.find(s => s.id === selectedSubdivision) && (
+              <div className={`absolute bottom-4 left-4 z-10 px-4 py-2 rounded-lg shadow-lg ${
+                darkMode ? 'bg-gray-800 text-white border border-gray-600' : 'bg-white text-gray-900 border border-gray-300'
+              }`}>
+                {(() => {
+                  const selected = subdivisions.find(s => s.id === selectedSubdivision);
+                  return (
+                    <div>
+                      <div className="font-medium">{selected.label}</div>
+                      <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                        Area: {selected.area.toFixed(2)} m²
+                      </div>
+                      <div className={`text-xs ${darkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                        {selected.type === 'rectangle' ? 
+                          `${selected.width.toFixed(1)}m × ${selected.height.toFixed(1)}m` :
+                          `${selected.points?.length || 0} points`
+                        }
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            )}
 
-     {/* PDF Customizer Modal */}
-   {showPdfCustomizer && (
-     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-       <div className={`p-6 rounded-lg shadow-xl max-w-md w-full mx-4 ${
-         darkMode ? 'bg-gray-800' : 'bg-white'
-       }`}>
-         <h3 className={`text-xl font-bold mb-4 ${
-           darkMode ? 'text-white' : 'text-slate-900'
-         }`}>Customize PDF Report</h3>
-         
-         <div className="space-y-4">
-           <div>
-             <label className={`block text-sm font-medium mb-2 ${
-               darkMode ? 'text-gray-300' : 'text-slate-700'
-             }`}>Report Title</label>
-             <input
-               type="text"
-               value={pdfSettings.reportTitle}
-               onChange={(e) => setPdfSettings({...pdfSettings, reportTitle: e.target.value})}
-               className={`w-full p-2 border rounded-md ${
-                 darkMode 
-                   ? 'bg-gray-700 border-gray-600 text-white' 
-                   : 'bg-white border-slate-300'
-               }`}
-             />
-           </div>
-           
-           <div>
-             <label className={`block text-sm font-medium mb-2 ${
-               darkMode ? 'text-gray-300' : 'text-slate-700'
-             }`}>Company Name (optional)</label>
-             <input
-               type="text"
-               value={pdfSettings.companyName}
-               onChange={(e) => setPdfSettings({...pdfSettings, companyName: e.target.value})}
-               className={`w-full p-2 border rounded-md ${
-                 darkMode 
-                   ? 'bg-gray-700 border-gray-600 text-white' 
-                   : 'bg-white border-slate-300'
-               }`}
-               placeholder="Your Company Name"
-             />
-           </div>
-           
-           <div className="space-y-2">
-             <label className={`block text-sm font-medium ${
-               darkMode ? 'text-gray-300' : 'text-slate-700'
-             }`}>Include Sections:</label>
-             
-             {[
-               { key: 'includeVisualization', label: '3D Visualization' },
-               { key: 'includeLandSummary', label: 'Land Summary' },
-               { key: 'includeSubdivisions', label: 'Subdivisions' },
-               { key: 'includeComparisons', label: 'Size Comparisons' },
-               { key: 'includeConversions', label: 'Unit Conversions' }
-             ].map(({key, label}) => (
-               <label key={key} className="flex items-center">
-                 <input
-                   type="checkbox"
-                   checked={pdfSettings[key]}
-                   onChange={(e) => setPdfSettings({...pdfSettings, [key]: e.target.checked})}
-                   className="mr-2"
-                 />
-                 <span className={`text-sm ${
-                   darkMode ? 'text-gray-300' : 'text-slate-700'
-                 }`}>{label}</span>
-               </label>
-             ))}
-           </div>
-         </div>
-         
-         <div className="flex gap-3 mt-6">
-           <button
-             onClick={() => setShowPdfCustomizer(false)}
-             className={`flex-1 px-4 py-2 rounded-md border ${
-               darkMode 
-                 ? 'border-gray-600 text-gray-300 hover:bg-gray-700' 
-                 : 'border-slate-300 text-slate-700 hover:bg-slate-50'
-             }`}
-           >
-             Cancel
-           </button>
-           <button
-             onClick={() => {
-               exportToPDF();
-               setShowPdfCustomizer(false);
-             }}
-             className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-           >
-             Generate PDF
-           </button>
-         </div>
-       </div>
-     </div>
-   )}
-   
-   {/* Premium Export Modal */}
-   {showPremiumExportModal && (
-     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-       <div className={`rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] flex flex-col ${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'}`}>
-         {/* Modal Header */}
-         <div className={`sticky top-0 px-6 py-4 border-b z-10 ${darkMode ? 'border-gray-600 bg-gray-800' : 'border-gray-200 bg-white'}`}>
-           <div className="flex items-center justify-between">
-             <h2 className="text-2xl font-bold bg-gradient-to-r from-green-600 to-blue-600 bg-clip-text text-transparent">
-               Premium Export Options
-             </h2>
-             <button 
-               onClick={() => setShowPremiumExportModal(false)}
-               className={`p-2 rounded-lg transition-colors ${darkMode ? 'hover:bg-gray-700 text-gray-400 hover:text-white' : 'hover:bg-gray-100 text-gray-500 hover:text-gray-700'}`}
-             >
-               <X size={20} />
-             </button>
-           </div>
-         </div>
-
-         {/* Modal Content */}
-         <div className="p-6 overflow-y-auto flex-1">
-           {/* Export Tiers */}
-           <div className="grid md:grid-cols-2 gap-6 mb-6 mt-2">
-             {/* Basic Export */}
-             <div className={`rounded-xl border-2 p-6 relative ${selectedTier === 'basic' ? 'border-green-500 bg-green-50/50 dark:bg-green-900/10' : darkMode ? 'border-gray-600 hover:border-gray-500' : 'border-gray-200 hover:border-gray-300'} transition-all cursor-pointer`}
-                  onClick={() => setSelectedTier('basic')}>
-               <div className="flex items-start justify-between mb-4">
-                 <div>
-                   <h3 className="text-xl font-semibold text-green-600">Basic Export</h3>
-                   <div className="text-3xl font-bold mt-2">$5</div>
-                 </div>
-                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedTier === 'basic' ? 'border-green-500 bg-green-500' : darkMode ? 'border-gray-400' : 'border-gray-300'}`}>
-                   {selectedTier === 'basic' && <Check size={16} className="text-white" />}
-                 </div>
-               </div>
-               <ul className="space-y-2 mb-4">
-                 {exportTiers.basic.features.map((feature, idx) => (
-                   <li key={idx} className="flex items-start">
-                     <Check size={16} className="text-green-500 mr-2 mt-0.5 flex-shrink-0" />
-                     <span className="text-sm">{feature}</span>
-                   </li>
-                 ))}
-               </ul>
-               <div className="flex flex-wrap gap-2">
-                 {exportTiers.basic.formats.map(format => (
-                   <span key={format} className="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 rounded text-xs font-medium">
-                     {format}
-                   </span>
-                 ))}
-               </div>
-             </div>
-
-             {/* Premium Export */}
-             <div className={`rounded-xl border-2 p-6 relative ${selectedTier === 'premium' ? 'border-blue-500 bg-blue-50/50 dark:bg-blue-900/10' : darkMode ? 'border-gray-600 hover:border-gray-500' : 'border-gray-200 hover:border-gray-300'} transition-all cursor-pointer`}
-                  onClick={() => setSelectedTier('premium')}>
-               <div className="absolute -top-3 left-4">
-                 <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-3 py-1 rounded-full text-xs font-bold">
-                   BEST VALUE
-                 </span>
-               </div>
-               <div className="flex items-start justify-between mb-4">
-                 <div>
-                   <h3 className="text-xl font-semibold text-blue-600">Premium Export</h3>
-                   <div className="text-3xl font-bold mt-2">$10</div>
-                 </div>
-                 <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selectedTier === 'premium' ? 'border-blue-500 bg-blue-500' : darkMode ? 'border-gray-400' : 'border-gray-300'}`}>
-                   {selectedTier === 'premium' && <Check size={16} className="text-white" />}
-                 </div>
-               </div>
-               <ul className="space-y-2 mb-4">
-                 {exportTiers.premium.features.map((feature, idx) => (
-                   <li key={idx} className="flex items-start">
-                     <Check size={16} className="text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
-                     <span className="text-sm">{feature}</span>
-                   </li>
-                 ))}
-               </ul>
-               <div className="flex flex-wrap gap-2">
-                 {exportTiers.premium.formats.map(format => (
-                   <span key={format} className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 rounded text-xs font-medium">
-                     {format}
-                   </span>
-                 ))}
-               </div>
-             </div>
-           </div>
-
-           {/* Payment Section */}
-           {selectedTier && (
-             <div className={`rounded-xl border p-4 mb-4 ${darkMode ? 'border-gray-600 bg-gray-700' : 'border-gray-200 bg-gray-50'}`}>
-               <h3 className="text-lg font-semibold mb-3">Payment Information</h3>
-               <div className="grid md:grid-cols-2 gap-4">
-                 <div>
-                   <h4 className="font-medium mb-2">Selected Package</h4>
-                   <div className={`p-2 rounded-lg ${darkMode ? 'bg-gray-800' : 'bg-white'}`}>
-                     <div className="flex justify-between items-center">
-                       <span>{exportTiers[selectedTier].name}</span>
-                       <span className="font-bold">${exportTiers[selectedTier].price}</span>
-                     </div>
-                   </div>
-                 </div>
-                 <div>
-                   <h4 className="font-medium mb-2">Payment</h4>
-                   <div className="w-full">
-                     <PayPalButtons
-                       createOrder={(data, actions) => {
-                         return actions.order.create({
-                           purchase_units: [
-                             {
-                               amount: {
-                                 value: exportTiers[selectedTier].price.toString(),
-                               },
-                               description: exportTiers[selectedTier].name,
-                             },
-                           ],
-                         });
-                       }}
-                       onApprove={async (data, actions) => {
-                         console.log('PayPal onApprove called:', data);
-                         try {
-                           const order = await actions.order.capture();
-                           console.log('PayPal order captured:', order);
-                           handlePaymentSuccess(order);
-                         } catch (error) {
-                           console.error('PayPal capture error:', error);
-                           alert('Payment capture failed. Please try again.');
-                         }
-                       }}
-                       onError={(err) => {
-                         console.error('PayPal Error:', err);
-                         alert('Payment failed. Please try again.');
-                       }}
-                       style={{
-                         layout: 'vertical',
-                         color: 'gold',
-                         shape: 'rect',
-                         label: 'paypal'
-                       }}
-                     />
-                     
-                     {/* Cancel Button */}
-                     <div className="mt-3 pt-3 border-t border-gray-300 dark:border-gray-600">
-                       <button
-                         onClick={() => setShowPremiumExportModal(false)}
-                         className={`w-full py-2 px-4 rounded-lg font-medium transition-colors text-sm ${darkMode ? 'bg-gray-600 hover:bg-gray-500 text-white' : 'bg-gray-200 hover:bg-gray-300 text-gray-800'}`}
-                       >
-                         Cancel
-                       </button>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-             </div>
-           )}
-
-
-           {/* Security Notice */}
-           <div className={`mt-6 p-4 rounded-lg text-sm ${darkMode ? 'bg-gray-700 text-gray-300' : 'bg-gray-100 text-gray-600'}`}>
-             <div className="flex items-start">
-               <Info size={16} className="mr-2 mt-0.5 flex-shrink-0" />
-               <div>
-                 <strong>Secure Payment:</strong> All transactions are processed securely through PayPal. 
-                 We don't store your payment information. Downloads are available immediately after successful payment.
-               </div>
-             </div>
-           </div>
-         </div>
-       </div>
-     </div>
-   )}
-   
-   </div>
- );
-};
-
-// Collapsible content component that shows different content based on route
-function ContentSection({ isExpanded }) {
-  const location = useLocation();
-  const currentPath = location.pathname;
-  const content = pageContent[currentPath] || pageContent['/'];
-  
-  if (!isExpanded) {
-    // Collapsed state - hide content completely now that Learn More is in header
-    return (
-      <div className="sr-only" aria-hidden="true">
-        <h1>{content.heading}</h1>
-        {content.content}
-      </div>
-    );
-  }
-  
-  // Expanded state - show full content section
-  return (
-    <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg mb-6">
-      <div className="mb-4">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-          {content.heading}
-        </h1>
-      </div>
-      
-      {/* Full content */}
-      <div 
-        id="content-details"
-        className="text-gray-700 dark:text-gray-300 text-base leading-relaxed whitespace-pre-line"
-      >
-        {content.content}
-      </div>
-      
-      {/* Navigation breadcrumbs for SEO */}
-      <nav className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-600">
-        <div className="flex flex-wrap gap-4 text-sm">
-          <Link to="/" className="text-blue-600 hover:text-blue-800 dark:text-blue-400">
-            Home
-          </Link>
-          {currentPath !== '/' && (
-            <>
-              <span className="text-gray-400">•</span>
-              <span className="text-gray-600 dark:text-gray-400 capitalize">
-                {currentPath.replace('/', '').replace(/-/g, ' ')}
-              </span>
-            </>
-          )}
+            <Canvas
+              camera={{ 
+                position: [50, 50, 50], 
+                fov: 60,
+                near: 1,
+                far: 800 
+              }}
+              style={{ 
+                background: darkMode ? '#111827' : '#f8fafc',
+                cursor: drawingMode === 'rectangle' ? 'crosshair' : 
+                       drawingMode === 'polygon' ? 'crosshair' : 
+                       drawingMode === 'select' ? 'pointer' : 
+                       'default'
+              }}
+              gl={{ 
+                antialias: false,
+                alpha: false,
+                stencil: false,
+                depth: true,
+                powerPreference: 'high-performance'
+              }}
+              frameloop="demand"
+              performance={{ min: 0.1 }}
+            >
+              <Scene />
+            </Canvas>
+          </div>
         </div>
-      </nav>
+
+      {/* Right Properties Panel */}
+      <PropertiesPanel
+          darkMode={darkMode}
+          activeTool={activeTool}
+          onPropertiesPanelExpansionChange={setIsPropertiesPanelExpanded}
+          measuringTapeActive={showMeasuringTape}
+          toggleMeasuringTape={toggleMeasuringTape}
+          tapeMeasurements={tapeMeasurements}
+          addTapeMeasurement={addTapeMeasurement}
+          deleteTapeMeasurement={deleteTapeMeasurement}
+          selectedTapeMeasurement={selectedTapeMeasurement}
+          selectTapeMeasurement={selectTapeMeasurement}
+          compassBearingActive={showCompassBearing}
+          toggleCompassBearing={toggleCompassBearing}
+          bearings={bearings}
+          addBearing={addBearing}
+          deleteBearing={deleteBearing}
+          clearAllBearings={clearAllBearings}
+          terrainEnabled={terrainEnabled}
+          setTerrainEnabled={setTerrainEnabled}
+          terrainPreset={terrainPreset}
+          setTerrainPreset={setTerrainPreset}
+          terrainOpacity={terrainOpacity}
+          setTerrainOpacity={setTerrainOpacity}
+          showManualInput={showManualInput}
+          setShowManualInput={setShowManualInput}
+          manualDimensions={manualDimensions}
+          setManualDimensions={setManualDimensions}
+          onAddManualSubdivision={onAddManualSubdivision}
+          onToggleRightSidebar={toggleRightSidebar}
+          isPropertiesPanelExpanded={isPropertiesPanelExpanded}
+        />
+
+      {/* Modals and Overlays */}
+      {showPresetSelector && (
+        <AreaPresetSelector 
+          onSelectPreset={handlePresetSelect}
+          darkMode={darkMode}
+          onClose={() => setShowPresetSelector(false)}
+        />
+      )}
+
+      {/* Drawing UI Overlays */}
+      <DrawingModeInfo />
+      <SelectedSubdivisionInfo />
+      
+      {/* Infinite Canvas Info */}
+      <InfiniteCanvasInfo 
+        cameraPosition={cameraPosition} 
+        currentZoom={currentZoom} 
+      />
+      
+      {/* Bottom Zoom Slider */}
+      <ZoomSlider 
+        zoomLevel={zoomLevel}
+        setZoomLevel={setZoomLevel}
+        darkMode={darkMode}
+      />
+      
+      <ToastContainer 
+        toasts={toasts}
+        onDismissToast={handleDismissToast}
+        darkMode={darkMode}
+      />
     </div>
   );
 }
 
-// Main App component with routing
+// App wrapper with routing and providers
 function App() {
-  const paypalOptions = {
-    "client-id": process.env.REACT_APP_PAYPAL_CLIENT_ID || "test",
-    currency: "USD",
-    intent: "capture",
-    components: "buttons",
-    "enable-funding": "venmo",
-    "disable-funding": ""
-  };
-
-  // Debug log to check if environment variable is loaded
-  console.log("PayPal Client ID:", process.env.REACT_APP_PAYPAL_CLIENT_ID);
-
   return (
-    <PayPalScriptProvider options={paypalOptions}>
+    <PayPalScriptProvider options={{
+      "client-id": process.env.REACT_APP_PAYPAL_CLIENT_ID || "test",
+      currency: "USD"
+    }}>
       <BrowserRouter>
-        <AppContent />
+        <SEOHead />
+        <Routes>
+          <Route path="/" element={<LandVisualizer />} />
+          <Route path="/land-area-calculator" element={<LandVisualizer />} />
+          <Route path="/property-survey-tools" element={<LandVisualizer />} />
+          <Route path="/3d-land-visualization" element={<LandVisualizer />} />
+        </Routes>
       </BrowserRouter>
     </PayPalScriptProvider>
-  );
-}
-
-// App content component that uses Router context
-function AppContent() {
-  const [isExpanded, setIsExpanded] = useState(false);
-  return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-      <SEOHead />
-          
-          <Routes>
-            <Route path="/" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-            <Route path="/land-visualization-tool" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-            <Route path="/plot-mapping-software" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-            <Route path="/interactive-land-maps" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-            <Route path="/real-estate-mapping-tool" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-            <Route path="/property-boundary-visualizer" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-            <Route path="/online-land-plot-viewer" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-            <Route path="/land-survey-visualization" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-            <Route path="/gis-land-mapping" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-            <Route path="/land-ownership-map" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-            <Route path="/land-parcel-viewer" element={
-              <div>
-                <ContentSection isExpanded={isExpanded} />
-                <LandVisualizer isExpanded={isExpanded} setIsExpanded={setIsExpanded} />
-              </div>
-            } />
-      </Routes>
-    </div>
   );
 }
 
