@@ -29,6 +29,10 @@ const Ribbon = ({
   showMeasuringTape,
   toggleMeasuringTape,
   
+  // Dimensions
+  showDimensions,
+  toggleDimensions,
+  
   // Calculator
   showAreaCalculator,
   toggleAreaCalculator,
@@ -157,6 +161,14 @@ const Ribbon = ({
           active: showMeasuringTape,
           action: toggleMeasuringTape,
           description: 'Measure distances between points'
+        },
+        {
+          id: 'dimensions',
+          label: 'Dimensions',
+          icon: Ruler,
+          active: showDimensions,
+          action: toggleDimensions,
+          description: 'Show/hide dimension lines on subdivisions'
         },
         {
           id: 'enter-dimensions',

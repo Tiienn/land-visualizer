@@ -28,7 +28,15 @@
       "Bash(del package-lock.json)",
       "Bash(curl:*)",
       "Bash(npm uninstall:*)",
-      "Bash(taskkill:*)"
+      "Bash(taskkill:*)",
+      "WebFetch(domain:developer.paypal.com)",
+      "Bash(mkdir:*)",
+      "Bash(npx react-scripts:*)",
+      "Bash(rg:*)",
+      "Bash(npx acorn:*)",
+      "Bash(mv:*)",
+      "Bash(git log:*)",
+      "Bash(npx kill-port:*)"
     ],
     "deny": []
   }

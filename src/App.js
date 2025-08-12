@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Link } from 'react-router-dom';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Plane, Box, Text, Line } from '@react-three/drei';
-import { Plus, Minus, Maximize2, Activity, Ruler, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X, RotateCcw, RotateCw, Moon, Sun, FileDown } from 'lucide-react';
+import { Plus, Minus, Maximize2, Activity, Info, Share2, Copy, Check, Square as SquareIcon, MousePointer, Trash2, Edit3, Save, X, RotateCcw, RotateCw, Moon, Sun, FileDown } from 'lucide-react';
 import * as THREE from 'three';
 import jsPDF from 'jspdf';
 import { PayPalScriptProvider, PayPalButtons } from "@paypal/react-paypal-js";
@@ -13,6 +13,7 @@ import LeftSidebar from './components/LeftSidebar';
 import PropertiesPanel from './components/PropertiesPanel';
 import AreaPresetSelector from './components/AreaPresetSelector';
 import { ToastContainer } from './components/Toast';
+import EnhancedSubdivision from './components/EnhancedSubdivision';
 
 import './App.css';
 
@@ -93,8 +94,21 @@ function LandVisualizer() {
   const [darkMode, setDarkMode] = useState(false);
   const [drawingMode, setDrawingMode] = useState(null);
   const [units, setUnits] = useState([{ value: 1000, unit: 'm²' }]);
-  const [subdivisions, setSubdivisions] = useState([]);
-  const [selectedComparison, setSelectedComparison] = useState('footballField');
+  const [subdivisions, setSubdivisions] = useState([
+    {
+      id: 'default-square',
+      type: 'rectangle',
+      position: { x: -40, z: -40 }, // Move away from center to avoid OrbitControls conflict
+      width: Math.sqrt(1000), // ~31.6m x 31.6m = 1000m²
+      height: Math.sqrt(1000),
+      area: 1000,
+      label: 'Default Area',
+      color: '#3b82f6',
+      created: new Date().toISOString(),
+      editable: true
+    }
+  ]);
+  const [selectedComparison, setSelectedComparison] = useState(null);
   
   // UI state
   const [showMeasuringTape, setShowMeasuringTape] = useState(false);
@@ -122,7 +136,9 @@ function LandVisualizer() {
   const [manualDimensions, setManualDimensions] = useState({ width: '', length: '', unit: 'm' });
   
   // Selection state
-  const [selectedSubdivision, setSelectedSubdivision] = useState(null);
+  const [selectedSubdivision, setSelectedSubdivision] = useState('default-square');
+  const [showCorners, setShowCorners] = useState(true); // Always show corners for selected subdivisions
+  const [showDimensions, setShowDimensions] = useState(true); // Show dimension lines
   
   // History state for undo/redo
   const [history, setHistory] = useState([]);
@@ -145,6 +161,26 @@ function LandVisualizer() {
     return total + (unit.value * (conversionFactors[unit.unit] || 1));
   }, 0);
 
+  // Update default square when total area changes
+  useEffect(() => {
+    if (totalAreaInSqM > 0) {
+      const sideLength = Math.sqrt(totalAreaInSqM);
+      setSubdivisions(prev => 
+        prev.map(sub => 
+          sub.id === 'default-square' 
+            ? {
+                ...sub,
+                width: sideLength,
+                height: sideLength,
+                area: totalAreaInSqM,
+                label: `${totalAreaInSqM.toLocaleString()} m²`
+              }
+            : sub
+        )
+      );
+    }
+  }, [totalAreaInSqM]);
+
   // Handlers
   const toggleMeasuringTape = useCallback(() => {
     setShowMeasuringTape(prev => !prev);
@@ -163,6 +199,10 @@ function LandVisualizer() {
 
   const toggleDarkMode = useCallback(() => {
     setDarkMode(prev => !prev);
+  }, []);
+
+  const toggleDimensions = useCallback(() => {
+    setShowDimensions(prev => !prev);
   }, []);
 
   const toggleLeftSidebar = useCallback(() => {
@@ -277,13 +317,89 @@ function LandVisualizer() {
   }, [canRedo]);
 
   // Corner control handlers
+  // Corner manipulation handlers
   const onAddCorner = useCallback(() => {
-    // Add corner functionality
-  }, []);
+    if (!selectedSubdivision) {
+      addToast({
+        type: 'warning',
+        message: 'Please select a subdivision first',
+        duration: 2000
+      });
+      return;
+    }
+
+    const subdivision = subdivisions.find(s => s.id === selectedSubdivision);
+    if (!subdivision || subdivision.type === 'rectangle') {
+      addToast({
+        type: 'info',
+        message: 'Cannot add corners to rectangles. Use freeform subdivisions instead.',
+        duration: 3000
+      });
+      return;
+    }
+
+    addToast({
+      type: 'info',
+      message: 'Click the + buttons between corners to add new corners',
+      duration: 3000
+    });
+  }, [selectedSubdivision, subdivisions, addToast]);
 
   const onRemoveCorner = useCallback(() => {
-    // Remove corner functionality  
+    if (!selectedSubdivision) {
+      addToast({
+        type: 'warning',
+        message: 'Please select a subdivision first',
+        duration: 2000
+      });
+      return;
+    }
+
+    const subdivision = subdivisions.find(s => s.id === selectedSubdivision);
+    if (!subdivision || subdivision.type === 'rectangle') {
+      addToast({
+        type: 'info',
+        message: 'Cannot remove corners from rectangles.',
+        duration: 2000
+      });
+      return;
+    }
+
+    if (subdivision.points && subdivision.points.length <= 3) {
+      addToast({
+        type: 'warning',
+        message: 'Cannot remove corner - minimum 3 corners required for polygon',
+        duration: 3000
+      });
+      return;
+    }
+
+    addToast({
+      type: 'info',
+      message: 'Click the red X buttons on corners to remove them',
+      duration: 3000
+    });
+  }, [selectedSubdivision, subdivisions, addToast]);
+
+  // Update subdivision handler (for corner edits)
+  const handleUpdateSubdivision = useCallback((updatedSubdivision) => {
+    setSubdivisions(prev => 
+      prev.map(sub => 
+        sub.id === updatedSubdivision.id ? updatedSubdivision : sub
+      )
+    );
   }, []);
+
+  // Delete subdivision handler
+  const handleDeleteSubdivision = useCallback((subdivisionId) => {
+    setSubdivisions(prev => prev.filter(s => s.id !== subdivisionId));
+    setSelectedSubdivision(null);
+    addToast({
+      type: 'success',
+      message: 'Subdivision deleted',
+      duration: 2000
+    });
+  }, [addToast]);
 
   // Export handler
   const exportToExcel = useCallback(() => {
@@ -1104,15 +1220,27 @@ function LandVisualizer() {
   };
 
   // Infinite Grid Component
-  const InfiniteGrid = ({ cellSize, sectionSize, gridSize, darkMode, camera }) => {
+  const InfiniteGrid = React.memo(({ cellSize, sectionSize, gridSize, darkMode, camera }) => {
     const gridRef = React.useRef();
+    const lastPositionRef = React.useRef({ x: 0, z: 0 });
     
     useFrame(() => {
       if (gridRef.current) {
-        // Keep grid centered on camera position (rounded to grid cells)
+        // Heavy throttle - only update when camera moves significantly (every 200ms max)
+        const now = Date.now();
+        if (now - (lastPositionRef.current.lastUpdate || 0) < 200) return;
+        
         const roundedX = Math.round(camera.position.x / cellSize) * cellSize;
         const roundedZ = Math.round(camera.position.z / cellSize) * cellSize;
-        gridRef.current.position.set(roundedX, 0, roundedZ);
+        
+        // Only update if position changed by at least 2 cells for better performance
+        if (
+          Math.abs(roundedX - lastPositionRef.current.x) >= cellSize * 2 ||
+          Math.abs(roundedZ - lastPositionRef.current.z) >= cellSize * 2
+        ) {
+          gridRef.current.position.set(roundedX, 0, roundedZ);
+          lastPositionRef.current = { x: roundedX, z: roundedZ, lastUpdate: now };
+        }
       }
     });
     
@@ -1132,21 +1260,32 @@ function LandVisualizer() {
         />
       </group>
     );
-  };
+  });
 
-  // Enhanced Drawing Plane with Infinite Support
-  const InfiniteDrawingPlane = () => {
+  // Enhanced Drawing Plane with Infinite Support - Optimized
+  const InfiniteDrawingPlane = React.memo(() => {
     const meshRef = React.useRef();
     const { camera } = useThree();
+    const lastUpdateRef = React.useRef(0);
+    const lastSizeRef = React.useRef(1000);
     
     useFrame(() => {
       if (meshRef.current) {
+        // Throttle updates to every 100ms for better performance
+        const now = Date.now();
+        if (now - lastUpdateRef.current < 100) return;
+        
         // Keep drawing plane centered on camera with large size
         const distance = camera.position.distanceTo(new THREE.Vector3(0, 0, 0));
         const planeSize = Math.max(1000, distance * 4);
         
-        meshRef.current.position.set(camera.position.x, 0.006, camera.position.z);
-        meshRef.current.scale.setScalar(planeSize / 1000);
+        // Only update if size changed significantly
+        if (Math.abs(planeSize - lastSizeRef.current) > 100) {
+          meshRef.current.position.set(camera.position.x, 0.006, camera.position.z);
+          meshRef.current.scale.setScalar(planeSize / 1000);
+          lastSizeRef.current = planeSize;
+          lastUpdateRef.current = now;
+        }
       }
     });
     
@@ -1362,6 +1501,39 @@ function LandVisualizer() {
         />
       </mesh>
     );
+  });
+
+  // Camera control functions
+  const [cameraRef, setCameraRef] = useState(null);
+  
+  const setTopView = useCallback(() => {
+    if (cameraRef) {
+      const distance = cameraRef.position.distanceTo(new THREE.Vector3(0, 0, 0));
+      cameraRef.position.set(0, distance, 0);
+      cameraRef.lookAt(0, 0, 0);
+    }
+  }, [cameraRef]);
+
+  const set3DView = useCallback(() => {
+    if (cameraRef) {
+      const distance = cameraRef.position.distanceTo(new THREE.Vector3(0, 0, 0));
+      const angle = Math.PI / 4;
+      const height = distance * Math.sin(angle);
+      const radius = distance * Math.cos(angle);
+      cameraRef.position.set(radius, height, radius);
+      cameraRef.lookAt(0, 0, 0);
+    }
+  }, [cameraRef]);
+
+  // View Control Component to capture camera reference
+  const ViewControls = () => {
+    const { camera } = useThree();
+    
+    React.useEffect(() => {
+      setCameraRef(camera);
+    }, [camera]);
+
+    return null;
   };
 
   // Performance-Optimized Navigation Controls
@@ -1523,11 +1695,17 @@ function LandVisualizer() {
       };
     }, [camera, cameraTarget, gl.domElement, onZoomChange, setZoomLevel]);
 
-    // Update camera tracking
+    // Update camera tracking - heavily throttled for performance
+    const lastCameraUpdateRef = React.useRef(0);
     useFrame(() => {
-      const distance = camera.position.distanceTo(cameraTarget);
-      onCameraChange([camera.position.x, camera.position.y, camera.position.z]);
-      onZoomChange(distance);
+      // Throttle camera updates to 10fps (100ms intervals) for better performance
+      const now = Date.now();
+      if (now - lastCameraUpdateRef.current > 100) {
+        const distance = camera.position.distanceTo(cameraTarget);
+        onCameraChange([camera.position.x, camera.position.y, camera.position.z]);
+        onZoomChange(distance);
+        lastCameraUpdateRef.current = now;
+      }
     });
 
     // Handle zoom level changes from slider
@@ -1542,21 +1720,26 @@ function LandVisualizer() {
     return (
       <OrbitControls 
         ref={controlsRef}
-        enablePan={true} // Enable middle mouse panning
-        enableZoom={false} // Disable default zoom (we handle scroll)
-        enableRotate={!drawingMode || drawingMode === 'select'}
+        enablePan={true} // Always enable panning
+        enableZoom={true} // Always enable zoom
+        enableRotate={true} // Always enable rotation
         mouseButtons={{
           LEFT: THREE.MOUSE.ROTATE, // Left click to rotate
           MIDDLE: THREE.MOUSE.PAN,   // Middle mouse to pan
-          RIGHT: null // Disable right click
+          RIGHT: THREE.MOUSE.PAN     // Right click to pan as well
         }}
-        maxPolarAngle={Math.PI / 2.05} // Slight adjustment for better angle
-        minDistance={5}
-        maxDistance={500}
+        touches={{
+          ONE: THREE.TOUCH.ROTATE,   // Single touch to rotate
+          TWO: THREE.TOUCH.DOLLY_PAN // Two finger pinch/pan
+        }}
+        maxPolarAngle={Math.PI / 2} // Allow full top-down view
+        minDistance={3}
+        maxDistance={2000}
         enableDamping={true}
-        dampingFactor={0.08} // More responsive damping
-        panSpeed={2.0} // Faster panning
-        rotateSpeed={0.8} // More responsive rotation
+        dampingFactor={0.1} // Smoother damping
+        panSpeed={0.8} // Smoother panning
+        rotateSpeed={0.5} // Smoother rotation
+        zoomSpeed={0.8} // Smoother zoom
         target={cameraTarget}
         onStart={() => {
           gl.domElement.style.cursor = 'grabbing';
@@ -1584,25 +1767,25 @@ function LandVisualizer() {
     return null;
   };
 
-  // Infinite Canvas 3D Scene Component
+  // Infinite Canvas 3D Scene Component - Optimized
   const Scene = () => {
     const selectedComparisonData = comparisonOptions.find(c => c.id === selectedComparison);
     const { camera } = useThree();
     
-    // Dynamic grid scaling based on zoom level
-    const getGridScale = () => {
-      const distance = Math.sqrt(
-        camera.position.x ** 2 + camera.position.y ** 2 + camera.position.z ** 2
-      );
-      
-      // Dynamic scaling: closer = smaller grid cells, farther = larger grid cells
-      if (distance < 50) return { cellSize: 1, sectionSize: 10, gridSize: 500 };
-      if (distance < 200) return { cellSize: 5, sectionSize: 25, gridSize: 1000 };
-      if (distance < 1000) return { cellSize: 25, sectionSize: 100, gridSize: 5000 };
-      return { cellSize: 100, sectionSize: 500, gridSize: 20000 };
-    };
+    // Memoized and throttled grid scaling based on zoom level
+    const cameraDistance = React.useMemo(() => 
+      Math.sqrt(camera.position.x ** 2 + camera.position.y ** 2 + camera.position.z ** 2),
+      [camera.position.x, camera.position.y, camera.position.z]
+    );
     
-    const gridProps = getGridScale();
+    const gridProps = React.useMemo(() => {
+      // Dynamic scaling: closer = smaller grid cells, farther = larger grid cells
+      if (cameraDistance < 50) return { cellSize: 1, sectionSize: 10, gridSize: 500 };
+      if (cameraDistance < 200) return { cellSize: 5, sectionSize: 25, gridSize: 1000 };
+      if (cameraDistance < 1000) return { cellSize: 25, sectionSize: 100, gridSize: 5000 };
+      return { cellSize: 100, sectionSize: 500, gridSize: 20000 };
+    }, [cameraDistance]);
+    
     
     return (
       <>
@@ -1645,9 +1828,9 @@ function LandVisualizer() {
           camera={camera}
         />
         
-        {/* Main land area with dynamic sizing */}
+        {/* Main land area with dynamic sizing - EXACTLY on ground level */}
         {totalAreaInSqM > 0 && (
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.002, 0]}>
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
             <planeGeometry args={[Math.sqrt(totalAreaInSqM), Math.sqrt(totalAreaInSqM)]} />
             <meshLambertMaterial 
               color="#3b82f6" 
@@ -1658,12 +1841,12 @@ function LandVisualizer() {
           </mesh>
         )}
         
-        {/* Enhanced Infinite Drawing Plane */}
-        <InfiniteDrawingPlane />
+        {/* Enhanced Infinite Drawing Plane - DISABLED FOR TESTING */}
+        {/* {drawingMode && <InfiniteDrawingPlane />} */}
         
-        {/* Drawing Preview with enhanced visuals */}
-        <DrawingPreview />
-        <PolygonPreview />
+        {/* Drawing Preview with enhanced visuals - DISABLED FOR TESTING */}
+        {/* <DrawingPreview />
+        <PolygonPreview /> */}
         
         {/* Comparison object with better positioning */}
         {selectedComparisonData && (
@@ -1677,26 +1860,20 @@ function LandVisualizer() {
           />
         )}
         
-        {/* Enhanced Subdivisions with LOD (Level of Detail) */}
+        {/* Enhanced Subdivisions with Corner Editing */}
         {subdivisions.map((subdivision, index) => (
-          <EnhancedSubdivision3D 
+          <EnhancedSubdivision 
             key={subdivision.id} 
             subdivision={subdivision} 
             index={index}
             isSelected={selectedSubdivision === subdivision.id}
-            camera={camera}
-            onEdit={(id) => {
-              console.log('Editing subdivision:', id);
-              setEditingSubdivision(id);
-            }}
-            onDelete={(id) => {
-              setSubdivisions(prev => prev.filter(s => s.id !== id));
-              addToast({
-                type: 'success',
-                message: `Subdivision ${subdivision.label || id} deleted`,
-                duration: 2000
-              });
-            }}
+            showCorners={showCorners && selectedSubdivision === subdivision.id}
+            showDimensions={showDimensions}
+            onUpdateSubdivision={handleUpdateSubdivision}
+            onSelectSubdivision={setSelectedSubdivision}
+            onDeleteSubdivision={handleDeleteSubdivision}
+            darkMode={darkMode}
+            drawingMode={drawingMode}
           />
         ))}
         
@@ -1709,6 +1886,9 @@ function LandVisualizer() {
           zoomLevel={zoomLevel}
           setZoomLevel={setZoomLevel}
         />
+
+        {/* View Controls */}
+        <ViewControls />
       </>
     );
   };
@@ -1965,6 +2145,7 @@ Professional survey integration supports data import from total stations, GPS un
       if (zoom < 1000) return `${(zoom / 100).toFixed(1)}hm`;
       return `${(zoom / 1000).toFixed(1)}km`;
     };
+
     
     return (
       <div className={`
@@ -2041,14 +2222,10 @@ Professional survey integration supports data import from total stations, GPS un
         >
           +
         </button>
+
         
         {/* Navigation Help */}
-        <div className={`
-          ml-4 pl-4 border-l text-xs
-          ${darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500'}
-        `}>
-          <div><kbd className={`px-1 rounded text-xs ${darkMode ? 'bg-gray-700' : 'bg-gray-200'}`}>Ctrl</kbd> + scroll to zoom</div>
-        </div>
+        {/* Removed Ctrl + scroll to zoom text */}
       </div>
     );
   };
@@ -2177,6 +2354,8 @@ Professional survey integration supports data import from total stations, GPS un
             setDrawingMode={setDrawingMode}
             showMeasuringTape={showMeasuringTape}
             toggleMeasuringTape={toggleMeasuringTape}
+            showDimensions={showDimensions}
+            toggleDimensions={toggleDimensions}
             showAreaCalculator={showAreaCalculator}
             toggleAreaCalculator={toggleAreaCalculator}
             showCompassBearing={showCompassBearing}
@@ -2351,6 +2530,30 @@ Professional survey integration supports data import from total stations, GPS un
               </div>
             )}
 
+            {/* View Control Buttons */}
+            <div className="fixed top-4 right-4 z-50 flex gap-2">
+              <button
+                onClick={setTopView}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-lg ${
+                  darkMode 
+                    ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-600' 
+                    : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300'
+                }`}
+              >
+                Top View
+              </button>
+              <button
+                onClick={set3DView}
+                className={`px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-lg ${
+                  darkMode 
+                    ? 'bg-gray-800 hover:bg-gray-700 text-white border border-gray-600' 
+                    : 'bg-white hover:bg-gray-50 text-gray-900 border border-gray-300'
+                }`}
+              >
+                3D View
+              </button>
+            </div>
+
             <Canvas
               camera={{ 
                 position: [50, 50, 50], 
@@ -2360,20 +2563,23 @@ Professional survey integration supports data import from total stations, GPS un
               }}
               style={{ 
                 background: darkMode ? '#111827' : '#f8fafc',
-                cursor: drawingMode === 'rectangle' ? 'crosshair' : 
-                       drawingMode === 'polygon' ? 'crosshair' : 
-                       drawingMode === 'select' ? 'pointer' : 
-                       'default'
+                cursor: 'grab' // Always show grab cursor for better UX
               }}
               gl={{ 
                 antialias: false,
                 alpha: false,
                 stencil: false,
                 depth: true,
-                powerPreference: 'high-performance'
+                powerPreference: 'high-performance',
+                preserveDrawingBuffer: false,
+                failIfMajorPerformanceCaveat: false
               }}
               frameloop="demand"
-              performance={{ min: 0.1 }}
+              performance={{ 
+                min: 0.5,
+                max: 1.0,
+                debounce: 100
+              }}
             >
               <Scene />
             </Canvas>
