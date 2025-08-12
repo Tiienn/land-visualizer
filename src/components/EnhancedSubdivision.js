@@ -62,8 +62,10 @@ export const EnhancedSubdivision = React.memo(({
           <Plane 
             args={[subdivision.width, subdivision.height]} 
             rotation={[-Math.PI / 2, 0, 0]} 
-            position={[subdivision.position.x, -0.019, subdivision.position.z]}
-            // Temporarily removed all event handlers to test OrbitControls
+            position={[subdivision.position.x, 0.002, subdivision.position.z]}
+            onClick={handleSubdivisionClick}
+            onPointerEnter={handlePointerEnter}
+            onPointerLeave={handlePointerLeave}
           >
             <meshLambertMaterial 
               color={subdivision.color} 
@@ -116,8 +118,10 @@ export const EnhancedSubdivision = React.memo(({
           {/* Polygon mesh */}
           <mesh 
             geometry={geometry}
-            position={[subdivision.position.x, -0.019, subdivision.position.z]}
-            // Temporarily removed all event handlers to test OrbitControls
+            position={[subdivision.position.x, 0.002, subdivision.position.z]}
+            onClick={handleSubdivisionClick}
+            onPointerEnter={handlePointerEnter}
+            onPointerLeave={handlePointerLeave}
           >
             <meshLambertMaterial 
               color={subdivision.color} 
@@ -144,24 +148,37 @@ export const EnhancedSubdivision = React.memo(({
       {/* Main subdivision geometry */}
       {renderSubdivision()}
       
-      {/* Subdivision label */}
+      {/* Subdivision label - positioned for top view visibility */}
       <Text
-        position={[subdivision.position.x, 2, subdivision.position.z]}
-        rotation={[0, 0, 0]}
+        position={[subdivision.position.x, 10, subdivision.position.z]}
+        rotation={[-Math.PI / 2, 0, 0]}
         color={visualProps.labelColor}
         anchorX="center"
         anchorY="middle"
         fontSize={isSelected ? 1.5 : 1.2}
         maxWidth={20}
+        outlineWidth={0.1}
+        outlineColor={darkMode ? '#000000' : '#ffffff'}
       >
         {subdivision.label}
-        {isSelected && (
-          <>
-            {'\n'}
-            {subdivision.area.toFixed(1)} m²
-          </>
-        )}
       </Text>
+
+      {/* Area text - positioned for top view visibility */}
+      {isSelected && (
+        <Text
+          position={[subdivision.position.x, 10, subdivision.position.z + 3]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          color={visualProps.labelColor}
+          anchorX="center"
+          anchorY="middle"
+          fontSize={1.2}
+          maxWidth={20}
+          outlineWidth={0.1}
+          outlineColor={darkMode ? '#000000' : '#ffffff'}
+        >
+          {subdivision.area.toFixed(1)} m²
+        </Text>
+      )}
 
       {/* Dimension lines */}
       <DimensionLines

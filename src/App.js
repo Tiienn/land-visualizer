@@ -1262,6 +1262,64 @@ function LandVisualizer() {
     );
   });
 
+  // Handle right-click and spacebar functionality: Cancel drawing only
+  const handleRightClickOrSpacebar = useCallback(() => {
+    if (drawingMode === 'rectangle' && isDrawing) {
+      // Cancel rectangle drawing
+      setIsDrawing(false);
+      setDrawingStart(null);
+      setDrawingCurrent(null);
+      setDrawingPreview(null);
+      addToast({
+        type: 'info',
+        message: 'Rectangle drawing cancelled',
+        duration: 2000
+      });
+    } else if (drawingMode === 'polygon' && polygonPoints.length > 0) {
+      // Cancel polygon drawing
+      setPolygonPoints([]);
+      addToast({
+        type: 'info',
+        message: 'Polygon drawing cancelled',
+        duration: 2000
+      });
+    } else if (drawingMode === 'polyline' && (isDrawing || polygonPoints.length > 0)) {
+      // Cancel polyline drawing
+      setIsDrawing(false);
+      setPolygonPoints([]);
+      addToast({
+        type: 'info',
+        message: 'Polyline drawing cancelled',
+        duration: 2000
+      });
+    } else if (drawingMode) {
+      // Exit drawing mode
+      setDrawingMode(null);
+      addToast({
+        type: 'info',
+        message: 'Drawing mode cancelled',
+        duration: 2000
+      });
+    }
+    // Removed: Clear selection functionality
+  }, [drawingMode, isDrawing, polygonPoints.length, addToast]);
+
+  // Global spacebar handling for right-click functionality
+  useEffect(() => {
+    const handleKeyDown = (event) => {
+      if (event.code === 'Space' && !event.repeat) {
+        // Only trigger right-click functionality if we're in a drawing mode
+        if (drawingMode) {
+          event.preventDefault();
+          handleRightClickOrSpacebar();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleRightClickOrSpacebar, drawingMode]);
+
   // Enhanced Drawing Plane with Infinite Support - Optimized
   const InfiniteDrawingPlane = React.memo(() => {
     const meshRef = React.useRef();
@@ -1294,6 +1352,12 @@ function LandVisualizer() {
       
       event.stopPropagation();
       const point = event.point;
+      
+      // Handle right-click: Cancel current drawing/selection
+      if (event.nativeEvent.button === 2) {
+        handleRightClickOrSpacebar();
+        return;
+      }
       
       if (drawingMode === 'select') {
         setSelectedSubdivision(null);
@@ -1491,6 +1555,10 @@ function LandVisualizer() {
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
         onDoubleClick={handleDoubleClick}
+        onContextMenu={(e) => {
+          e.preventDefault(); // Disable browser context menu
+          handleRightClickOrSpacebar(); // Trigger our custom right-click functionality
+        }}
       >
         <planeGeometry args={[1000, 1000]} />
         <meshBasicMaterial 
@@ -1565,6 +1633,9 @@ function LandVisualizer() {
           event.preventDefault();
           setIsSpacePressed(true);
           gl.domElement.style.cursor = 'grab';
+          
+          // Note: Right-click functionality (cancel drawing/clear selection) 
+          // is now handled by the global spacebar listener
         }
       };
       
@@ -1809,8 +1880,8 @@ function LandVisualizer() {
           intensity={0.3}
         />
         
-        {/* Infinite Ground Plane */}
-        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+        {/* Infinite Ground Plane - BELOW everything */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.05, 0]}>
           <planeGeometry args={[gridProps.gridSize * 2, gridProps.gridSize * 2]} />
           <meshLambertMaterial 
             color={darkMode ? "#1f2937" : "#16a34a"}
@@ -1828,25 +1899,25 @@ function LandVisualizer() {
           camera={camera}
         />
         
-        {/* Main land area with dynamic sizing - EXACTLY on ground level */}
-        {totalAreaInSqM > 0 && (
-          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.02, 0]}>
+        {/* Main land area - REMOVED as requested */}
+        {/* {totalAreaInSqM > 0 && (
+          <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.001, 0]}>
             <planeGeometry args={[Math.sqrt(totalAreaInSqM), Math.sqrt(totalAreaInSqM)]} />
             <meshLambertMaterial 
               color="#3b82f6" 
               transparent 
-              opacity={0.4}
+              opacity={0.6}
               side={THREE.DoubleSide}
             />
           </mesh>
-        )}
+        )} */}
         
-        {/* Enhanced Infinite Drawing Plane - DISABLED FOR TESTING */}
-        {/* {drawingMode && <InfiniteDrawingPlane />} */}
+        {/* Enhanced Infinite Drawing Plane */}
+        {drawingMode && <InfiniteDrawingPlane />}
         
-        {/* Drawing Preview with enhanced visuals - DISABLED FOR TESTING */}
-        {/* <DrawingPreview />
-        <PolygonPreview /> */}
+        {/* Drawing Preview with enhanced visuals */}
+        <DrawingPreview />
+        <PolygonPreview />
         
         {/* Comparison object with better positioning */}
         {selectedComparisonData && (
@@ -1877,14 +1948,19 @@ function LandVisualizer() {
           />
         ))}
         
-        {/* Enhanced Navigation Controls */}
-        <EnhancedNavigationControls 
-          drawingMode={drawingMode}
-          onCameraChange={setCameraPosition}
-          onZoomChange={setCurrentZoom}
-          darkMode={darkMode}
-          zoomLevel={zoomLevel}
-          setZoomLevel={setZoomLevel}
+        {/* Simple OrbitControls - NO complex navigation system */}
+        <OrbitControls 
+          enablePan={true}
+          enableZoom={true}
+          enableRotate={true}
+          enableDamping={true}
+          dampingFactor={0.1}
+          panSpeed={1.0}
+          rotateSpeed={1.0}
+          zoomSpeed={1.0}
+          maxPolarAngle={Math.PI / 2}
+          minDistance={5}
+          maxDistance={1000}
         />
 
         {/* View Controls */}
@@ -2559,7 +2635,7 @@ Professional survey integration supports data import from total stations, GPS un
                 position: [50, 50, 50], 
                 fov: 60,
                 near: 1,
-                far: 800 
+                far: 10000 
               }}
               style={{ 
                 background: darkMode ? '#111827' : '#f8fafc',
@@ -2574,7 +2650,7 @@ Professional survey integration supports data import from total stations, GPS un
                 preserveDrawingBuffer: false,
                 failIfMajorPerformanceCaveat: false
               }}
-              frameloop="demand"
+              frameloop="always"
               performance={{ 
                 min: 0.5,
                 max: 1.0,

@@ -16,126 +16,71 @@ export const DimensionLines = React.memo(({
     const { position, width, height } = subdivision;
     const { x, z } = position;
     
-    // Calculate corner points
+    // Calculate positions for dimension text on each side
     const halfWidth = width / 2;
     const halfHeight = height / 2;
     
-    const corners = {
-      bottomLeft: { x: x - halfWidth, z: z - halfHeight },
-      bottomRight: { x: x + halfWidth, z: z - halfHeight },
-      topRight: { x: x + halfWidth, z: z + halfHeight },
-      topLeft: { x: x - halfWidth, z: z + halfHeight }
-    };
-
-    // Offset for dimension lines (outside the rectangle)
-    const offset = Math.min(width, height) * 0.15 + 2;
-    const textHeight = 1.5;
+    // Offset for dimension text (outside the rectangle)
+    const offset = Math.min(width, height) * 0.1 + 1.5;
+    const textHeight = 10; // High up for top view visibility
 
     return (
       <group>
-        {/* Bottom dimension line (width) */}
-        <group>
-          <Line
-            points={[
-              [corners.bottomLeft.x, 0.01, corners.bottomLeft.z - offset],
-              [corners.bottomRight.x, 0.01, corners.bottomRight.z - offset]
-            ]}
-            color={darkMode ? '#ffffff' : '#333333'}
-            lineWidth={2}
-          />
-          
-          {/* Extension lines */}
-          <Line
-            points={[
-              [corners.bottomLeft.x, 0.01, corners.bottomLeft.z],
-              [corners.bottomLeft.x, 0.01, corners.bottomLeft.z - offset - 0.5]
-            ]}
-            color={darkMode ? '#ffffff' : '#333333'}
-            lineWidth={1}
-          />
-          <Line
-            points={[
-              [corners.bottomRight.x, 0.01, corners.bottomRight.z],
-              [corners.bottomRight.x, 0.01, corners.bottomRight.z - offset - 0.5]
-            ]}
-            color={darkMode ? '#ffffff' : '#333333'}
-            lineWidth={1}
-          />
-          
-          {/* Width text with background */}
-          <group position={[x, textHeight, corners.bottomLeft.z - offset]}>
-            <mesh>
-              <planeGeometry args={[width.toString().length * 0.6 + 1, 0.8]} />
-              <meshBasicMaterial 
-                color={darkMode ? '#1a1a1a' : '#ffffff'} 
-                transparent 
-                opacity={0.9}
-              />
-            </mesh>
-            <Text
-              position={[0, 0, 0.01]}
-              rotation={[0, 0, 0]}
-              color={darkMode ? '#ffffff' : '#000000'}
-              anchorX="center"
-              anchorY="middle"
-              fontSize={1}
-            >
-              {width.toFixed(1)}m
-            </Text>
-          </group>
-        </group>
+        {/* Bottom dimension text (width) */}
+        <Text
+          position={[x, textHeight, z - halfHeight - offset]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          color={darkMode ? '#ffffff' : '#000000'}
+          anchorX="center"
+          anchorY="middle"
+          fontSize={1.2}
+          outlineWidth={0.1}
+          outlineColor={darkMode ? '#000000' : '#ffffff'}
+        >
+          {width.toFixed(1)}m
+        </Text>
 
-        {/* Left dimension line (height) */}
-        <group>
-          <Line
-            points={[
-              [corners.bottomLeft.x - offset, 0.01, corners.bottomLeft.z],
-              [corners.topLeft.x - offset, 0.01, corners.topLeft.z]
-            ]}
-            color={darkMode ? '#ffffff' : '#333333'}
-            lineWidth={2}
-          />
-          
-          {/* Extension lines */}
-          <Line
-            points={[
-              [corners.bottomLeft.x, 0.01, corners.bottomLeft.z],
-              [corners.bottomLeft.x - offset - 0.5, 0.01, corners.bottomLeft.z]
-            ]}
-            color={darkMode ? '#ffffff' : '#333333'}
-            lineWidth={1}
-          />
-          <Line
-            points={[
-              [corners.topLeft.x, 0.01, corners.topLeft.z],
-              [corners.topLeft.x - offset - 0.5, 0.01, corners.topLeft.z]
-            ]}
-            color={darkMode ? '#ffffff' : '#333333'}
-            lineWidth={1}
-          />
-          
-          {/* Height text with background */}
-          <group position={[corners.bottomLeft.x - offset, textHeight, z]}>
-            <mesh rotation={[0, Math.PI / 2, 0]}>
-              <planeGeometry args={[height.toString().length * 0.6 + 1, 0.8]} />
-              <meshBasicMaterial 
-                color={darkMode ? '#1a1a1a' : '#ffffff'} 
-                transparent 
-                opacity={0.9}
-              />
-            </mesh>
-            <Text
-              position={[0, 0, 0.01]}
-              rotation={[0, Math.PI / 2, 0]}
-              color={darkMode ? '#ffffff' : '#000000'}
-              anchorX="center"
-              anchorY="middle"
-              fontSize={1}
-            >
-              {height.toFixed(1)}m
-            </Text>
-          </group>
-        </group>
+        {/* Top dimension text (width) */}
+        <Text
+          position={[x, textHeight, z + halfHeight + offset]}
+          rotation={[-Math.PI / 2, 0, 0]}
+          color={darkMode ? '#ffffff' : '#000000'}
+          anchorX="center"
+          anchorY="middle"
+          fontSize={1.2}
+          outlineWidth={0.1}
+          outlineColor={darkMode ? '#000000' : '#ffffff'}
+        >
+          {width.toFixed(1)}m
+        </Text>
+
+        {/* Left dimension text (height) */}
+        <Text
+          position={[x - halfWidth - offset, textHeight, z]}
+          rotation={[-Math.PI / 2, 0, Math.PI / 2]}
+          color={darkMode ? '#ffffff' : '#000000'}
+          anchorX="center"
+          anchorY="middle"
+          fontSize={1.2}
+          outlineWidth={0.1}
+          outlineColor={darkMode ? '#000000' : '#ffffff'}
+        >
+          {height.toFixed(1)}m
+        </Text>
+
+        {/* Right dimension text (height) */}
+        <Text
+          position={[x + halfWidth + offset, textHeight, z]}
+          rotation={[-Math.PI / 2, 0, Math.PI / 2]}
+          color={darkMode ? '#ffffff' : '#000000'}
+          anchorX="center"
+          anchorY="middle"
+          fontSize={1.2}
+          outlineWidth={0.1}
+          outlineColor={darkMode ? '#000000' : '#ffffff'}
+        >
+          {height.toFixed(1)}m
+        </Text>
       </group>
     );
   };
