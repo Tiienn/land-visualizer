@@ -126,7 +126,7 @@ const LeftSidebar = ({
       <div
         className={`
           fixed left-0 z-30 transition-all duration-200 ease-out
-          ${activeSection ? 'w-80' : 'w-20'}
+          ${isLeftSidebarExpanded ? 'w-80' : 'w-20'}
           ${darkMode
             ? 'bg-gray-950 border-r border-gray-800'
             : 'bg-white border-r border-gray-100'
@@ -148,9 +148,9 @@ const LeftSidebar = ({
                     ? 'bg-blue-600 hover:bg-blue-500 border-gray-600 text-white' 
                     : 'bg-blue-500 hover:bg-blue-400 border-white text-white'}
                 `}
-                title={`${activeSection ? 'Collapse' : 'Expand'} left sidebar`}
+                title={`${isLeftSidebarExpanded ? 'Collapse' : 'Expand'} left sidebar`}
               >
-                {activeSection ? (
+                {isLeftSidebarExpanded ? (
                   <ChevronLeft size={14} />
                 ) : (
                   <ChevronRight size={14} />
@@ -188,7 +188,7 @@ const LeftSidebar = ({
           </div>
 
           {/* Right Content Panel */}
-          {activeSection && (
+          {isLeftSidebarExpanded && (
             <div className={`
               flex-1 border-l overflow-y-auto
               ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-100 bg-white'}

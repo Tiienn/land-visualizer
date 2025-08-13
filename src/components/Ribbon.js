@@ -55,6 +55,7 @@ const Ribbon = ({
   showAreaConfiguration,
   toggleAreaConfiguration,
   addUnit,
+  onShowInsertArea,
   showInsertAreaDropdown,
   toggleInsertAreaDropdown,
   showPresetSelector,
@@ -97,10 +98,10 @@ const Ribbon = ({
         {
           id: 'insert-area',
           label: 'Insert Area',
-          icon: ChevronDown,
-          active: showInsertAreaDropdown,
-          action: toggleInsertAreaDropdown,
-          description: 'Insert area with unit selection dropdown'
+          icon: Plus,
+          active: false,
+          action: onShowInsertArea,
+          description: 'Insert area with specified dimensions'
         },
         {
           id: 'add-area',

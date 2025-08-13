@@ -307,7 +307,7 @@ const PropertiesPanel = ({
       <div
         className={`
           fixed right-0 z-30 transition-all duration-200 ease-out
-          ${activeSection ? 'w-80' : 'w-20'}
+          ${isPropertiesPanelExpanded ? 'w-80' : 'w-20'}
           ${darkMode
             ? 'bg-gray-950 border-l border-gray-800'
             : 'bg-white border-l border-gray-100'
@@ -317,7 +317,7 @@ const PropertiesPanel = ({
       >
         <div className="flex h-full">
           {/* Right Content Panel */}
-          {activeSection && (
+          {isPropertiesPanelExpanded && (
             <div className={`
               flex-1 border-r overflow-y-auto
               ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-100 bg-white'}
@@ -375,9 +375,9 @@ const PropertiesPanel = ({
                     ? 'bg-blue-600 hover:bg-blue-500 border-gray-600 text-white' 
                     : 'bg-blue-500 hover:bg-blue-400 border-white text-white'}
                 `}
-                title={`${activeSection ? 'Collapse' : 'Expand'} right sidebar`}
+                title={`${isPropertiesPanelExpanded ? 'Collapse' : 'Expand'} right sidebar`}
               >
-                {activeSection ? (
+                {isPropertiesPanelExpanded ? (
                   <ChevronRight size={14} />
                 ) : (
                   <ChevronLeft size={14} />
@@ -432,7 +432,7 @@ const PropertiesPanel = ({
       </div>
 
       {/* Content Spacer */}
-      <div className={`${activeSection ? 'mr-80' : 'mr-20'} transition-all duration-200`}>
+      <div className={`${isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'} transition-all duration-200`}>
         {/* This ensures content doesn't get hidden behind the panel */}
       </div>
     </>
