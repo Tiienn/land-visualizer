@@ -430,11 +430,6 @@ function LandVisualizer() {
           camera={camera}
         />
 
-        {/* Simple test box to verify 3D rendering */}
-        <mesh position={[0, 1, 0]}>
-          <boxGeometry args={[2, 2, 2]} />
-          <meshLambertMaterial color="#3b82f6" />
-        </mesh>
 
         {/* Render all subdivisions */}
         {subdivisions.map((subdivision) => (
@@ -885,7 +880,7 @@ Professional survey integration supports data import from total stations, GPS un
       } ${
         isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
       } transition-all duration-200`}>
-        <div className="h-full min-h-[500px]">
+        <div className="h-[80vh] min-h-[600px]">
         {/* Drawing Mode Info Overlay */}
         <DrawingModeInfo />
         
@@ -899,7 +894,7 @@ Professional survey integration supports data import from total stations, GPS un
             }}
             style={{ 
               width: '100%',
-              height: '100%',
+              height: '70vh',
               background: '#87ceeb'
             }}
           >
@@ -907,11 +902,6 @@ Professional survey integration supports data import from total stations, GPS un
             <ambientLight intensity={0.6} />
             <directionalLight position={[10, 10, 5]} intensity={1} />
             
-            {/* Test cube */}
-            <mesh position={[0, 0, 0]}>
-              <boxGeometry args={[2, 2, 2]} />
-              <meshStandardMaterial color="#ff6b35" />
-            </mesh>
             
             {/* Ground plane */}
             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 0]}>
