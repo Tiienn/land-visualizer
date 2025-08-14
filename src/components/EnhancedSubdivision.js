@@ -14,19 +14,30 @@ export const EnhancedSubdivision = React.memo(({
   onUpdateSubdivision,
   onSelectSubdivision,
   onDeleteSubdivision,
+  onSelect, // New prop for selection handling
   darkMode,
   drawingMode 
 }) => {
   const [isHovered, setIsHovered] = useState(false);
 
-  // Handle subdivision selection - only when in select mode
+  // Handle subdivision selection - only works in normal mode and select mode  
   const handleSubdivisionClick = useCallback((event) => {
-    if (drawingMode === 'select') {
-      event.stopPropagation();
-      onSelectSubdivision(subdivision.id);
+    // Only handle selection when NOT in drawing mode (rectangle, polyline, etc.)
+    if (!drawingMode || drawingMode === 'select') {
+      if (event.nativeEvent && event.nativeEvent.button === 0) {
+        event.stopPropagation(); // Stop propagation for left-clicks on subdivisions
+        if (onSelect) {
+          // Set userData for identification
+          event.eventObject.userData = { subdivisionId: subdivision.id };
+          onSelect(event);
+        } else if (onSelectSubdivision) {
+          onSelectSubdivision(subdivision.id);
+        }
+        return; // Exit early to prevent other event handlers
+      }
     }
-    // For all other modes: DO NOT STOP PROPAGATION - let OrbitControls handle it
-  }, [subdivision.id, onSelectSubdivision, drawingMode]);
+    // In drawing mode: DON'T stop propagation - let drawing plane handle left-clicks
+  }, [subdivision.id, onSelect, onSelectSubdivision, drawingMode]);
 
   // Handle subdivision hover
   const handlePointerEnter = useCallback(() => {

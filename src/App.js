@@ -88,6 +88,13 @@ function LandVisualizer() {
   // Core state
   const [darkMode, setDarkMode] = useState(false);
   const [drawingMode, setDrawingMode] = useState(null);
+  
+  // Disable right-click context menu globally (since right-click now rotates camera)
+  useEffect(() => {
+    const handleContextMenu = (e) => e.preventDefault();
+    document.addEventListener('contextmenu', handleContextMenu);
+    return () => document.removeEventListener('contextmenu', handleContextMenu);
+  }, []);
   const [units, setUnits] = useState([{ value: 5000, unit: 'm²' }]);
   const [subdivisions, setSubdivisions] = useState([
     {
@@ -155,6 +162,10 @@ function LandVisualizer() {
   const [drawingCurrent, setDrawingCurrent] = useState(null);
   const [drawingPreview, setDrawingPreview] = useState(null);
   
+  // Selection state
+  const [selectedObject, setSelectedObject] = useState(null);
+  const [selectedSubdivision, setSelectedSubdivision] = useState(null);
+  
   // Comparison options for visual reference
   const comparisonOptions = [
     { id: 'football-field', name: 'Football Field', area: 5351, unit: 'm²', color: '#22c55e' },
@@ -216,6 +227,40 @@ function LandVisualizer() {
     setBearings(prev => [...prev, { ...bearing, id: Date.now() }]);
   }, []);
 
+  // Selection handlers
+  const handleObjectSelection = useCallback((event) => {
+    
+    // Only handle selection in normal mode (not in drawing mode)
+    if (drawingMode && drawingMode !== 'select') {
+      return;
+    }
+    
+    // Check if left-click
+    if (event.nativeEvent && event.nativeEvent.button !== 0) {
+      return;
+    }
+    
+    // Find what was clicked using raycasting
+    const intersectedObject = event.eventObject;
+    
+    if (intersectedObject) {
+      // Check if it's a subdivision
+      const subdivision = subdivisions.find(sub => 
+        intersectedObject.userData && intersectedObject.userData.subdivisionId === sub.id
+      );
+      
+      if (subdivision) {
+        setSelectedSubdivision(subdivision);
+        setSelectedObject(intersectedObject);
+      } else {
+        // Clear selection if clicking on empty space
+        setSelectedSubdivision(null);
+        setSelectedObject(null);
+      }
+    } else {
+    }
+  }, [drawingMode, subdivisions]);
+
   // Drawing mode handlers
   const handleDrawingModeChange = useCallback((mode) => {
     setDrawingMode(mode);
@@ -259,10 +304,19 @@ function LandVisualizer() {
 
   // Enhanced drawing handlers with performance optimization
   const handlePointerDown = useCallback((event) => {
-    if (!drawingMode || drawingMode === 'select') return;
+    
+    if (!drawingMode || drawingMode === 'select') {
+      return;
+    }
+    
+    // Only handle left-click events (button 0)
+    if (event.nativeEvent && event.nativeEvent.button !== 0) {
+      return;
+    }
     
     setIsDrawing(true);
-    const point = event.point;
+    // Get 3D world position from Three.js intersection
+    const point = { x: event.point.x, z: event.point.z };
     setDrawingStart(point);
     setDrawingCurrent(point);
   }, [drawingMode]);
@@ -270,7 +324,8 @@ function LandVisualizer() {
   const handlePointerMove = useCallback((event) => {
     if (!isDrawing || !drawingStart) return;
     
-    const point = event.point;
+    // Get 3D world position from Three.js intersection
+    const point = { x: event.point.x, z: event.point.z };
     setDrawingCurrent(point);
     
     // Create preview shape
@@ -288,10 +343,13 @@ function LandVisualizer() {
         area: width * height
       });
     }
-  }, [drawingMode, drawingStart, isDrawing, subdivisions.length]);
+  }, [drawingMode, drawingStart, isDrawing]);
 
   const handlePointerUp = useCallback((event) => {
     if (!isDrawing || !drawingStart || !drawingCurrent) return;
+    
+    // Only handle left-click release events (button 0)
+    if (event.nativeEvent && event.nativeEvent.button !== 0) return;
     
     if (drawingMode === 'rectangle') {
       const width = Math.abs(drawingCurrent.x - drawingStart.x);
@@ -324,48 +382,47 @@ function LandVisualizer() {
     setDrawingStart(null);
     setDrawingCurrent(null);
     setDrawingPreview(null);
-  }, [drawingMode, drawingPreview, isDrawing, subdivisions.length]);
+  }, [drawingMode, drawingCurrent, drawingStart, isDrawing, subdivisions.length]);
 
-  // View Controls Component
-  const ViewControls = () => {
-    const { camera, gl } = useThree();
+  // Conditional OrbitControls component that handles right-click dynamically
+  const ConditionalOrbitControls = ({ drawingMode }) => {
     const controlsRef = useRef();
-
-    // Update camera position based on zoom level
+    const { gl } = useThree();
+    
+    // No DOM-level blocking - let Three.js handle events properly
+    
+    // Update mouse button configuration when drawing mode changes
     useEffect(() => {
-      const distance = 100 / zoomLevel;
-      const newPosition = new THREE.Vector3(
-        cameraTarget.x + distance * 0.7,
-        distance * 0.7,
-        cameraTarget.z + distance * 0.7
-      );
-      
-      camera.position.copy(newPosition);
-      camera.lookAt(cameraTarget);
-    }, [zoomLevel, camera, cameraTarget]);
-
-    // Enhanced Performance Components
+      if (controlsRef.current) {
+        const controls = controlsRef.current;
+        // Keep panning enabled in all modes now - drawing plane is selective
+        controls.enablePan = true;
+        controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN;
+        // LEFT and RIGHT stay consistent: null and ROTATE respectively
+      }
+    }, [drawingMode]);
+    
     return (
-      <>
-        <OptimizedRenderer 
-          enableAdaptiveQuality={true}
-          enableSelectiveRendering={true}
-          onPerformanceChange={setPerformanceStats}
-        />
-        
-        <EnhancedEventHandler
-          drawingMode={drawingMode}
-          isDrawing={isDrawing}
-          onPointerDown={handlePointerDown}
-          onPointerMove={handlePointerMove}
-          onPointerUp={handlePointerUp}
-        />
-        
-        <EnhancedCameraController 
-          target={[cameraTarget.x, cameraTarget.y, cameraTarget.z]}
-          enableDamping={true}
-        />
-      </>
+      <OrbitControls 
+        ref={controlsRef}
+        enablePan={true} 
+        enableZoom={true} 
+        enableRotate={true}
+        enableDamping={true}
+        dampingFactor={0.25}
+        rotateSpeed={0.5}
+        panSpeed={0.8}
+        zoomSpeed={0.6}
+        minDistance={10}
+        maxDistance={300}
+        maxPolarAngle={Math.PI / 2.1}
+        screenSpacePanning={false}
+        mouseButtons={{
+          LEFT: null, // Left-click always disabled from start
+          MIDDLE: THREE.MOUSE.PAN,
+          RIGHT: THREE.MOUSE.ROTATE // Right-click always enabled
+        }}
+      />
     );
   };
 
@@ -439,6 +496,8 @@ function LandVisualizer() {
             darkMode={darkMode}
             showDimensions={showDimensions}
             drawingMode={drawingMode}
+            isSelected={selectedSubdivision?.id === subdivision.id}
+            onSelect={handleObjectSelection}
           />
         ))}
         
@@ -458,8 +517,65 @@ function LandVisualizer() {
           />
         )}
 
-        {/* View Controls */}
-        <ViewControls />
+        {/* Invisible Drawing Plane - only active when in drawing mode */}
+        {drawingMode && drawingMode !== 'select' && (
+          <mesh 
+            rotation={[-Math.PI / 2, 0, 0]} 
+            position={[0, 0.15, 0]} // Higher position to ensure it's on top
+            visible={false}
+            onPointerDown={(event) => {
+              // Only stop propagation for left-click events
+              if (event.nativeEvent.button === 0) {
+                event.stopPropagation();
+                handlePointerDown(event);
+              } else {
+              }
+              // Let middle-click and right-click through for camera controls
+            }}
+            onPointerMove={(event) => {
+              // Only stop propagation if we're actively drawing with left-click
+              if (isDrawing) {
+                event.stopPropagation();
+                handlePointerMove(event);
+              }
+              // Let other pointer moves through for camera controls
+            }}
+            onPointerUp={(event) => {
+              // Only stop propagation for left-click release during drawing
+              if (isDrawing && event.nativeEvent.button === 0) {
+                event.stopPropagation();
+                handlePointerUp(event);
+              }
+              // Let other button releases through
+            }}
+          >
+            <planeGeometry args={[gridProps.gridSize * 1.5, gridProps.gridSize * 1.5]} />
+            <meshBasicMaterial transparent opacity={0} />
+          </mesh>
+        )}
+
+        {/* Global selection plane - for clicking empty space */}
+        <mesh 
+          rotation={[-Math.PI / 2, 0, 0]} 
+          position={[0, -0.1, 0]} // Much lower to avoid conflicts with subdivisions
+          visible={false}
+          onClick={(event) => {
+            // Handle left-click selection on empty space (clear selection)
+            if (!drawingMode || drawingMode === 'select') {
+              if (event.nativeEvent && event.nativeEvent.button === 0) {
+                // Only clear if no subdivision was clicked (event should have been stopped)
+                setSelectedSubdivision(null);
+                setSelectedObject(null);
+              }
+            }
+          }}
+        >
+          <planeGeometry args={[gridProps.gridSize * 2, gridProps.gridSize * 2]} />
+          <meshBasicMaterial transparent opacity={0} />
+        </mesh>
+
+        {/* Direct OrbitControls with conditional right-click */}
+        <ConditionalOrbitControls drawingMode={drawingMode} />
       </>
     );
   };
@@ -887,30 +1003,21 @@ Professional survey integration supports data import from total stations, GPS un
         {/* 3D Canvas */}
           <Canvas
             camera={{ 
-              position: [10, 10, 10], 
+              position: [50, 50, 50], 
               fov: 50,
               near: 0.1,
-              far: 1000
+              far: 2000
             }}
             style={{ 
               width: '100%',
               height: '70vh',
-              background: '#87ceeb'
+              background: darkMode ? '#1e293b' : '#87ceeb'
             }}
+            onContextMenu={(e) => e.preventDefault()} // Always prevent context menu
+            dpr={[1, 2]} // Limit device pixel ratio for consistent performance
+            performance={{ min: 0.5 }} // Minimum performance threshold
           >
-            {/* Lighting */}
-            <ambientLight intensity={0.6} />
-            <directionalLight position={[10, 10, 5]} intensity={1} />
-            
-            
-            {/* Ground plane */}
-            <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -2, 0]}>
-              <planeGeometry args={[20, 20]} />
-              <meshStandardMaterial color="#4ade80" />
-            </mesh>
-            
-            {/* OrbitControls for interaction */}
-            <OrbitControls enablePan={true} enableZoom={true} enableRotate={true} />
+            <Scene />
           </Canvas>
         </div>
       </div>
