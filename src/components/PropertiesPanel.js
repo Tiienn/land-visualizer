@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Ruler, Mountain, Compass, ChevronLeft, ChevronRight, Edit, Search } from 'lucide-react';
+import { Settings, Ruler, Mountain, Compass, ChevronLeft, ChevronRight, Edit, Square as SquareIcon, MousePointer, Edit3 } from 'lucide-react';
 import MeasuringTape from './MeasuringTape';
 import CompassBearing from './CompassBearing';
 import { TerrainControls } from './TerrainElevation';
@@ -47,12 +47,14 @@ const PropertiesPanel = ({
   
   // Toggle function
   onToggleRightSidebar,
-  isPropertiesPanelExpanded
+  isPropertiesPanelExpanded,
+  
+  // Drawing mode info
+  drawingMode
 }) => {
   const [activeSection, setActiveSection] = useState(null);
-  const [searchTerm, setSearchTerm] = useState('');
 
-  // Update active section when activeTool changes
+  // Update active section when activeTool changes or drawing mode is active
   useEffect(() => {
     if (activeTool && activeTool !== activeSection) {
       setActiveSection(activeTool);
@@ -60,9 +62,15 @@ const PropertiesPanel = ({
       if (onPropertiesPanelExpansionChange) {
         onPropertiesPanelExpansionChange(true);
       }
+    } else if (drawingMode && activeSection !== 'settings') {
+      // Auto-open Properties when drawing mode is active (regardless of activeTool)
+      setActiveSection('settings');
+      if (onPropertiesPanelExpansionChange) {
+        onPropertiesPanelExpansionChange(true);
+      }
     }
     // Don't auto-close when activeTool becomes null - let user close manually
-  }, [activeTool, onPropertiesPanelExpansionChange]);
+  }, [activeTool, drawingMode, onPropertiesPanelExpansionChange, activeSection]);
 
   // Handle section change
   const handleSectionChange = (sectionId) => {
@@ -103,13 +111,16 @@ const PropertiesPanel = ({
     },
     {
       id: 'settings',
-      label: 'Settings',
+      label: 'Properties',
       icon: Settings,
-      description: 'General settings'
+      description: 'General properties'
     }
   ];
-  const getActiveToolContent = () => {
-    switch (activeTool) {
+  const getActiveContent = () => {
+    // Use activeSection if set, otherwise fall back to activeTool
+    const currentSection = activeSection || activeTool;
+    
+    switch (currentSection) {
       case 'measuring':
         return (
           <MeasuringTape
@@ -177,7 +188,7 @@ const PropertiesPanel = ({
                 </label>
                 <input
                   type="number"
-                  value={manualDimensions.width}
+                  value={manualDimensions?.width || ''}
                   onChange={(e) => setManualDimensions(prev => ({ ...prev, width: e.target.value }))}
                   placeholder="Enter width"
                   className={`w-full px-3 py-2 rounded-lg border transition-colors ${
@@ -196,7 +207,7 @@ const PropertiesPanel = ({
                 </label>
                 <input
                   type="number"
-                  value={manualDimensions.length}
+                  value={manualDimensions?.length || ''}
                   onChange={(e) => setManualDimensions(prev => ({ ...prev, length: e.target.value }))}
                   placeholder="Enter length"
                   className={`w-full px-3 py-2 rounded-lg border transition-colors ${
@@ -215,7 +226,7 @@ const PropertiesPanel = ({
                 </label>
                 <input
                   type="text"
-                  value={manualDimensions.label}
+                  value={manualDimensions?.label || ''}
                   onChange={(e) => setManualDimensions(prev => ({ ...prev, label: e.target.value }))}
                   placeholder="Enter label"
                   className={`w-full px-3 py-2 rounded-lg border transition-colors ${
@@ -229,9 +240,9 @@ const PropertiesPanel = ({
               <div className="flex gap-2">
                 <button
                   onClick={onAddManualSubdivision}
-                  disabled={!manualDimensions.width || !manualDimensions.length}
+                  disabled={!manualDimensions?.width || !manualDimensions?.length}
                   className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    !manualDimensions.width || !manualDimensions.length
+                    !manualDimensions?.width || !manualDimensions?.length
                       ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                       : darkMode
                         ? 'bg-blue-600 hover:bg-blue-700 text-white'
@@ -253,6 +264,166 @@ const PropertiesPanel = ({
                 </button>
               </div>
             </div>
+          </div>
+        );
+      
+      case 'settings':
+        return (
+          <div className={`space-y-4 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+            {/* Rectangle Drawing Mode Details */}
+            {drawingMode === 'rectangle' && (
+              <div className={`p-4 rounded-xl shadow-sm border ${
+                darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'
+              }`}>
+                <div className="flex items-center space-x-3 mb-4">
+                  <SquareIcon className={`w-6 h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                  <div>
+                    <h4 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Rectangle Drawing Tool
+                    </h4>
+                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Create rectangular subdivisions by clicking and dragging
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                    <h5 className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      How to use:
+                    </h5>
+                    <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <li>• Left-click and drag to create a rectangle</li>
+                      <li>• Release to finalize the subdivision</li>
+                      <li>• Right-click to rotate the 3D view</li>
+                      <li>• Middle-click to pan around</li>
+                    </ul>
+                  </div>
+                  
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-blue-900/20' : 'bg-blue-50'} border ${darkMode ? 'border-blue-800' : 'border-blue-200'}`}>
+                    <div className={`text-sm ${darkMode ? 'text-blue-300' : 'text-blue-700'}`}>
+                      <strong>Tip:</strong> The subdivisions will automatically calculate their area and display dimensions when created.
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Select Mode Details */}
+            {drawingMode === 'select' && (
+              <div className={`p-4 rounded-xl shadow-sm border ${
+                darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'
+              }`}>
+                <div className="flex items-center space-x-3 mb-4">
+                  <MousePointer className={`w-6 h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                  <div>
+                    <h4 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Selection Tool
+                    </h4>
+                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Select and modify existing subdivisions
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                    <h5 className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      How to use:
+                    </h5>
+                    <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <li>• Left-click on a subdivision to select it</li>
+                      <li>• Selected subdivisions will be highlighted</li>
+                      <li>• Use other tools to modify selected areas</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* Polyline Mode Details */}
+            {drawingMode === 'polyline' && (
+              <div className={`p-4 rounded-xl shadow-sm border ${
+                darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'
+              }`}>
+                <div className="flex items-center space-x-3 mb-4">
+                  <Edit3 className={`w-6 h-6 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+                  <div>
+                    <h4 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      Polyline Drawing Tool
+                    </h4>
+                    <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      Create custom irregular shapes by clicking points
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className={`p-3 rounded-lg ${darkMode ? 'bg-gray-700' : 'bg-gray-50'}`}>
+                    <h5 className={`font-medium mb-2 ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                      How to use:
+                    </h5>
+                    <ul className={`text-sm space-y-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                      <li>• Click to place points along the boundary</li>
+                      <li>• Continue clicking to add more points</li>
+                      <li>• Double-click to finish the shape</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {/* General Properties when no drawing mode */}
+            {!drawingMode && (
+              <div className={`p-4 rounded-xl shadow-sm border ${
+                darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'
+              }`}>
+                <div className="mb-4">
+                  <h4 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                    General Properties
+                  </h4>
+                  <p className={`text-sm mt-1 ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                    Application status and information
+                  </p>
+                </div>
+                
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      3D Scene Status
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      darkMode ? 'bg-green-900 text-green-300' : 'bg-green-100 text-green-700'
+                    }`}>
+                      Active
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Camera Controls
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      darkMode ? 'bg-blue-900 text-blue-300' : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      Right-click rotate
+                    </span>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-700'}`}>
+                      Drawing Mode
+                    </span>
+                    <span className={`text-xs px-2 py-1 rounded-full ${
+                      darkMode ? 'bg-gray-900 text-gray-300' : 'bg-gray-100 text-gray-700'
+                    }`}>
+                      {drawingMode || 'None'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            
           </div>
         );
       
@@ -296,6 +467,8 @@ const PropertiesPanel = ({
         return 'Terrain Elevation';
       case 'dimensions':
         return 'Enter Dimensions';
+      case 'settings':
+        return 'Properties';
       default:
         return 'Properties';
     }
@@ -322,42 +495,21 @@ const PropertiesPanel = ({
               flex-1 border-r overflow-y-auto
               ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-100 bg-white'}
             `}>
-              {/* Header with Search */}
+              {/* Header */}
               <div className={`
                 sticky top-0 z-10 p-4 border-b
                 ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-100 bg-white'}
               `}>
-                <h3 className={`text-lg font-semibold mb-3 ${
+                <h3 className={`text-lg font-semibold ${
                   darkMode ? 'text-white' : 'text-gray-900'
                 }`}>
-                  {propertySections.find(s => s.id === activeSection)?.label}
+                  {propertySections.find(s => s.id === activeSection)?.label || 'Properties'}
                 </h3>
-                
-                {/* Canva-style Search Bar */}
-                <div className="relative">
-                  <Search className={`absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 ${
-                    darkMode ? 'text-gray-500' : 'text-gray-400'
-                  }`} />
-                  <input
-                    type="text"
-                    placeholder={`Search ${propertySections.find(s => s.id === activeSection)?.label.toLowerCase()}...`}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className={`
-                      w-full pl-10 pr-4 py-2.5 rounded-lg border text-sm
-                      transition-all duration-150 focus:ring-2 focus:ring-violet-500/20 focus:border-violet-500
-                      ${darkMode
-                        ? 'bg-gray-900 border-gray-700 text-white placeholder-gray-500'
-                        : 'bg-gray-50 border-gray-200 text-gray-900 placeholder-gray-500'
-                      }
-                    `}
-                  />
-                </div>
               </div>
 
               {/* Content Area */}
               <div className="p-4">
-                {getActiveToolContent()}
+                {getActiveContent()}
               </div>
             </div>
           )}

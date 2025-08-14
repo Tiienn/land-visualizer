@@ -286,7 +286,16 @@ const Ribbon = ({
     return (
       <div
         className={`${baseClasses} ${stateClasses}`}
-        onClick={() => !isDisabled && tool.action()}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          if (!isDisabled) {
+            // Add small delay to prevent camera interference during state updates
+            setTimeout(() => {
+              tool.action();
+            }, 16); // One frame delay (~16ms at 60fps)
+          }
+        }}
         onMouseEnter={() => setHoveredTool(`${sectionId}-${tool.id}`)}
         onMouseLeave={() => setHoveredTool(null)}
       >
@@ -344,13 +353,15 @@ const Ribbon = ({
   );
 
   return (
-    <div className={`
-      relative w-full border-b shadow-sm
-      ${darkMode 
-        ? 'bg-gradient-to-r from-gray-800 to-gray-900 border-gray-700' 
-        : 'bg-gradient-to-r from-slate-50 to-slate-100 border-gray-200'
-      }
-    `}>
+    <div 
+      className={`
+        relative w-full border-b shadow-sm
+        ${darkMode 
+          ? 'bg-gradient-to-r from-gray-800 to-gray-900 border-gray-700' 
+          : 'bg-gradient-to-r from-slate-50 to-slate-100 border-gray-200'
+        }
+      `}
+    >
 
       {/* Ribbon Header */}
       <div className={`

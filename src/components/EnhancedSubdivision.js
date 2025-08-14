@@ -25,12 +25,20 @@ export const EnhancedSubdivision = React.memo(({
     // Only handle selection when NOT in drawing mode (rectangle, polyline, etc.)
     if (!drawingMode || drawingMode === 'select') {
       if (event.nativeEvent && event.nativeEvent.button === 0) {
-        event.stopPropagation(); // Stop propagation for left-clicks on subdivisions
+        // Use correct R3F event methods to prevent camera interference
         if (onSelect) {
           // Set userData for identification
           event.eventObject.userData = { subdivisionId: subdivision.id };
+          // Stop event propagation using R3F methods
+          event.stopPropagation();
+          event.nativeEvent.preventDefault();
+          event.nativeEvent.stopPropagation();
           onSelect(event);
         } else if (onSelectSubdivision) {
+          // Stop event propagation using R3F methods
+          event.stopPropagation();
+          event.nativeEvent.preventDefault();
+          event.nativeEvent.stopPropagation();
           onSelectSubdivision(subdivision.id);
         }
         return; // Exit early to prevent other event handlers

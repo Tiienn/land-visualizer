@@ -100,11 +100,11 @@ function LandVisualizer() {
     {
       id: 'default-square',
       type: 'rectangle',
-      position: { x: -40, z: -40 }, // Move away from center to avoid OrbitControls conflict
+      position: { x: 0, z: 0 }, // Center position
       width: Math.sqrt(5000), // ~70.7m x 70.7m = 5000m²
       height: Math.sqrt(5000),
       area: 5000,
-      label: 'Default Area',
+      label: 'Land Area',
       color: '#3b82f6',
       created: new Date().toISOString(),
       editable: true
@@ -165,6 +165,7 @@ function LandVisualizer() {
   // Selection state
   const [selectedObject, setSelectedObject] = useState(null);
   const [selectedSubdivision, setSelectedSubdivision] = useState(null);
+  
   
   // Comparison options for visual reference
   const comparisonOptions = [
@@ -251,13 +252,17 @@ function LandVisualizer() {
       
       if (subdivision) {
         setSelectedSubdivision(subdivision);
-        setSelectedObject(intersectedObject);
+        // Don't set selectedObject - it might cause camera focusing
+        setSelectedObject(null);
       } else {
         // Clear selection if clicking on empty space
         setSelectedSubdivision(null);
         setSelectedObject(null);
       }
     } else {
+      // Clear selection if no object was found
+      setSelectedSubdivision(null);
+      setSelectedObject(null);
     }
   }, [drawingMode, subdivisions]);
 
@@ -384,23 +389,25 @@ function LandVisualizer() {
     setDrawingPreview(null);
   }, [drawingMode, drawingCurrent, drawingStart, isDrawing, subdivisions.length]);
 
-  // Conditional OrbitControls component that handles right-click dynamically
-  const ConditionalOrbitControls = ({ drawingMode }) => {
+  // Clean OrbitControls - no left-click functionality, no auto-focus
+  const CleanOrbitControls = () => {
     const controlsRef = useRef();
-    const { gl } = useThree();
     
-    // No DOM-level blocking - let Three.js handle events properly
-    
-    // Update mouse button configuration when drawing mode changes
     useEffect(() => {
       if (controlsRef.current) {
         const controls = controlsRef.current;
-        // Keep panning enabled in all modes now - drawing plane is selective
+        // Disable automatic target updates that cause centering
+        controls.autoRotate = false;
         controls.enablePan = true;
-        controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN;
-        // LEFT and RIGHT stay consistent: null and ROTATE respectively
+        controls.enableZoom = true;
+        controls.enableRotate = true;
+        
+        // Override the focus method to prevent auto-centering
+        controls.focus = () => {
+          // Do nothing - prevent auto-focusing on objects
+        };
       }
-    }, [drawingMode]);
+    }, []);
     
     return (
       <OrbitControls 
@@ -417,10 +424,11 @@ function LandVisualizer() {
         maxDistance={300}
         maxPolarAngle={Math.PI / 2.1}
         screenSpacePanning={false}
+        target={[0, 0, 0]} // Fix the target to center
         mouseButtons={{
-          LEFT: null, // Left-click always disabled from start
+          LEFT: THREE.MOUSE.NONE, // No left-click function
           MIDDLE: THREE.MOUSE.PAN,
-          RIGHT: THREE.MOUSE.ROTATE // Right-click always enabled
+          RIGHT: THREE.MOUSE.ROTATE
         }}
       />
     );
@@ -487,8 +495,7 @@ function LandVisualizer() {
           camera={camera}
         />
 
-
-        {/* Render all subdivisions */}
+        {/* All subdivisions including default blue area */}
         {subdivisions.map((subdivision) => (
           <EnhancedSubdivision
             key={subdivision.id}
@@ -501,7 +508,7 @@ function LandVisualizer() {
           />
         ))}
         
-        {/* Render drawing preview */}
+        {/* Drawing preview */}
         {drawingPreview && (
           <EnhancedSubdivision
             subdivision={{
@@ -517,36 +524,26 @@ function LandVisualizer() {
           />
         )}
 
-        {/* Invisible Drawing Plane - only active when in drawing mode */}
-        {drawingMode && drawingMode !== 'select' && (
+        {/* Drawing plane for rectangle mode */}
+        {drawingMode === 'rectangle' && (
           <mesh 
             rotation={[-Math.PI / 2, 0, 0]} 
-            position={[0, 0.15, 0]} // Higher position to ensure it's on top
+            position={[0, 0.15, 0]} 
             visible={false}
             onPointerDown={(event) => {
-              // Only stop propagation for left-click events
               if (event.nativeEvent.button === 0) {
-                event.stopPropagation();
                 handlePointerDown(event);
-              } else {
               }
-              // Let middle-click and right-click through for camera controls
             }}
             onPointerMove={(event) => {
-              // Only stop propagation if we're actively drawing with left-click
               if (isDrawing) {
-                event.stopPropagation();
                 handlePointerMove(event);
               }
-              // Let other pointer moves through for camera controls
             }}
             onPointerUp={(event) => {
-              // Only stop propagation for left-click release during drawing
               if (isDrawing && event.nativeEvent.button === 0) {
-                event.stopPropagation();
                 handlePointerUp(event);
               }
-              // Let other button releases through
             }}
           >
             <planeGeometry args={[gridProps.gridSize * 1.5, gridProps.gridSize * 1.5]} />
@@ -554,28 +551,9 @@ function LandVisualizer() {
           </mesh>
         )}
 
-        {/* Global selection plane - for clicking empty space */}
-        <mesh 
-          rotation={[-Math.PI / 2, 0, 0]} 
-          position={[0, -0.1, 0]} // Much lower to avoid conflicts with subdivisions
-          visible={false}
-          onClick={(event) => {
-            // Handle left-click selection on empty space (clear selection)
-            if (!drawingMode || drawingMode === 'select') {
-              if (event.nativeEvent && event.nativeEvent.button === 0) {
-                // Only clear if no subdivision was clicked (event should have been stopped)
-                setSelectedSubdivision(null);
-                setSelectedObject(null);
-              }
-            }
-          }}
-        >
-          <planeGeometry args={[gridProps.gridSize * 2, gridProps.gridSize * 2]} />
-          <meshBasicMaterial transparent opacity={0} />
-        </mesh>
 
-        {/* Direct OrbitControls with conditional right-click */}
-        <ConditionalOrbitControls drawingMode={drawingMode} />
+        {/* Clean OrbitControls - no conflicts with static mesh */}
+        <CleanOrbitControls />
       </>
     );
   };
@@ -741,47 +719,6 @@ Professional survey integration supports data import from total stations, GPS un
     );
   };
 
-  // Drawing Mode Info Overlay Component
-  const DrawingModeInfo = () => {
-    if (!drawingMode) return null;
-    
-    const modeInfo = {
-      rectangle: {
-        title: 'Rectangle Drawing Mode',
-        description: 'Click and drag to create rectangular subdivisions',
-        icon: <SquareIcon size={16} />
-      },
-      polyline: {
-        title: 'Polyline Drawing Mode', 
-        description: 'Click points to create custom shapes',
-        icon: <Edit3 size={16} />
-      },
-      select: {
-        title: 'Selection Mode',
-        description: 'Click to select and edit subdivisions',
-        icon: <MousePointer size={16} />
-      }
-    };
-
-    const info = modeInfo[drawingMode];
-    if (!info) return null;
-
-    return (
-      <div className={`absolute top-4 left-4 z-50 px-4 py-3 rounded-lg shadow-lg border ${
-        darkMode 
-          ? 'bg-gray-800 border-gray-600 text-white' 
-          : 'bg-white border-gray-200 text-gray-900'
-      }`}>
-        <div className="flex items-center space-x-2 mb-1">
-          {info.icon}
-          <span className="font-medium">{info.title}</span>
-        </div>
-        <p className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-          {info.description}
-        </p>
-      </div>
-    );
-  };
 
   // SEO Meta
   useSEO({
@@ -796,11 +733,13 @@ Professional survey integration supports data import from total stations, GPS un
       darkMode ? 'bg-gray-900' : 'bg-slate-50'
     }`}>
       {/* Header */}
-      <header className={`border-b transition-colors duration-300 ${
-        darkMode 
-          ? 'bg-gray-800 border-gray-700' 
-          : 'bg-white border-gray-200'
-      }`}>
+      <header 
+        className={`border-b transition-colors duration-300 ${
+          darkMode 
+            ? 'bg-gray-800 border-gray-700' 
+            : 'bg-white border-gray-200'
+        }`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -880,11 +819,26 @@ Professional survey integration supports data import from total stations, GPS un
       </header>
 
       {/* Tools Ribbon */}
-      <div className={`${
-        isLeftSidebarExpanded ? 'ml-80' : 'ml-20'
-      } ${
-        isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
-      } transition-all duration-200`}>
+      <div 
+        className={`${
+          isLeftSidebarExpanded ? 'ml-80' : 'ml-20'
+        } ${
+          isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
+        } transition-all duration-200`}
+        style={{ pointerEvents: 'auto' }}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onMouseUp={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+        onClick={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        }}
+      >
         <Ribbon
           darkMode={darkMode}
           drawingMode={drawingMode}
@@ -979,14 +933,20 @@ Professional survey integration supports data import from total stations, GPS un
         setSubdivisions={setSubdivisions}
         onToggleRightSidebar={() => setIsPropertiesPanelExpanded(prev => !prev)}
         isPropertiesPanelExpanded={isPropertiesPanelExpanded}
+        drawingMode={drawingMode}
+        manualDimensions={manualDimensions}
+        setManualDimensions={setManualDimensions}
       />
 
       {/* Contextual Function Box - appears below ribbon when active */}
-      <div className={`${
-        isLeftSidebarExpanded ? 'ml-80' : 'ml-20'
-      } ${
-        isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
-      } transition-all duration-200`}>
+      <div 
+        className={`${
+          isLeftSidebarExpanded ? 'ml-80' : 'ml-20'
+        } ${
+          isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
+        } transition-all duration-200`}
+        style={{ pointerEvents: 'auto' }}
+      >
         <ContextualFunctionBox />
       </div>
 
@@ -997,25 +957,24 @@ Professional survey integration supports data import from total stations, GPS un
         isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
       } transition-all duration-200`}>
         <div className="h-[80vh] min-h-[600px]">
-        {/* Drawing Mode Info Overlay */}
-        <DrawingModeInfo />
-        
         {/* 3D Canvas */}
           <Canvas
             camera={{ 
               position: [50, 50, 50], 
               fov: 50,
               near: 0.1,
-              far: 2000
+              far: 2000,
+              up: [0, 1, 0] // Ensure consistent up direction
             }}
             style={{ 
               width: '100%',
               height: '70vh',
-              background: darkMode ? '#1e293b' : '#87ceeb'
+              background: darkMode ? '#1e293b' : '#87ceeb',
+              pointerEvents: 'auto'
             }}
-            onContextMenu={(e) => e.preventDefault()} // Always prevent context menu
             dpr={[1, 2]} // Limit device pixel ratio for consistent performance
             performance={{ min: 0.5 }} // Minimum performance threshold
+            gl={{ preserveDrawingBuffer: true }}
           >
             <Scene />
           </Canvas>
@@ -1023,15 +982,17 @@ Professional survey integration supports data import from total stations, GPS un
       </div>
 
       {/* Small Footer */}
-      <footer className={`border-t transition-colors duration-300 ${
-        darkMode 
-          ? 'bg-gray-800 border-gray-700 text-gray-300' 
-          : 'bg-white border-gray-200 text-gray-600'
-      } ${
-        isLeftSidebarExpanded ? 'ml-80' : 'ml-20'
-      } ${
-        isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
-      } transition-all duration-200`}>
+      <footer 
+        className={`border-t transition-colors duration-300 ${
+          darkMode 
+            ? 'bg-gray-800 border-gray-700 text-gray-300' 
+            : 'bg-white border-gray-200 text-gray-600'
+        } ${
+          isLeftSidebarExpanded ? 'ml-80' : 'ml-20'
+        } ${
+          isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
+        } transition-all duration-200`}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-10 text-sm">
             <div className="flex items-center space-x-4">
