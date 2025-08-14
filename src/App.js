@@ -88,15 +88,15 @@ function LandVisualizer() {
   // Core state
   const [darkMode, setDarkMode] = useState(false);
   const [drawingMode, setDrawingMode] = useState(null);
-  const [units, setUnits] = useState([{ value: 1000, unit: 'm²' }]);
+  const [units, setUnits] = useState([{ value: 5000, unit: 'm²' }]);
   const [subdivisions, setSubdivisions] = useState([
     {
       id: 'default-square',
       type: 'rectangle',
       position: { x: -40, z: -40 }, // Move away from center to avoid OrbitControls conflict
-      width: Math.sqrt(1000), // ~31.6m x 31.6m = 1000m²
-      height: Math.sqrt(1000),
-      area: 1000,
+      width: Math.sqrt(5000), // ~70.7m x 70.7m = 5000m²
+      height: Math.sqrt(5000),
+      area: 5000,
       label: 'Default Area',
       color: '#3b82f6',
       created: new Date().toISOString(),
