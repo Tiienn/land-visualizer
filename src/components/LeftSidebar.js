@@ -42,6 +42,15 @@ const LeftSidebar = ({
     const newActiveSection = activeSection === sectionId ? null : sectionId;
     setActiveSection(newActiveSection);
     
+    // Auto-expand sidebar when a section is selected, collapse when deselected
+    if (newActiveSection && !isLeftSidebarExpanded) {
+      // Expand when selecting a new section
+      onToggleLeftSidebar();
+    } else if (!newActiveSection && isLeftSidebarExpanded) {
+      // Collapse when deselecting (re-clicking same icon)
+      onToggleLeftSidebar();
+    }
+    
     // Notify parent about expansion state
     if (onSidebarExpansionChange) {
       onSidebarExpansionChange(newActiveSection !== null);

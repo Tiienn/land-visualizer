@@ -123,6 +123,34 @@ function LandVisualizer() {
   const [isLeftSidebarExpanded, setIsLeftSidebarExpanded] = useState(false);
   const [isPropertiesPanelExpanded, setIsPropertiesPanelExpanded] = useState(false);
   
+  // Insert Area and Add Area functionality
+  const [showInsertAreaModal, setShowInsertAreaModal] = useState(false);
+  const [showAddAreaModal, setShowAddAreaModal] = useState(false);
+  const [areaInputValue, setAreaInputValue] = useState('');
+  const [areaInputUnit, setAreaInputUnit] = useState('m²');
+
+  // Unit conversion factors to square meters
+  const unitToSquareMeters = {
+    'm²': 1,
+    'ft²': 0.092903,
+    'hectares': 10000,
+    'acres': 4046.86,
+    'arpent': 3419, // Traditional French unit
+    'perche': 42.21, // Traditional French unit  
+    'toise': 3.799 // Traditional French unit (1 toise² = 3.799 m²)
+  };
+
+  // Available units for area input
+  const availableUnits = [
+    { value: 'm²', label: 'Square Meters (m²)' },
+    { value: 'ft²', label: 'Square Feet (ft²)' },
+    { value: 'hectares', label: 'Hectares' },
+    { value: 'acres', label: 'Acres' },
+    { value: 'arpent', label: 'Arpent (Traditional)' },
+    { value: 'perche', label: 'Perche (Traditional)' },
+    { value: 'toise', label: 'Toise (Traditional)' }
+  ];
+  
   // Contextual function box state
   const [activeFunction, setActiveFunction] = useState(null);
   const [functionBoxData, setFunctionBoxData] = useState(null);
@@ -207,6 +235,81 @@ function LandVisualizer() {
   const toggleLeftSidebar = useCallback(() => {
     setIsLeftSidebarExpanded(prev => !prev);
   }, []);
+
+  // Insert Area: Replace the default blue subdivision with user's custom area
+  const handleInsertArea = useCallback(() => {
+    if (!areaInputValue || isNaN(areaInputValue) || parseFloat(areaInputValue) <= 0) {
+      alert('Please enter a valid area value');
+      return;
+    }
+
+    const inputArea = parseFloat(areaInputValue);
+    const areaInSquareMeters = inputArea * unitToSquareMeters[areaInputUnit];
+    
+    // Calculate square dimensions (assuming square shape)
+    const sideLength = Math.sqrt(areaInSquareMeters);
+    
+    // Update the default subdivision
+    setSubdivisions(prev => prev.map(subdivision => 
+      subdivision.id === 'default-square' 
+        ? {
+            ...subdivision,
+            width: sideLength,
+            height: sideLength,
+            area: areaInSquareMeters,
+            label: `${inputArea} ${areaInputUnit}`
+          }
+        : subdivision
+    ));
+    
+    // Update the units display to show the new area
+    setUnits([{ value: areaInSquareMeters, unit: 'm²' }]);
+    
+    // Close modal and reset values
+    setShowInsertAreaModal(false);
+    setAreaInputValue('');
+    setAreaInputUnit('m²');
+  }, [areaInputValue, areaInputUnit, unitToSquareMeters]);
+
+  // Add Area: Add additional area to existing total
+  const handleAddArea = useCallback(() => {
+    if (!areaInputValue || isNaN(areaInputValue) || parseFloat(areaInputValue) <= 0) {
+      alert('Please enter a valid area value');
+      return;
+    }
+
+    const inputArea = parseFloat(areaInputValue);
+    const additionalAreaInSquareMeters = inputArea * unitToSquareMeters[areaInputUnit];
+    
+    // Get current total area
+    const currentDefaultSubdivision = subdivisions.find(s => s.id === 'default-square');
+    const currentTotalArea = currentDefaultSubdivision ? currentDefaultSubdivision.area : 5000;
+    const newTotalArea = currentTotalArea + additionalAreaInSquareMeters;
+    
+    // Calculate new square dimensions
+    const newSideLength = Math.sqrt(newTotalArea);
+    
+    // Update the default subdivision with the new total
+    setSubdivisions(prev => prev.map(subdivision => 
+      subdivision.id === 'default-square' 
+        ? {
+            ...subdivision,
+            width: newSideLength,
+            height: newSideLength,
+            area: newTotalArea,
+            label: `Total: ${newTotalArea.toFixed(0)} m²`
+          }
+        : subdivision
+    ));
+    
+    // Add to units array to keep track of individual areas
+    setUnits(prev => [...prev, { value: additionalAreaInSquareMeters, unit: 'm²' }]);
+    
+    // Close modal and reset values
+    setShowAddAreaModal(false);
+    setAreaInputValue('');
+    setAreaInputUnit('m²');
+  }, [areaInputValue, areaInputUnit, unitToSquareMeters, subdivisions]);
 
   // Add measurement functions
   const addTapeMeasurement = useCallback((measurement) => {
@@ -728,6 +831,114 @@ Professional survey integration supports data import from total stations, GPS un
     image: 'https://landvisualizer.com/og-image.jpg'
   });
 
+  // Area Input Modal Component
+  const AreaInputModal = ({ isOpen, onClose, onSubmit, title, buttonText }) => {
+    if (!isOpen) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className={`
+          w-96 max-w-md mx-4 rounded-xl shadow-xl border
+          ${darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}
+        `}>
+          {/* Header */}
+          <div className={`p-6 border-b ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+            <h3 className={`text-xl font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+              {title}
+            </h3>
+          </div>
+          
+          {/* Content */}
+          <div className="p-6 space-y-4">
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${
+                darkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Area Value
+              </label>
+              <input
+                type="number"
+                value={areaInputValue}
+                onChange={(e) => setAreaInputValue(e.target.value)}
+                placeholder="Enter area value"
+                className={`w-full px-4 py-3 rounded-lg border text-lg transition-colors ${
+                  darkMode
+                    ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400 focus:border-blue-500'
+                    : 'bg-white border-gray-300 text-gray-900 placeholder-gray-500 focus:border-blue-500'
+                } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+                autoFocus
+              />
+            </div>
+            
+            <div>
+              <label className={`block text-sm font-medium mb-2 ${
+                darkMode ? 'text-gray-300' : 'text-gray-700'
+              }`}>
+                Unit
+              </label>
+              <select
+                value={areaInputUnit}
+                onChange={(e) => setAreaInputUnit(e.target.value)}
+                className={`w-full px-4 py-3 rounded-lg border transition-colors ${
+                  darkMode
+                    ? 'bg-gray-700 border-gray-600 text-white focus:border-blue-500'
+                    : 'bg-white border-gray-300 text-gray-900 focus:border-blue-500'
+                } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+              >
+                {availableUnits.map((unit) => (
+                  <option key={unit.value} value={unit.value}>
+                    {unit.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            
+            {/* Preview calculation */}
+            {areaInputValue && !isNaN(areaInputValue) && (
+              <div className={`p-3 rounded-lg border ${
+                darkMode ? 'bg-gray-700 border-gray-600' : 'bg-gray-50 border-gray-200'
+              }`}>
+                <div className={`text-sm ${darkMode ? 'text-gray-300' : 'text-gray-600'}`}>
+                  Equivalent area:
+                </div>
+                <div className={`font-medium ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                  {(parseFloat(areaInputValue) * unitToSquareMeters[areaInputUnit]).toFixed(2)} m²
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Footer */}
+          <div className={`p-6 border-t flex gap-3 ${darkMode ? 'border-gray-700' : 'border-gray-200'}`}>
+            <button
+              onClick={onClose}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium border transition-colors ${
+                darkMode
+                  ? 'border-gray-600 text-gray-300 hover:bg-gray-700'
+                  : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+              }`}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onSubmit}
+              disabled={!areaInputValue || isNaN(areaInputValue) || parseFloat(areaInputValue) <= 0}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                !areaInputValue || isNaN(areaInputValue) || parseFloat(areaInputValue) <= 0
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : darkMode
+                    ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                    : 'bg-blue-500 hover:bg-blue-600 text-white'
+              } focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+            >
+              {buttonText}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
       darkMode ? 'bg-gray-900' : 'bg-slate-50'
@@ -856,11 +1067,8 @@ Professional survey integration supports data import from total stations, GPS un
           exportToExcel={() => console.log('Export to Excel')}
           showAreaConfiguration={showAreaConfiguration}
           toggleAreaConfiguration={() => setShowAreaConfiguration(prev => !prev)}
-          addUnit={() => setUnits(prev => [...prev, { value: 1000, unit: 'm²' }])}
-        onShowInsertArea={() => {
-          setActiveFunction('insert-area');
-          setFunctionBoxData({ width: '', height: '', label: '' });
-        }}
+          addUnit={() => setShowAddAreaModal(true)}
+          onShowInsertArea={() => setShowInsertAreaModal(true)}
           showInsertAreaDropdown={showInsertAreaDropdown}
           toggleInsertAreaDropdown={() => setShowInsertAreaDropdown(prev => !prev)}
           showPresetSelector={showPresetSelector}
@@ -1008,6 +1216,23 @@ Professional survey integration supports data import from total stations, GPS un
           </div>
         </div>
       </footer>
+
+      {/* Area Input Modals */}
+      <AreaInputModal
+        isOpen={showInsertAreaModal}
+        onClose={() => setShowInsertAreaModal(false)}
+        onSubmit={handleInsertArea}
+        title="Insert Area"
+        buttonText="Insert Area"
+      />
+      
+      <AreaInputModal
+        isOpen={showAddAreaModal}
+        onClose={() => setShowAddAreaModal(false)}
+        onSubmit={handleAddArea}
+        title="Add Area"
+        buttonText="Add Area"
+      />
 
       {/* Toast Container */}
       <ToastContainer darkMode={darkMode} />
