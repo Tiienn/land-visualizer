@@ -89,6 +89,9 @@ function LandVisualizer() {
   const [darkMode, setDarkMode] = useState(false);
   const [drawingMode, setDrawingMode] = useState(null);
   
+  // Polyline drawing state
+  const [polylinePoints, setPolylinePoints] = useState([]);
+  
   // Disable right-click context menu globally (since right-click now rotates camera)
   useEffect(() => {
     const handleContextMenu = (e) => e.preventDefault();
@@ -374,6 +377,67 @@ function LandVisualizer() {
     setSelectedTapeMeasurement(measurement);
   }, []);
 
+  // Polyline drawing functions
+  const finishPolylineDrawing = useCallback(() => {
+    if (polylinePoints.length >= 3) {
+      // Calculate area of polyline using shoelace formula
+      const calculatePolylineArea = (points) => {
+        let area = 0;
+        const n = points.length;
+        for (let i = 0; i < n; i++) {
+          const j = (i + 1) % n;
+          area += points[i].x * points[j].z;
+          area -= points[j].x * points[i].z;
+        }
+        return Math.abs(area) / 2;
+      };
+      
+      const area = calculatePolylineArea(polylinePoints);
+      
+      // Calculate centroid for positioning
+      const centroid = polylinePoints.reduce(
+        (acc, point) => ({ x: acc.x + point.x, z: acc.z + point.z }),
+        { x: 0, z: 0 }
+      );
+      centroid.x /= polylinePoints.length;
+      centroid.z /= polylinePoints.length;
+      
+      // Create a subdivision instead of replacing the main land area
+      const newSubdivision = {
+        id: Date.now(),
+        points: polylinePoints,
+        position: centroid,
+        area: area,
+        label: `Polyline Area ${subdivisions.length + 1}`,
+        color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+        type: 'polyline'
+      };
+      
+      const newSubdivisions = [...subdivisions, newSubdivision];
+      setSubdivisions(newSubdivisions);
+    }
+    setPolylinePoints([]);
+    setDrawingMode(null);
+  }, [polylinePoints, subdivisions]);
+
+  const addPolylinePoint = useCallback((x, z) => {
+    // Check if clicking on an existing point to close the shape
+    const clickThreshold = 3; // Distance threshold for clicking on existing points
+    const existingPointIndex = polylinePoints.findIndex(point => {
+      const distance = Math.sqrt(Math.pow(point.x - x, 2) + Math.pow(point.z - z, 2));
+      return distance < clickThreshold;
+    });
+    
+    if (existingPointIndex !== -1 && polylinePoints.length >= 3) {
+      // Close the shape by finishing the polyline
+      finishPolylineDrawing();
+      return;
+    }
+    
+    const newPoint = { x, z };
+    setPolylinePoints([...polylinePoints, newPoint]);
+  }, [polylinePoints, finishPolylineDrawing]);
+
   const addBearing = useCallback((bearing) => {
     setBearings(prev => [...prev, { ...bearing, id: Date.now() }]);
   }, []);
@@ -422,6 +486,8 @@ function LandVisualizer() {
     setDrawingStart(null);
     setDrawingCurrent(null);
     setDrawingPreview(null);
+    // Clear polyline points when changing drawing modes
+    setPolylinePoints([]);
   }, []);
 
   // Infinite Grid Component
@@ -468,15 +534,22 @@ function LandVisualizer() {
       return;
     }
     
-    setIsDrawing(true);
     // Get 3D world position from Three.js intersection
     const point = { x: event.point.x, z: event.point.z };
+    
+    if (drawingMode === 'polyline') {
+      // Add point to polyline
+      addPolylinePoint(point.x, point.z);
+      return;
+    }
+    
+    setIsDrawing(true);
     setDrawingStart(point);
     setDrawingCurrent(point);
-  }, [drawingMode]);
+  }, [drawingMode, addPolylinePoint]);
 
   const handlePointerMove = useCallback((event) => {
-    if (!isDrawing || !drawingStart) return;
+    if (!isDrawing || !drawingStart || !drawingMode) return;
     
     // Get 3D world position from Three.js intersection
     const point = { x: event.point.x, z: event.point.z };
@@ -491,13 +564,16 @@ function LandVisualizer() {
       // Batch state updates for better performance
       startTransition(() => {
         setDrawingCurrent(point);
-        setDrawingPreview({
-          type: 'rectangle',
-          position: { x: centerX, z: centerZ },
-          width,
-          height,
-          area: width * height
-        });
+        // Only set preview if we're still in drawing mode
+        if (drawingMode === 'rectangle') {
+          setDrawingPreview({
+            type: 'rectangle',
+            position: { x: centerX, z: centerZ },
+            width,
+            height,
+            area: width * height
+          });
+        }
       });
     }
   }, [drawingMode, drawingStart, isDrawing]);
@@ -540,7 +616,26 @@ function LandVisualizer() {
           order: maxOrder + 1 // New layers appear on top
         };
         
-        setSubdivisions(prev => [...prev, newSubdivision]);
+        // Use startTransition to batch all state updates together
+        startTransition(() => {
+          // Clear all drawing states first
+          setDrawingPreview(null);
+          setIsDrawing(false);
+          setDrawingStart(null);
+          setDrawingCurrent(null);
+          setDrawingMode(null);
+          
+          // Then add the new subdivision
+          setSubdivisions(prev => [...prev, newSubdivision]);
+        });
+        
+        // Additional safeguard: Clear preview again after a short delay to handle any race conditions
+        setTimeout(() => {
+          setDrawingPreview(null);
+        }, 50);
+        
+        // Return early since we've handled all state updates
+        return;
       }
     }
     
@@ -697,16 +792,22 @@ function LandVisualizer() {
             visible={false}
             onPointerDown={(event) => {
               if (event.nativeEvent.button === 0) {
+                event.stopPropagation();
+                event.nativeEvent.stopPropagation();
                 handlePointerDown(event);
               }
             }}
             onPointerMove={(event) => {
               if (isDrawing) {
+                event.stopPropagation();
+                event.nativeEvent.stopPropagation();
                 handlePointerMove(event);
               }
             }}
             onPointerUp={(event) => {
               if (isDrawing && event.nativeEvent.button === 0) {
+                event.stopPropagation();
+                event.nativeEvent.stopPropagation();
                 handlePointerUp(event);
               }
             }}
@@ -714,6 +815,50 @@ function LandVisualizer() {
             <planeGeometry args={[gridProps.gridSize * 1.5, gridProps.gridSize * 1.5]} />
             <meshBasicMaterial transparent opacity={0} />
           </mesh>
+        )}
+
+        {/* Drawing plane for polyline mode */}
+        {drawingMode === 'polyline' && (
+          <mesh 
+            rotation={[-Math.PI / 2, 0, 0]} 
+            position={[0, 0.15, 0]} 
+            visible={false}
+            onPointerDown={(event) => {
+              if (event.nativeEvent.button === 0) {
+                event.stopPropagation();
+                event.nativeEvent.stopPropagation();
+                handlePointerDown(event);
+              }
+            }}
+          >
+            <planeGeometry args={[gridProps.gridSize * 1.5, gridProps.gridSize * 1.5]} />
+            <meshBasicMaterial transparent opacity={0} />
+          </mesh>
+        )}
+
+        {/* Polyline points while drawing */}
+        {drawingMode === 'polyline' && polylinePoints.length > 0 && (
+          <group>
+            {/* Show polyline points */}
+            {polylinePoints.map((point, index) => (
+              <Box
+                key={index}
+                args={[1, 2, 1]}
+                position={[point.x, 1, point.z]}
+              >
+                <meshLambertMaterial color="#f59e0b" />
+              </Box>
+            ))}
+            
+            {/* Show polyline connections */}
+            {polylinePoints.length > 1 && (
+              <Line
+                points={polylinePoints.map(p => [p.x, 0.02, p.z])}
+                color="#f59e0b"
+                lineWidth={3}
+              />
+            )}
+          </group>
         )}
 
 

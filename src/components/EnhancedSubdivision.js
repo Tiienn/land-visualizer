@@ -112,15 +112,32 @@ export const EnhancedSubdivision = React.memo(({
           meshRef.current.position.z = newZ;
 
           // Update line geometry if it exists
-          if (lineRef.current && subdivision.type === 'rectangle') {
-            const points = [
-              new THREE.Vector3(newX - subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), newZ - subdivision.height/2),
-              new THREE.Vector3(newX + subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), newZ - subdivision.height/2),
-              new THREE.Vector3(newX + subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), newZ + subdivision.height/2),
-              new THREE.Vector3(newX - subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), newZ + subdivision.height/2),
-              new THREE.Vector3(newX - subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), newZ - subdivision.height/2)
-            ];
-            lineRef.current.geometry.setFromPoints(points);
+          if (lineRef.current) {
+            if (subdivision.type === 'rectangle') {
+              const points = [
+                new THREE.Vector3(newX - subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), newZ - subdivision.height/2),
+                new THREE.Vector3(newX + subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), newZ - subdivision.height/2),
+                new THREE.Vector3(newX + subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), newZ + subdivision.height/2),
+                new THREE.Vector3(newX - subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), newZ + subdivision.height/2),
+                new THREE.Vector3(newX - subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), newZ - subdivision.height/2)
+              ];
+              lineRef.current.geometry.setFromPoints(points);
+            } else if (subdivision.type === 'polyline' && subdivision.points) {
+              // Update polyline border during drag
+              const deltaX = newX - originalPosition.current.x;
+              const deltaZ = newZ - originalPosition.current.z;
+              
+              const updatedPoints = subdivision.points.map(point => 
+                new THREE.Vector3(
+                  point.x + deltaX, 
+                  0.003 + ((subdivision.order || 0) * 0.01), 
+                  point.z + deltaZ
+                )
+              );
+              // Close the loop
+              updatedPoints.push(updatedPoints[0]);
+              lineRef.current.geometry.setFromPoints(updatedPoints);
+            }
           }
         }
       }
@@ -128,12 +145,34 @@ export const EnhancedSubdivision = React.memo(({
 
     const handleMouseUp = () => {
       if (isDragging && meshRef.current && onUpdateSubdivision) {
-        // Update React state with final position
-        const finalPosition = {
-          x: meshRef.current.position.x,
-          z: meshRef.current.position.z
-        };
-        onUpdateSubdivision(subdivision.id, { position: finalPosition });
+        if (subdivision.type === 'polyline' && subdivision.points) {
+          // For polylines, update all points by the movement offset
+          const deltaX = meshRef.current.position.x - originalPosition.current.x;
+          const deltaZ = meshRef.current.position.z - originalPosition.current.z;
+          
+          const newPoints = subdivision.points.map(point => ({
+            x: point.x + deltaX,
+            z: point.z + deltaZ
+          }));
+          
+          // Update centroid position too
+          const newCentroid = {
+            x: subdivision.position.x + deltaX,
+            z: subdivision.position.z + deltaZ
+          };
+          
+          onUpdateSubdivision(subdivision.id, { 
+            points: newPoints,
+            position: newCentroid
+          });
+        } else {
+          // For rectangles and other types, update position normally
+          const finalPosition = {
+            x: meshRef.current.position.x,
+            z: meshRef.current.position.z
+          };
+          onUpdateSubdivision(subdivision.id, { position: finalPosition });
+        }
       }
 
       setMouseDown(false);
@@ -150,7 +189,7 @@ export const EnhancedSubdivision = React.memo(({
       document.removeEventListener('mousemove', handleMouseMove);
       document.removeEventListener('mouseup', handleMouseUp);
     };
-  }, [mouseDown, isDragging, camera, gl, onUpdateSubdivision, subdivision.id, subdivision.width, subdivision.height, subdivision.order]);
+  }, [mouseDown, isDragging, camera, gl, onUpdateSubdivision, subdivision.id, subdivision.width, subdivision.height, subdivision.order, subdivision.points, subdivision.position.x, subdivision.position.z, subdivision.type]);
 
   // Handle mouse down
   const handlePointerDown = useCallback((event) => {
@@ -183,9 +222,36 @@ export const EnhancedSubdivision = React.memo(({
     const hoveredOpacity = 0.55;
     const draggingOpacity = 0.9; // Increased for better visibility while dragging
 
+    // Helper function to get a darker/lighter version of the subdivision color
+    const getDerivedBorderColor = () => {
+      if (isDragging) return '#00ff88'; // Keep bright green for dragging
+      if (isSelected) return '#ffffff'; // Keep white for selected
+      
+      // For normal and hovered states, derive from subdivision color
+      if (subdivision.color) {
+        try {
+          // Parse the color and create a darker version for border
+          const color = new THREE.Color(subdivision.color);
+          if (isHovered) {
+            // Lighter version for hover
+            return `#${color.clone().multiplyScalar(1.3).getHexString()}`;
+          } else {
+            // Darker version for normal state
+            return `#${color.clone().multiplyScalar(0.6).getHexString()}`;
+          }
+        } catch (e) {
+          // Fallback to original logic if color parsing fails
+          return isHovered ? '#cccccc' : '#888888';
+        }
+      }
+      
+      // Fallback for subdivisions without color
+      return isHovered ? '#cccccc' : '#888888';
+    };
+
     return {
       opacity: isDragging ? draggingOpacity : (isSelected ? selectedOpacity : (isHovered ? hoveredOpacity : baseOpacity)),
-      borderColor: isDragging ? '#00ff88' : (isSelected ? '#ffffff' : (isHovered ? '#cccccc' : '#888888')), // Brighter green for dragging
+      borderColor: getDerivedBorderColor(),
       borderWidth: isDragging ? 4 : (isSelected ? 3 : (isHovered ? 2 : 1)),
       labelColor: darkMode ? '#ffffff' : '#000000',
       cursor: drawingMode === 'select' && isSelected && subdivision.id !== 'default-square' ? (isDragging ? 'grabbing' : 'grab') : 'pointer'
@@ -233,24 +299,49 @@ export const EnhancedSubdivision = React.memo(({
           />
         </>
       );
-    } else if (subdivision.type === 'polygon' || subdivision.type === 'freeform') {
+    } else if (subdivision.type === 'polygon' || subdivision.type === 'freeform' || subdivision.type === 'polyline') {
       // Create polygon from points
       const points = subdivision.points || [];
       if (points.length < 3) return null;
 
-      // Create geometry for polygon
-      const shape = new THREE.Shape();
-      const firstPoint = points[0];
-      shape.moveTo(firstPoint.x - subdivision.position.x, firstPoint.z - subdivision.position.z);
+      // Create geometry relative to centroid for proper mesh positioning
+      const centroid = subdivision.position;
       
-      for (let i = 1; i < points.length; i++) {
-        const point = points[i];
-        shape.lineTo(point.x - subdivision.position.x, point.z - subdivision.position.z);
-      }
-      shape.closePath();
-
-      const geometry = new THREE.ShapeGeometry(shape);
-      geometry.rotateX(-Math.PI / 2);
+      // Create polygon geometry using direct triangulation for exact match
+      const createPolygonGeometry = () => {
+        const geometry = new THREE.BufferGeometry();
+        
+        // Simple fan triangulation from the first vertex
+        const vertices = [];
+        const indices = [];
+        
+        // Add all vertices relative to centroid, in XZ plane (Y=0)
+        points.forEach(point => {
+          vertices.push(
+            point.x - centroid.x,  // X coordinate
+            0,                     // Y coordinate (height)
+            point.z - centroid.z   // Z coordinate
+          );
+        });
+        
+        // Create triangular faces using fan triangulation
+        // For n points, we need n-2 triangles
+        for (let i = 1; i < points.length - 1; i++) {
+          indices.push(0, i, i + 1);
+        }
+        
+        
+        // Set the geometry attributes
+        geometry.setIndex(indices);
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        
+        // Compute normals pointing upward
+        geometry.computeVertexNormals();
+        
+        return geometry;
+      };
+      
+      const geometry = createPolygonGeometry();
 
       // Create border points for Line component
       const borderPoints = [
@@ -260,8 +351,9 @@ export const EnhancedSubdivision = React.memo(({
 
       return (
         <>
-          {/* Polygon mesh */}
+          {/* Polygon mesh with same rotation pattern as Plane component */}
           <mesh 
+            ref={meshRef}
             geometry={geometry}
             position={[subdivision.position.x, 0.002 + ((subdivision.order || 0) * 0.01), subdivision.position.z]}
             onClick={subdivision.id === 'default-square' && drawingMode === 'select' ? undefined : handleSubdivisionClick}
@@ -274,11 +366,13 @@ export const EnhancedSubdivision = React.memo(({
               color={subdivision.color} 
               transparent 
               opacity={visualProps.opacity}
+              side={THREE.DoubleSide}
             />
           </mesh>
           
           {/* Polygon border */}
           <Line
+            ref={lineRef}
             points={borderPoints}
             color={visualProps.borderColor}
             lineWidth={visualProps.borderWidth}
