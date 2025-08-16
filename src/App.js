@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, startTransition } from 'react';
 import { BrowserRouter, Routes, Route, useLocation, Link } from 'react-router-dom';
 import { Canvas, useThree, useFrame } from '@react-three/fiber';
 import { OrbitControls, Grid, Plane, Box, Text, Line } from '@react-three/drei';
@@ -107,7 +107,8 @@ function LandVisualizer() {
       label: 'Land Area',
       color: '#3b82f6',
       created: new Date().toISOString(),
-      editable: true
+      editable: true,
+      order: 0 // Keep the base land area at the bottom
     }
   ]);
   const [selectedComparison, setSelectedComparison] = useState(null);
@@ -311,6 +312,52 @@ function LandVisualizer() {
     setAreaInputUnit('m²');
   }, [areaInputValue, areaInputUnit, unitToSquareMeters, subdivisions]);
 
+  // Handle preset selection
+  const handlePresetSelect = useCallback((preset) => {
+    const { area, dimensions, name } = preset;
+    
+    // Update the default subdivision with preset dimensions and area
+    setSubdivisions(prev => prev.map(subdivision => 
+      subdivision.id === 'default-square' 
+        ? {
+            ...subdivision,
+            width: dimensions.width,
+            height: dimensions.length,
+            area: area,
+            label: name
+          }
+        : subdivision
+    ));
+    
+    // Update units to show the preset area
+    setUnits([{ value: area, unit: 'm²' }]);
+    
+    // Close preset selector
+    setShowPresetSelector(false);
+  }, []);
+
+  // Layer management functions
+  const handleUpdateSubdivision = useCallback((layerId, updates) => {
+    setSubdivisions(prev => prev.map(subdivision => 
+      subdivision.id === layerId 
+        ? { ...subdivision, ...updates }
+        : subdivision
+    ));
+  }, []);
+
+  const handleDeleteSubdivision = useCallback((layerId) => {
+    setSubdivisions(prev => prev.filter(subdivision => subdivision.id !== layerId));
+    // Clear selection if deleted layer was selected
+    if (selectedSubdivision?.id === layerId) {
+      setSelectedSubdivision(null);
+    }
+  }, [selectedSubdivision]);
+
+  const handleSelectSubdivision = useCallback((subdivision) => {
+    setSelectedSubdivision(subdivision);
+  }, []);
+
+
   // Add measurement functions
   const addTapeMeasurement = useCallback((measurement) => {
     setTapeMeasurements(prev => [...prev, { ...measurement, id: Date.now() }]);
@@ -354,8 +401,7 @@ function LandVisualizer() {
       );
       
       if (subdivision) {
-        setSelectedSubdivision(subdivision);
-        // Don't set selectedObject - it might cause camera focusing
+        handleSelectSubdivision(subdivision);
         setSelectedObject(null);
       } else {
         // Clear selection if clicking on empty space
@@ -367,7 +413,7 @@ function LandVisualizer() {
       setSelectedSubdivision(null);
       setSelectedObject(null);
     }
-  }, [drawingMode, subdivisions]);
+  }, [drawingMode, subdivisions, handleSelectSubdivision]);
 
   // Drawing mode handlers
   const handleDrawingModeChange = useCallback((mode) => {
@@ -434,21 +480,24 @@ function LandVisualizer() {
     
     // Get 3D world position from Three.js intersection
     const point = { x: event.point.x, z: event.point.z };
-    setDrawingCurrent(point);
     
-    // Create preview shape
+    // Update both current position and preview in a single batch
     if (drawingMode === 'rectangle') {
       const width = Math.abs(point.x - drawingStart.x);
       const height = Math.abs(point.z - drawingStart.z);
       const centerX = (drawingStart.x + point.x) / 2;
       const centerZ = (drawingStart.z + point.z) / 2;
       
-      setDrawingPreview({
-        type: 'rectangle',
-        position: { x: centerX, z: centerZ },
-        width,
-        height,
-        area: width * height
+      // Batch state updates for better performance
+      startTransition(() => {
+        setDrawingCurrent(point);
+        setDrawingPreview({
+          type: 'rectangle',
+          position: { x: centerX, z: centerZ },
+          width,
+          height,
+          area: width * height
+        });
       });
     }
   }, [drawingMode, drawingStart, isDrawing]);
@@ -468,17 +517,27 @@ function LandVisualizer() {
         const centerZ = (drawingStart.z + drawingCurrent.z) / 2;
         const area = width * height;
         
+        // Calculate layer number for naming (excluding default land area)
+        const layerNumber = subdivisions.filter(s => s.id !== 'default-square').length + 1;
+        
+        // Calculate the highest order for new layer to be on top
+        const existingOrders = subdivisions.filter(s => s.id !== 'default-square').map(s => s.order || 0);
+        const maxOrder = existingOrders.length > 0 ? Math.max(...existingOrders) : 0;
+        
         const newSubdivision = {
-          id: `subdivision-${Date.now()}`,
+          id: `layer-${Date.now()}`,
           type: 'rectangle',
           position: { x: centerX, z: centerZ },
           width,
           height,
           area,
-          label: `Area ${subdivisions.length + 1}`,
-          color: `hsl(${(subdivisions.length * 137.5) % 360}, 70%, 50%)`,
+          label: `Layer ${layerNumber}`,
+          color: `hsl(${(layerNumber * 137.5) % 360}, 70%, 50%)`,
           created: new Date().toISOString(),
-          editable: true
+          editable: true,
+          visible: true,
+          isLayer: true, // Mark as user-created layer
+          order: maxOrder + 1 // New layers appear on top
         };
         
         setSubdivisions(prev => [...prev, newSubdivision]);
@@ -608,6 +667,9 @@ function LandVisualizer() {
             drawingMode={drawingMode}
             isSelected={selectedSubdivision?.id === subdivision.id}
             onSelect={handleObjectSelection}
+            onSelectSubdivision={handleSelectSubdivision}
+            onUpdateSubdivision={handleUpdateSubdivision}
+            onDeleteSubdivision={handleDeleteSubdivision}
           />
         ))}
         
@@ -1112,6 +1174,11 @@ Professional survey integration supports data import from total stations, GPS un
         setManualDimensions={setManualDimensions}
         activeTool={activeTool}
         setActiveTool={setActiveTool}
+        // Layer management props
+        onUpdateSubdivision={handleUpdateSubdivision}
+        onDeleteSubdivision={handleDeleteSubdivision}
+        selectedSubdivision={selectedSubdivision}
+        onSelectSubdivision={handleSelectSubdivision}
       />
       
       <PropertiesPanel
@@ -1165,7 +1232,7 @@ Professional survey integration supports data import from total stations, GPS un
         isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
       } transition-all duration-200`}>
         <div className="h-[80vh] min-h-[600px]">
-        {/* 3D Canvas */}
+          {/* 3D Canvas */}
           <Canvas
             camera={{ 
               position: [50, 50, 50], 
@@ -1236,6 +1303,15 @@ Professional survey integration supports data import from total stations, GPS un
 
       {/* Toast Container */}
       <ToastContainer darkMode={darkMode} />
+
+      {/* Area Preset Selector Modal */}
+      {showPresetSelector && (
+        <AreaPresetSelector
+          onSelectPreset={handlePresetSelect}
+          onClose={() => setShowPresetSelector(false)}
+          darkMode={darkMode}
+        />
+      )}
     </div>
   );
 }

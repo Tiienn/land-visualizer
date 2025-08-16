@@ -36,7 +36,8 @@
       "Bash(npx acorn:*)",
       "Bash(mv:*)",
       "Bash(git log:*)",
-      "Bash(npx kill-port:*)"
+      "Bash(npx kill-port:*)",
+      "WebFetch(domain:localhost)"
     ],
     "deny": []
   }
