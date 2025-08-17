@@ -160,26 +160,6 @@ const Ribbon = ({
           active: drawingMode === 'polyline',
           action: () => setDrawingMode(drawingMode === 'polyline' ? null : 'polyline'),
           description: 'Draw irregular boundaries'
-        },
-        {
-          id: 'add-corner',
-          label: 'Add Corner',
-          icon: Plus,
-          active: false,
-          action: onAddCorner,
-          disabled: !selectedCorner || drawingMode !== 'select',
-          description: 'Add corner after selected corner'
-        },
-        {
-          id: 'delete-corner',
-          label: 'Delete Corner',
-          icon: Trash2,
-          active: false,
-          action: onDeleteCorner,
-          disabled: shouldDisableDelete,
-          description: hasMinimumCorners
-            ? 'Cannot delete corner (minimum 3 required)' 
-            : 'Remove selected corner'
         }
       ]
     },
@@ -245,15 +225,15 @@ const Ribbon = ({
           disabled: !selectedCorner || drawingMode !== 'select'
         },
         {
-          id: 'remove-corner',
-          label: 'Remove Corner',
+          id: 'delete-corner',
+          label: 'Delete Corner',
           icon: CornerUpLeft,
           active: false,
-          action: onRemoveCorner,
-          description: selectedSubdivision?.corners && selectedSubdivision.corners.length <= 3 
-            ? 'Cannot remove corner (minimum 3 required)' 
-            : 'Remove corner from subdivision',
-          disabled: !selectedCorner || drawingMode !== 'select' || (selectedSubdivision?.corners && selectedSubdivision.corners.length <= 3)
+          action: onDeleteCorner,
+          description: shouldDisableDelete
+            ? 'Cannot delete corner (minimum 3 required)' 
+            : 'Remove selected corner',
+          disabled: shouldDisableDelete
         }
       ]
     },
