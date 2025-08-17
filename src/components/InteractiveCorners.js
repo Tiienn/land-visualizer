@@ -1,5 +1,7 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Box, Sphere } from '@react-three/drei';
+import { useThree } from '@react-three/fiber';
+import * as THREE from 'three';
 
 // Interactive corner system for subdivision editing
 export const InteractiveCorners = ({ 
@@ -7,13 +9,22 @@ export const InteractiveCorners = ({
   isSelected, 
   onUpdateSubdivision, 
   onSelectSubdivision,
+  onUpdateCorner,
+  onSelectCorner,
+  onSelectEdge,
+  selectedCorner,
+  selectedEdge,
   darkMode,
-  showCorners = false 
+  showCorners = false,
+  drawingMode
 }) => {
   const [dragState, setDragState] = useState({ isDragging: false, cornerIndex: -1 });
   const [hoveredCorner, setHoveredCorner] = useState(-1);
+  const [tempDragPosition, setTempDragPosition] = useState(null);
   const dragStart = useRef({ x: 0, z: 0 });
   const originalPoints = useRef([]);
+  const debounceTimeout = useRef(null);
+  const { camera, gl } = useThree();
 
   // Get corner points based on subdivision type
   const getCornerPoints = useCallback(() => {
@@ -32,6 +43,8 @@ export const InteractiveCorners = ({
       ];
     } else if (subdivision.type === 'polygon' || subdivision.type === 'freeform') {
       return subdivision.points || [];
+    } else if (subdivision.type === 'editable-polygon') {
+      return subdivision.corners || [];
     }
     
     return [];
@@ -39,8 +52,8 @@ export const InteractiveCorners = ({
 
   const cornerPoints = getCornerPoints();
 
-  // Handle corner drag start
-  const handleCornerPointerDown = useCallback((event, cornerIndex) => {
+  // Handle corner click for selection
+  const handleCornerClick = useCallback((event, cornerIndex) => {
     event.stopPropagation();
     
     if (!isSelected) {
@@ -48,62 +61,161 @@ export const InteractiveCorners = ({
       return;
     }
 
-    setDragState({ isDragging: true, cornerIndex });
-    const point = event.point;
-    dragStart.current = { x: point.x, z: point.z };
-    originalPoints.current = [...cornerPoints];
-  }, [isSelected, onSelectSubdivision, subdivision.id, cornerPoints]);
+    // Select this corner
+    if (onSelectCorner && subdivision.type === 'editable-polygon') {
+      const corner = cornerPoints[cornerIndex];
+      onSelectCorner(corner);
+    }
+  }, [isSelected, onSelectSubdivision, subdivision.id, cornerPoints, onSelectCorner, subdivision.type]);
 
-  // Handle corner drag
-  const handleCornerPointerMove = useCallback((event, cornerIndex) => {
-    if (!dragState.isDragging || dragState.cornerIndex !== cornerIndex) return;
-    
+  // Handle corner drag start
+  const handleCornerPointerDown = useCallback((event, cornerIndex) => {
     event.stopPropagation();
-    const point = event.point;
-    const deltaX = point.x - dragStart.current.x;
-    const deltaZ = point.z - dragStart.current.z;
+    
+    // Also prevent the native event from bubbling
+    if (event.nativeEvent) {
+      event.nativeEvent.stopPropagation();
+      event.nativeEvent.stopImmediatePropagation();
+    }
+    
+    setDragState({ isDragging: true, cornerIndex });
+    
+    // Get the current corner position as starting point
+    const currentCorner = cornerPoints[cornerIndex];
+    dragStart.current = { x: currentCorner.x, z: currentCorner.z };
+    originalPoints.current = [...cornerPoints];
+  }, [cornerPoints]);
 
-    // Calculate new corner position
-    const newCornerPoints = [...originalPoints.current];
-    newCornerPoints[cornerIndex] = {
-      x: originalPoints.current[cornerIndex].x + deltaX,
-      z: originalPoints.current[cornerIndex].z + deltaZ
+  // Global mouse handling for dragging
+  useEffect(() => {
+    if (!dragState.isDragging) return;
+
+    // Disable text selection and pointer events during drag
+    document.body.style.userSelect = 'none';
+    document.body.style.pointerEvents = 'none';
+    gl.domElement.style.pointerEvents = 'auto'; // Keep canvas interactive
+
+    const plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    const handleMouseMove = (event) => {
+      // Prevent default behavior and stop propagation to prevent camera controls
+      event.preventDefault();
+      event.stopPropagation();
+      
+      const canvas = gl.domElement;
+      const rect = canvas.getBoundingClientRect();
+      
+      mouse.set(
+        ((event.clientX - rect.left) / rect.width) * 2 - 1,
+        -((event.clientY - rect.top) / rect.height) * 2 + 1
+      );
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersection = new THREE.Vector3();
+      raycaster.ray.intersectPlane(plane, intersection);
+
+      if (intersection) {
+        // Update temporary drag position for immediate visual feedback
+        setTempDragPosition({
+          cornerIndex: dragState.cornerIndex,
+          x: intersection.x,
+          z: intersection.z
+        });
+
+        // Clear previous debounce
+        if (debounceTimeout.current) {
+          clearTimeout(debounceTimeout.current);
+        }
+
+        // Debounce the expensive subdivision recalculation
+        debounceTimeout.current = setTimeout(() => {
+          const newCornerPoints = [...originalPoints.current];
+          newCornerPoints[dragState.cornerIndex] = {
+            x: intersection.x,
+            z: intersection.z
+          };
+
+          if (subdivision.type === 'editable-polygon') {
+            const updatedCorners = newCornerPoints.map((point, index) => ({
+              id: subdivision.corners[index]?.id || `corner-${index}`,
+              x: point.x,
+              z: point.z
+            }));
+            
+            // Recalculate centroid and area
+            const area = calculatePolygonArea(newCornerPoints);
+            const centroid = calculatePolygonCentroid(newCornerPoints);
+
+            onUpdateSubdivision(subdivision.id, {
+              corners: updatedCorners,
+              area: area,
+              position: centroid
+            });
+          }
+        }, 50); // 50ms debounce - frequent enough to feel responsive
+      }
     };
 
-    // Update subdivision based on type
-    let updatedSubdivision = { ...subdivision };
-
-    if (subdivision.type === 'rectangle') {
-      // Recalculate rectangle properties from corners
-      const minX = Math.min(...newCornerPoints.map(p => p.x));
-      const maxX = Math.max(...newCornerPoints.map(p => p.x));
-      const minZ = Math.min(...newCornerPoints.map(p => p.z));
-      const maxZ = Math.max(...newCornerPoints.map(p => p.z));
-      
-      updatedSubdivision.position = { x: (minX + maxX) / 2, z: (minZ + maxZ) / 2 };
-      updatedSubdivision.width = maxX - minX;
-      updatedSubdivision.height = maxZ - minZ;
-      updatedSubdivision.area = updatedSubdivision.width * updatedSubdivision.height;
-    } else if (subdivision.type === 'polygon' || subdivision.type === 'freeform') {
-      updatedSubdivision.points = newCornerPoints;
-      
-      // Recalculate centroid and area
-      const area = calculatePolygonArea(newCornerPoints);
-      const centroid = calculatePolygonCentroid(newCornerPoints);
-      updatedSubdivision.area = area;
-      updatedSubdivision.position = centroid;
-    }
-
-    onUpdateSubdivision(updatedSubdivision);
-  }, [dragState, subdivision, onUpdateSubdivision]);
-
-  // Handle corner drag end
-  const handleCornerPointerUp = useCallback((event) => {
-    if (dragState.isDragging) {
+    const handleMouseUp = (event) => {
+      // Prevent default behavior and stop propagation
+      event.preventDefault();
       event.stopPropagation();
+      
+      // Clear any pending debounced update
+      if (debounceTimeout.current) {
+        clearTimeout(debounceTimeout.current);
+        debounceTimeout.current = null;
+      }
+
+      // Apply final position immediately if dragging
+      if (dragState.isDragging && tempDragPosition && subdivision.type === 'editable-polygon') {
+        const newCornerPoints = [...originalPoints.current];
+        newCornerPoints[tempDragPosition.cornerIndex] = {
+          x: tempDragPosition.x,
+          z: tempDragPosition.z
+        };
+
+        const updatedCorners = newCornerPoints.map((point, index) => ({
+          id: subdivision.corners[index]?.id || `corner-${index}`,
+          x: point.x,
+          z: point.z
+        }));
+        
+        // Recalculate centroid and area
+        const area = calculatePolygonArea(newCornerPoints);
+        const centroid = calculatePolygonCentroid(newCornerPoints);
+
+        onUpdateSubdivision(subdivision.id, {
+          corners: updatedCorners,
+          area: area,
+          position: centroid
+        });
+      }
+
       setDragState({ isDragging: false, cornerIndex: -1 });
-    }
-  }, [dragState.isDragging]);
+      setTempDragPosition(null);
+      
+      // Restore body styles immediately
+      document.body.style.userSelect = '';
+      document.body.style.pointerEvents = '';
+      gl.domElement.style.pointerEvents = '';
+    };
+
+    document.addEventListener('mousemove', handleMouseMove, { capture: true, passive: false });
+    document.addEventListener('mouseup', handleMouseUp, { capture: true, passive: false });
+
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove, { capture: true });
+      document.removeEventListener('mouseup', handleMouseUp, { capture: true });
+      
+      // Restore body styles
+      document.body.style.userSelect = '';
+      document.body.style.pointerEvents = '';
+      gl.domElement.style.pointerEvents = '';
+    };
+  }, [dragState, camera, gl, subdivision, onUpdateSubdivision]);
 
   // Add corner between two existing corners (for polygons)
   const handleAddCorner = useCallback((insertIndex) => {
@@ -152,19 +264,33 @@ export const InteractiveCorners = ({
     onUpdateSubdivision(updatedSubdivision);
   }, [subdivision, cornerPoints, onUpdateSubdivision]);
 
-  // Render corner handles
-  const renderCorners = () => {
-    if (!showCorners || !isSelected) return null;
+  // Add edge selection handler
+  const handleEdgeClick = useCallback((event, edgeIndex) => {
+    event.stopPropagation();
+    if (onSelectEdge) {
+      onSelectEdge({ index: edgeIndex });
+    }
+  }, [onSelectEdge]);
 
-    return cornerPoints.map((corner, index) => (
-      <group key={`corner-${index}`}>
-        {/* Main corner handle */}
+  // Render corner handles - simplified for editable-polygon only
+  const renderCorners = () => {
+    if (!showCorners || subdivision.type !== 'editable-polygon') return null;
+
+
+    return cornerPoints.map((corner, index) => {
+      // Use temporary drag position if this corner is being dragged
+      const isBeingDragged = tempDragPosition && tempDragPosition.cornerIndex === index;
+      const position = isBeingDragged 
+        ? [tempDragPosition.x, 0.8, tempDragPosition.z]
+        : [corner.x, 0.8, corner.z];
+
+      return (
         <Sphere
-          args={[0.5, 8, 6]}
-          position={[corner.x, 0.5, corner.z]}
+          key={`corner-${index}`}
+          args={[1, 8, 6]}
+          position={position}
+          onClick={(e) => handleCornerClick(e, index)}
           onPointerDown={(e) => handleCornerPointerDown(e, index)}
-          onPointerMove={(e) => handleCornerPointerMove(e, index)}
-          onPointerUp={handleCornerPointerUp}
           onPointerEnter={() => setHoveredCorner(index)}
           onPointerLeave={() => setHoveredCorner(-1)}
         >
@@ -172,58 +298,18 @@ export const InteractiveCorners = ({
             color={
               dragState.isDragging && dragState.cornerIndex === index 
                 ? '#ff4444' 
-                : hoveredCorner === index 
-                  ? '#ffaa44' 
-                  : '#4444ff'
+                : selectedCorner?.id === corner.id
+                  ? '#ffff00'
+                  : hoveredCorner === index 
+                    ? '#ffaa44' 
+                    : '#ff6b35'
             }
             transparent
             opacity={0.8}
           />
         </Sphere>
-
-        {/* Corner index label */}
-        <mesh position={[corner.x, 1.2, corner.z]}>
-          <planeGeometry args={[1, 0.6]} />
-          <meshBasicMaterial 
-            color={darkMode ? '#1a1a1a' : '#ffffff'} 
-            transparent 
-            opacity={0.8} 
-          />
-        </mesh>
-
-        {/* Add corner button (for polygons) */}
-        {subdivision.type !== 'rectangle' && (
-          <Box
-            args={[0.3, 0.3, 0.1]}
-            position={[
-              (corner.x + cornerPoints[(index + 1) % cornerPoints.length].x) / 2,
-              0.3,
-              (corner.z + cornerPoints[(index + 1) % cornerPoints.length].z) / 2
-            ]}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleAddCorner(index);
-            }}
-          >
-            <meshLambertMaterial color="#22c55e" transparent opacity={0.7} />
-          </Box>
-        )}
-
-        {/* Remove corner button (for polygons with >3 corners) */}
-        {subdivision.type !== 'rectangle' && cornerPoints.length > 3 && (
-          <Box
-            args={[0.3, 0.3, 0.1]}
-            position={[corner.x + 0.8, 0.8, corner.z]}
-            onClick={(e) => {
-              e.stopPropagation();
-              handleRemoveCorner(index);
-            }}
-          >
-            <meshLambertMaterial color="#ef4444" transparent opacity={0.7} />
-          </Box>
-        )}
-      </group>
-    ));
+      );
+    });
   };
 
   return <>{renderCorners()}</>;

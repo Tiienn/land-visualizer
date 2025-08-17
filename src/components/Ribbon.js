@@ -17,6 +17,8 @@ import {
   Redo,
   ChevronLeft,
   ChevronRight,
+  Move3D,
+  Trash2,
 } from 'lucide-react';
 
 const Ribbon = ({
@@ -61,8 +63,7 @@ const Ribbon = ({
   showPresetSelector,
   togglePresetSelector,
   
-  // Corner Controls
-  onAddCorner,
+  // Corner Controls (legacy)
   onRemoveCorner,
   
   // Properties Tool State
@@ -77,6 +78,12 @@ const Ribbon = ({
   // Enter Dimensions
   onShowEnterDimensions,
   
+  // Corner Management
+  onAddCorner,
+  onDeleteCorner,
+  selectedCorner,
+  selectedEdge,
+  
   // Additional state for ribbon sections
   activeSection = null,
   setActiveSection = () => {},
@@ -88,6 +95,11 @@ const Ribbon = ({
   onToggleRightSidebar = () => {}
 }) => {
   const [hoveredTool, setHoveredTool] = useState(null);
+  
+  // Check corner count for delete button
+  const cornerCount = selectedSubdivision?.corners?.length || 0;
+  const hasMinimumCorners = cornerCount <= 3;
+  const shouldDisableDelete = !selectedCorner || drawingMode !== 'select' || hasMinimumCorners;
 
   // Ribbon section configuration
   const ribbonSections = [
@@ -148,6 +160,26 @@ const Ribbon = ({
           active: drawingMode === 'polyline',
           action: () => setDrawingMode(drawingMode === 'polyline' ? null : 'polyline'),
           description: 'Draw irregular boundaries'
+        },
+        {
+          id: 'add-corner',
+          label: 'Add Corner',
+          icon: Plus,
+          active: false,
+          action: onAddCorner,
+          disabled: !selectedCorner || drawingMode !== 'select',
+          description: 'Add corner after selected corner'
+        },
+        {
+          id: 'delete-corner',
+          label: 'Delete Corner',
+          icon: Trash2,
+          active: false,
+          action: onDeleteCorner,
+          disabled: shouldDisableDelete,
+          description: hasMinimumCorners
+            ? 'Cannot delete corner (minimum 3 required)' 
+            : 'Remove selected corner'
         }
       ]
     },
@@ -209,8 +241,8 @@ const Ribbon = ({
           icon: CornerDownRight,
           active: false,
           action: onAddCorner,
-          description: 'Add corner to subdivision',
-          disabled: !selectedSubdivision
+          description: 'Add corner after selected corner',
+          disabled: !selectedCorner || drawingMode !== 'select'
         },
         {
           id: 'remove-corner',
@@ -218,8 +250,10 @@ const Ribbon = ({
           icon: CornerUpLeft,
           active: false,
           action: onRemoveCorner,
-          description: 'Remove corner from subdivision',
-          disabled: !selectedSubdivision
+          description: selectedSubdivision?.corners && selectedSubdivision.corners.length <= 3 
+            ? 'Cannot remove corner (minimum 3 required)' 
+            : 'Remove corner from subdivision',
+          disabled: !selectedCorner || drawingMode !== 'select' || (selectedSubdivision?.corners && selectedSubdivision.corners.length <= 3)
         }
       ]
     },

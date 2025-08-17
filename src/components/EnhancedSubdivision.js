@@ -1,6 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Plane, Line, Text } from '@react-three/drei';
-import { InteractiveCorners } from './InteractiveCorners';
 import DimensionLines from './DimensionLines';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
@@ -299,15 +298,17 @@ export const EnhancedSubdivision = React.memo(({
           />
         </>
       );
-    } else if (subdivision.type === 'polygon' || subdivision.type === 'freeform' || subdivision.type === 'polyline') {
-      // Create polygon from points
-      const points = subdivision.points || [];
+    } else if (subdivision.type === 'polygon' || subdivision.type === 'freeform' || subdivision.type === 'polyline' || subdivision.type === 'editable-polygon') {
+      // Create polygon from points or corners
+      const points = subdivision.type === 'editable-polygon' 
+        ? subdivision.corners || []
+        : subdivision.points || [];
       if (points.length < 3) return null;
 
       // Create geometry relative to centroid for proper mesh positioning
       const centroid = subdivision.position;
       
-      // Create polygon geometry using direct triangulation for exact match
+      // Create polygon geometry using manual triangulation (back to original approach)
       const createPolygonGeometry = () => {
         const geometry = new THREE.BufferGeometry();
         
@@ -329,7 +330,6 @@ export const EnhancedSubdivision = React.memo(({
         for (let i = 1; i < points.length - 1; i++) {
           indices.push(0, i, i + 1);
         }
-        
         
         // Set the geometry attributes
         geometry.setIndex(indices);
@@ -434,15 +434,7 @@ export const EnhancedSubdivision = React.memo(({
         showDimensions={showDimensions}
       />
 
-      {/* Interactive corners */}
-      <InteractiveCorners
-        subdivision={subdivision}
-        isSelected={isSelected}
-        onUpdateSubdivision={onUpdateSubdivision}
-        onSelectSubdivision={onSelectSubdivision}
-        darkMode={darkMode}
-        showCorners={showCorners}
-      />
+      {/* Interactive corners are now handled in App.js to avoid duplicate rendering */}
 
       {/* Delete button for selected subdivision */}
       {isSelected && showCorners && (
@@ -478,5 +470,6 @@ export const EnhancedSubdivision = React.memo(({
     prevProps.drawingMode === nextProps.drawingMode
   );
 });
+
 
 export default EnhancedSubdivision;

@@ -39,6 +39,9 @@
       "Bash(npx kill-port:*)",
       "WebFetch(domain:localhost)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "C:\\c\\Users\\Tien"
+    ]
   }
 }

@@ -86,9 +86,14 @@ export const DimensionLines = React.memo(({
   };
 
   const renderPolygonDimensions = () => {
-    if (subdivision.type === 'rectangle' || !subdivision.points || subdivision.points.length < 3) return null;
-
-    const points = subdivision.points;
+    if (subdivision.type === 'rectangle') return null;
+    
+    // Get points from either points array or corners array
+    const points = subdivision.type === 'editable-polygon' 
+      ? subdivision.corners || []
+      : subdivision.points || [];
+      
+    if (points.length < 3) return null;
     const offset = 2.5; // Larger offset for cleaner look
     const textHeight = 10; // Same height as rectangle dimensions
 
@@ -138,7 +143,7 @@ export const DimensionLines = React.memo(({
   return (
     <group>
       {subdivision.type === 'rectangle' && renderRectangleDimensions()}
-      {(subdivision.type === 'polygon' || subdivision.type === 'freeform' || subdivision.type === 'polyline') && renderPolygonDimensions()}
+      {(subdivision.type === 'polygon' || subdivision.type === 'freeform' || subdivision.type === 'polyline' || subdivision.type === 'editable-polygon') && renderPolygonDimensions()}
     </group>
   );
 }, (prevProps, nextProps) => {

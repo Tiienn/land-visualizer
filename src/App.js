@@ -14,6 +14,7 @@ import PropertiesPanel from './components/PropertiesPanel';
 import AreaPresetSelector from './components/AreaPresetSelector';
 import { ToastContainer } from './components/Toast';
 import EnhancedSubdivision from './components/EnhancedSubdivision';
+import InteractiveCorners from './components/InteractiveCorners';
 
 // Import enhanced performance components
 import EnhancedCameraController from './components/EnhancedCameraController';
@@ -92,6 +93,12 @@ function LandVisualizer() {
   // Polyline drawing state
   const [polylinePoints, setPolylinePoints] = useState([]);
   
+  // Selection state (declared early to avoid initialization issues)
+  const [selectedObject, setSelectedObject] = useState(null);
+  const [selectedSubdivision, setSelectedSubdivision] = useState(null);
+  const [selectedCorner, setSelectedCorner] = useState(null);
+  const [selectedEdge, setSelectedEdge] = useState(null);
+  
   // Disable right-click context menu globally (since right-click now rotates camera)
   useEffect(() => {
     const handleContextMenu = (e) => e.preventDefault();
@@ -102,10 +109,15 @@ function LandVisualizer() {
   const [subdivisions, setSubdivisions] = useState([
     {
       id: 'default-square',
-      type: 'rectangle',
+      type: 'editable-polygon',
       position: { x: 0, z: 0 }, // Center position
-      width: Math.sqrt(5000), // ~70.7m x 70.7m = 5000m²
-      height: Math.sqrt(5000),
+      // Initial 4 corners of a square
+      corners: [
+        { id: 'corner-1', x: -Math.sqrt(5000)/2, z: -Math.sqrt(5000)/2 }, // Bottom-left
+        { id: 'corner-2', x: Math.sqrt(5000)/2, z: -Math.sqrt(5000)/2 },  // Bottom-right
+        { id: 'corner-3', x: Math.sqrt(5000)/2, z: Math.sqrt(5000)/2 },   // Top-right
+        { id: 'corner-4', x: -Math.sqrt(5000)/2, z: Math.sqrt(5000)/2 }   // Top-left
+      ],
       area: 5000,
       label: 'Land Area',
       color: '#3b82f6',
@@ -194,9 +206,6 @@ function LandVisualizer() {
   const [drawingCurrent, setDrawingCurrent] = useState(null);
   const [drawingPreview, setDrawingPreview] = useState(null);
   
-  // Selection state
-  const [selectedObject, setSelectedObject] = useState(null);
-  const [selectedSubdivision, setSelectedSubdivision] = useState(null);
   
   
   // Comparison options for visual reference
@@ -216,6 +225,16 @@ function LandVisualizer() {
     if (unit.unit === 'acres') return total + (unit.value * 4046.86);
     return total;
   }, 0);
+
+  // Auto-select default subdivision when switching to select mode
+  useEffect(() => {
+    if (drawingMode === 'select' && !selectedSubdivision) {
+      const defaultSubdivision = subdivisions.find(s => s.id === 'default-square');
+      if (defaultSubdivision) {
+        setSelectedSubdivision(defaultSubdivision);
+      }
+    }
+  }, [drawingMode, selectedSubdivision, subdivisions]);
 
   // Event handlers
   const toggleMeasuringTape = useCallback(() => {
@@ -441,6 +460,91 @@ function LandVisualizer() {
   const addBearing = useCallback((bearing) => {
     setBearings(prev => [...prev, { ...bearing, id: Date.now() }]);
   }, []);
+
+  // Corner management functions
+  const addCornerToDefaultSubdivision = useCallback(() => {
+    const defaultSub = subdivisions.find(s => s.id === 'default-square');
+    if (!defaultSub || !selectedCorner) return;
+
+    const corners = defaultSub.corners;
+    const selectedCornerIndex = corners.findIndex(c => c.id === selectedCorner.id);
+    if (selectedCornerIndex === -1) return;
+    
+    const nextIndex = (selectedCornerIndex + 1) % corners.length;
+    
+    // Calculate midpoint between selected corner and next corner
+    const corner1 = corners[selectedCornerIndex];
+    const corner2 = corners[nextIndex];
+    const midX = (corner1.x + corner2.x) / 2;
+    const midZ = (corner1.z + corner2.z) / 2;
+    
+    const newCorner = {
+      id: `corner-${Date.now()}`,
+      x: midX,
+      z: midZ
+    };
+    
+    // Insert new corner after the selected corner
+    const newCorners = [
+      ...corners.slice(0, nextIndex),
+      newCorner,
+      ...corners.slice(nextIndex)
+    ];
+    
+    setSubdivisions(prev => prev.map(sub => 
+      sub.id === 'default-square' 
+        ? { ...sub, corners: newCorners }
+        : sub
+    ));
+    
+    // Clear selection
+    setSelectedCorner(null);
+  }, [subdivisions, selectedCorner]);
+
+  const deleteCornerFromDefaultSubdivision = useCallback(() => {
+    const defaultSub = subdivisions.find(s => s.id === 'default-square');
+    if (!defaultSub || !selectedCorner || defaultSub.corners.length <= 3) return;
+
+    const newCorners = defaultSub.corners.filter(corner => corner.id !== selectedCorner.id);
+    
+    setSubdivisions(prev => prev.map(sub => 
+      sub.id === 'default-square' 
+        ? { ...sub, corners: newCorners }
+        : sub
+    ));
+    
+    // Clear selection
+    setSelectedCorner(null);
+  }, [subdivisions, selectedCorner]);
+
+  const updateCornerPosition = useCallback((cornerId, newPosition) => {
+    setSubdivisions(prev => prev.map(sub => 
+      sub.id === 'default-square' 
+        ? { 
+            ...sub, 
+            corners: sub.corners.map(corner => 
+              corner.id === cornerId 
+                ? { ...corner, x: newPosition.x, z: newPosition.z }
+                : corner
+            )
+          }
+        : sub
+    ));
+  }, []);
+
+  // Keyboard shortcuts for corner management
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Delete key for removing corners
+      if (e.key === 'Delete' && selectedCorner && drawingMode === 'select') {
+        e.preventDefault();
+        deleteCornerFromDefaultSubdivision();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [selectedCorner, drawingMode, deleteCornerFromDefaultSubdivision]);
 
   // Selection handlers
   const handleObjectSelection = useCallback((event) => {
@@ -767,6 +871,27 @@ function LandVisualizer() {
             onDeleteSubdivision={handleDeleteSubdivision}
           />
         ))}
+
+        {/* Interactive Corners for editable polygons */}
+        {subdivisions.map(subdivision => 
+          subdivision.type === 'editable-polygon' && (
+            <InteractiveCorners
+              key={`corners-${subdivision.id}`}
+              subdivision={subdivision}
+              isSelected={selectedSubdivision?.id === subdivision.id}
+              onUpdateSubdivision={handleUpdateSubdivision}
+              onSelectSubdivision={handleSelectSubdivision}
+              onUpdateCorner={updateCornerPosition}
+              onSelectCorner={setSelectedCorner}
+              onSelectEdge={setSelectedEdge}
+              selectedCorner={selectedCorner}
+              selectedEdge={selectedEdge}
+              darkMode={darkMode}
+              showCorners={drawingMode === 'select'}
+              drawingMode={drawingMode}
+            />
+          )
+        )}
         
         {/* Drawing preview */}
         {drawingPreview && (
@@ -1286,9 +1411,11 @@ Professional survey integration supports data import from total stations, GPS un
           onRedo={() => console.log('Redo')}
           canUndo={false}
           canRedo={false}
-          selectedSubdivision={null}
-          onAddCorner={() => console.log('Add corner')}
-          onRemoveCorner={() => console.log('Remove corner')}
+          selectedSubdivision={selectedSubdivision}
+          onAddCorner={addCornerToDefaultSubdivision}
+          onDeleteCorner={deleteCornerFromDefaultSubdivision}
+          selectedCorner={selectedCorner}
+          selectedEdge={selectedEdge}
           isLeftSidebarExpanded={isLeftSidebarExpanded}
           isPropertiesPanelExpanded={isPropertiesPanelExpanded}
           onToggleLeftSidebar={toggleLeftSidebar}
