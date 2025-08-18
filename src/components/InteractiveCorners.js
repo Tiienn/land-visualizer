@@ -1,7 +1,8 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Box, Sphere } from '@react-three/drei';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { useThree } from '@react-three/fiber';
 import * as THREE from 'three';
+import { PointRenderingEngine } from '../points/PointRenderer';
+import { useScreenSpaceOptimization } from '../points/ScreenSpaceOptimization';
 
 // Interactive corner system for subdivision editing
 export const InteractiveCorners = ({ 
@@ -24,7 +25,15 @@ export const InteractiveCorners = ({
   const dragStart = useRef({ x: 0, z: 0 });
   const originalPoints = useRef([]);
   const debounceTimeout = useRef(null);
-  const { camera, gl } = useThree();
+  const { camera, gl, scene } = useThree();
+  
+  // Point renderer system
+  const pointRenderer = useRef(null);
+  const { optimizePoints } = useScreenSpaceOptimization({
+    minPixelSize: 4,
+    maxPixelSize: 16,
+    basePixelSize: 8
+  });
 
   // Get corner points based on subdivision type
   const getCornerPoints = useCallback(() => {
@@ -51,6 +60,75 @@ export const InteractiveCorners = ({
   }, [subdivision]);
 
   const cornerPoints = getCornerPoints();
+
+  // Initialize point renderer
+  useEffect(() => {
+    if (!scene) return;
+    
+    const maxPoints = Math.max(cornerPoints.length || 4, 10); // Minimum 10 points for flexibility
+    pointRenderer.current = new PointRenderingEngine(scene, maxPoints);
+    
+    return () => {
+      if (pointRenderer.current) {
+        pointRenderer.current.dispose();
+        pointRenderer.current = null;
+      }
+    };
+  }, [scene, cornerPoints.length]);
+
+  // Update points when corner data changes
+  useEffect(() => {
+    if (!pointRenderer.current || !showCorners || subdivision?.type !== 'editable-polygon') {
+      if (pointRenderer.current) {
+        pointRenderer.current.clearPoints();
+      }
+      return;
+    }
+
+    const points = cornerPoints.map((corner, index) => {
+      // Use temporary drag position if this corner is being dragged
+      const isBeingDragged = tempDragPosition && tempDragPosition.cornerIndex === index;
+      const position = isBeingDragged 
+        ? { x: tempDragPosition.x, y: 0.8, z: tempDragPosition.z }
+        : { x: corner.x, y: 0.8, z: corner.z };
+
+      return {
+        id: `corner-${subdivision.id}-${index}`,
+        position,
+        style: 'cross',
+        state: dragState.isDragging && dragState.cornerIndex === index 
+          ? 'dragging'
+          : selectedCorner?.id === corner.id
+            ? 'selected'
+            : hoveredCorner === index 
+              ? 'hover' 
+              : 'normal',
+        scale: 1.5, // Make corners slightly larger for easier interaction
+        color: dragState.isDragging && dragState.cornerIndex === index 
+          ? '#ff4444' 
+          : selectedCorner?.id === corner.id
+            ? '#ffff00'
+            : hoveredCorner === index 
+              ? '#ffaa44' 
+              : '#ff6b35'
+      };
+    });
+
+    // Optimize points for performance
+    const optimizedPoints = optimizePoints(points, camera, gl);
+    
+    // Set user data for each point to enable interaction
+    optimizedPoints.forEach((point, index) => {
+      pointRenderer.current.setPointUserData(index, { 
+        cornerIndex: index, 
+        corner: cornerPoints[index],
+        subdivisionId: subdivision.id
+      });
+    });
+    
+    // Update the point renderer
+    pointRenderer.current.updatePoints(optimizedPoints);
+  }, [cornerPoints, tempDragPosition, dragState, selectedCorner, hoveredCorner, showCorners, subdivision, optimizePoints, camera, gl]);
 
   // Handle corner click for selection
   const handleCornerClick = useCallback((event, cornerIndex) => {
@@ -215,9 +293,10 @@ export const InteractiveCorners = ({
       document.body.style.pointerEvents = '';
       gl.domElement.style.pointerEvents = '';
     };
-  }, [dragState, camera, gl, subdivision, onUpdateSubdivision]);
+  }, [dragState, camera, gl, subdivision, onUpdateSubdivision, tempDragPosition]);
 
-  // Add corner between two existing corners (for polygons)
+  // Future feature: Add corner between two existing corners (for polygons)
+  // eslint-disable-next-line no-unused-vars
   const handleAddCorner = useCallback((insertIndex) => {
     if (subdivision.type === 'rectangle') return; // Can't add corners to rectangles
     
@@ -245,7 +324,8 @@ export const InteractiveCorners = ({
     onUpdateSubdivision(updatedSubdivision);
   }, [subdivision, cornerPoints, onUpdateSubdivision]);
 
-  // Remove corner (for polygons with more than 3 corners)
+  // Future feature: Remove corner (for polygons with more than 3 corners)
+  // eslint-disable-next-line no-unused-vars
   const handleRemoveCorner = useCallback((cornerIndex) => {
     if (subdivision.type === 'rectangle') return; // Can't remove corners from rectangles
     if (cornerPoints.length <= 3) return; // Need at least 3 corners for polygon
@@ -264,7 +344,8 @@ export const InteractiveCorners = ({
     onUpdateSubdivision(updatedSubdivision);
   }, [subdivision, cornerPoints, onUpdateSubdivision]);
 
-  // Add edge selection handler
+  // Future feature: Add edge selection handler
+  // eslint-disable-next-line no-unused-vars
   const handleEdgeClick = useCallback((event, edgeIndex) => {
     event.stopPropagation();
     if (onSelectEdge) {
@@ -272,47 +353,82 @@ export const InteractiveCorners = ({
     }
   }, [onSelectEdge]);
 
-  // Render corner handles - simplified for editable-polygon only
-  const renderCorners = () => {
-    if (!showCorners || subdivision.type !== 'editable-polygon') return null;
+  // Handle point interactions via raycasting
+  const handlePointInteraction = useCallback((event, interactionType) => {
+    if (!pointRenderer.current || !showCorners) return;
 
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    
+    const canvas = gl.domElement;
+    const rect = canvas.getBoundingClientRect();
+    
+    mouse.set(
+      ((event.clientX - rect.left) / rect.width) * 2 - 1,
+      -((event.clientY - rect.top) / rect.height) * 2 + 1
+    );
 
-    return cornerPoints.map((corner, index) => {
-      // Use temporary drag position if this corner is being dragged
-      const isBeingDragged = tempDragPosition && tempDragPosition.cornerIndex === index;
-      const position = isBeingDragged 
-        ? [tempDragPosition.x, 0.8, tempDragPosition.z]
-        : [corner.x, 0.8, corner.z];
+    raycaster.setFromCamera(mouse, camera);
+    
+    // Get all point intersections
+    const intersections = pointRenderer.current.getIntersections(raycaster);
+    
+    if (intersections.length > 0) {
+      const intersection = intersections[0];
+      const cornerIndex = intersection.userData?.cornerIndex;
+      
+      if (cornerIndex !== undefined) {
+        event.stopPropagation();
+        
+        switch (interactionType) {
+          case 'click':
+            handleCornerClick(event, cornerIndex);
+            break;
+          case 'pointerdown':
+            handleCornerPointerDown(event, cornerIndex);
+            break;
+          case 'pointerenter':
+            setHoveredCorner(cornerIndex);
+            break;
+          case 'pointerleave':
+            setHoveredCorner(-1);
+            break;
+          default:
+            // No action for unknown interaction types
+            break;
+        }
+      }
+    }
+  }, [pointRenderer, showCorners, gl, camera, handleCornerClick, handleCornerPointerDown]);
 
-      return (
-        <Sphere
-          key={`corner-${index}`}
-          args={[1, 8, 6]}
-          position={position}
-          onClick={(e) => handleCornerClick(e, index)}
-          onPointerDown={(e) => handleCornerPointerDown(e, index)}
-          onPointerEnter={() => setHoveredCorner(index)}
-          onPointerLeave={() => setHoveredCorner(-1)}
-        >
-          <meshLambertMaterial 
-            color={
-              dragState.isDragging && dragState.cornerIndex === index 
-                ? '#ff4444' 
-                : selectedCorner?.id === corner.id
-                  ? '#ffff00'
-                  : hoveredCorner === index 
-                    ? '#ffaa44' 
-                    : '#ff6b35'
-            }
-            transparent
-            opacity={0.8}
-          />
-        </Sphere>
-      );
-    });
-  };
+  // Add global event listeners for point interactions
+  useEffect(() => {
+    if (!gl.domElement || !pointRenderer.current) return;
 
-  return <>{renderCorners()}</>;
+    const canvas = gl.domElement;
+    
+    const handleCanvasClick = (event) => handlePointInteraction(event, 'click');
+    const handleCanvasPointerDown = (event) => handlePointInteraction(event, 'pointerdown');
+    const handleCanvasPointerMove = (event) => {
+      // Only handle hover when not dragging
+      if (!dragState.isDragging) {
+        handlePointInteraction(event, 'pointerenter');
+      }
+    };
+
+    canvas.addEventListener('click', handleCanvasClick);
+    canvas.addEventListener('pointerdown', handleCanvasPointerDown);
+    canvas.addEventListener('pointermove', handleCanvasPointerMove);
+    
+    return () => {
+      canvas.removeEventListener('click', handleCanvasClick);
+      canvas.removeEventListener('pointerdown', handleCanvasPointerDown);
+      canvas.removeEventListener('pointermove', handleCanvasPointerMove);
+    };
+  }, [gl.domElement, pointRenderer, handlePointInteraction, dragState.isDragging]);
+
+  // Return null since rendering is handled by the point renderer
+  return null;
 };
 
 // Utility functions for polygon calculations

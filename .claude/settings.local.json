@@ -37,7 +37,20 @@
       "Bash(mv:*)",
       "Bash(git log:*)",
       "Bash(npx kill-port:*)",
-      "WebFetch(domain:localhost)"
+      "WebFetch(domain:localhost)",
+      "Bash(npx:*)",
+      "Bash(claude mcp)",
+      "Bash(claude mcp:*)",
+      "mcp__playwright__browser_navigate",
+      "Bash(npm test:*)",
+      "mcp__playwright__browser_click",
+      "mcp__playwright__browser_drag",
+      "mcp__playwright__browser_take_screenshot",
+      "mcp__playwright__browser_press_key",
+      "mcp__playwright__browser_type",
+      "mcp__playwright__browser_snapshot",
+      "mcp__playwright__browser_resize",
+      "WebSearch"
     ],
     "deny": [],
     "additionalDirectories": [

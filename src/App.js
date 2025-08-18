@@ -15,11 +15,15 @@ import AreaPresetSelector from './components/AreaPresetSelector';
 import { ToastContainer } from './components/Toast';
 import EnhancedSubdivision from './components/EnhancedSubdivision';
 import InteractiveCorners from './components/InteractiveCorners';
+import KeyboardNavigation from './components/KeyboardShortcuts';
 
 // Import enhanced performance components
 import EnhancedCameraController from './components/EnhancedCameraController';
 import EnhancedEventHandler from './components/EnhancedEventHandler';
 import OptimizedRenderer from './components/OptimizedRenderer';
+
+// Import undo/redo functionality
+import useUndoRedo from './hooks/useUndoRedo';
 
 import './App.css';
 
@@ -93,9 +97,76 @@ function LandVisualizer() {
   // Polyline drawing state
   const [polylinePoints, setPolylinePoints] = useState([]);
   
-  // Selection state (declared early to avoid initialization issues)
+  // Initialize undo/redo system with tracked state
+  const {
+    present: trackableState,
+    executeWithHistory: updateTrackableState,
+    updateGrouped: updateTrackableStateGrouped,
+    undo,
+    redo,
+    canUndo,
+    canRedo
+  } = useUndoRedo({
+    units: [{ value: 5000, unit: 'm²' }],
+    subdivisions: [
+      {
+        id: 'default-square',
+        type: 'editable-polygon',
+        position: { x: 0, z: 0 }, // Center position
+        // Initial 4 corners of a square
+        corners: [
+          { id: 'corner-1', x: -Math.sqrt(5000)/2, z: -Math.sqrt(5000)/2 }, // Bottom-left
+          { id: 'corner-2', x: Math.sqrt(5000)/2, z: -Math.sqrt(5000)/2 },  // Bottom-right
+          { id: 'corner-3', x: Math.sqrt(5000)/2, z: Math.sqrt(5000)/2 },   // Top-right
+          { id: 'corner-4', x: -Math.sqrt(5000)/2, z: Math.sqrt(5000)/2 }   // Top-left
+        ],
+        area: 5000,
+        label: 'Land Area',
+        color: '#3b82f6',
+        created: new Date().toISOString(),
+        editable: true,
+        order: 0 // Keep the base land area at the bottom
+      }
+    ],
+    selectedSubdivision: null
+  }, {
+    trackedKeys: ['units', 'subdivisions', 'selectedSubdivision'],
+    maxHistorySize: 100,
+    groupingTimeout: 200
+  });
+
+  // Extract trackable state for easier access
+  const units = trackableState.units || [];
+  const subdivisions = trackableState.subdivisions || [];
+  const selectedSubdivision = trackableState.selectedSubdivision;
+
+  // Create wrapper functions for backward compatibility
+  const setUnits = useCallback((newUnits) => {
+    if (typeof newUnits === 'function') {
+      updateTrackableState(prevState => ({ units: newUnits(prevState.units) }));
+    } else {
+      updateTrackableState({ units: newUnits });
+    }
+  }, [updateTrackableState]);
+
+  const setSubdivisions = useCallback((newSubdivisions) => {
+    if (typeof newSubdivisions === 'function') {
+      updateTrackableState(prevState => ({ subdivisions: newSubdivisions(prevState.subdivisions) }));
+    } else {
+      updateTrackableState({ subdivisions: newSubdivisions });
+    }
+  }, [updateTrackableState]);
+
+  const setSelectedSubdivision = useCallback((newSelectedSubdivision) => {
+    if (typeof newSelectedSubdivision === 'function') {
+      updateTrackableState(prevState => ({ selectedSubdivision: newSelectedSubdivision(prevState.selectedSubdivision) }));
+    } else {
+      updateTrackableState({ selectedSubdivision: newSelectedSubdivision });
+    }
+  }, [updateTrackableState]);
+
+  // Non-trackable state (UI state, temporary state, etc.)
   const [selectedObject, setSelectedObject] = useState(null);
-  const [selectedSubdivision, setSelectedSubdivision] = useState(null);
   const [selectedCorner, setSelectedCorner] = useState(null);
   const [selectedEdge, setSelectedEdge] = useState(null);
   
@@ -105,27 +176,6 @@ function LandVisualizer() {
     document.addEventListener('contextmenu', handleContextMenu);
     return () => document.removeEventListener('contextmenu', handleContextMenu);
   }, []);
-  const [units, setUnits] = useState([{ value: 5000, unit: 'm²' }]);
-  const [subdivisions, setSubdivisions] = useState([
-    {
-      id: 'default-square',
-      type: 'editable-polygon',
-      position: { x: 0, z: 0 }, // Center position
-      // Initial 4 corners of a square
-      corners: [
-        { id: 'corner-1', x: -Math.sqrt(5000)/2, z: -Math.sqrt(5000)/2 }, // Bottom-left
-        { id: 'corner-2', x: Math.sqrt(5000)/2, z: -Math.sqrt(5000)/2 },  // Bottom-right
-        { id: 'corner-3', x: Math.sqrt(5000)/2, z: Math.sqrt(5000)/2 },   // Top-right
-        { id: 'corner-4', x: -Math.sqrt(5000)/2, z: Math.sqrt(5000)/2 }   // Top-left
-      ],
-      area: 5000,
-      label: 'Land Area',
-      color: '#3b82f6',
-      created: new Date().toISOString(),
-      editable: true,
-      order: 0 // Keep the base land area at the bottom
-    }
-  ]);
   const [selectedComparison, setSelectedComparison] = useState(null);
   
   // UI state
@@ -227,14 +277,34 @@ function LandVisualizer() {
   }, 0);
 
   // Auto-select default subdivision when switching to select mode
+  // Smart auto-selection for Select Mode: automatically select subdivision and first corner
   useEffect(() => {
-    if (drawingMode === 'select' && !selectedSubdivision) {
-      const defaultSubdivision = subdivisions.find(s => s.id === 'default-square');
-      if (defaultSubdivision) {
-        setSelectedSubdivision(defaultSubdivision);
+    if (drawingMode === 'select') {
+      // Auto-select subdivision if none selected
+      if (!selectedSubdivision) {
+        const defaultSubdivision = subdivisions.find(s => s.id === 'default-square');
+        if (defaultSubdivision) {
+          setSelectedSubdivision(defaultSubdivision);
+          
+          // Auto-select first corner to enable Corner Controls immediately
+          if (defaultSubdivision.corners && defaultSubdivision.corners.length > 0 && !selectedCorner) {
+            setSelectedCorner(defaultSubdivision.corners[0]);
+          }
+        }
+      } 
+      // If subdivision is selected but no corner is selected, auto-select first corner
+      else if (selectedSubdivision && !selectedCorner) {
+        const subdivision = subdivisions.find(s => s.id === selectedSubdivision.id || s.id === selectedSubdivision);
+        if (subdivision && subdivision.corners && subdivision.corners.length > 0) {
+          setSelectedCorner(subdivision.corners[0]);
+        }
       }
     }
-  }, [drawingMode, selectedSubdivision, subdivisions]);
+    // Clear corner selection when leaving select mode to prevent stale selections
+    else if (selectedCorner) {
+      setSelectedCorner(null);
+    }
+  }, [drawingMode, selectedSubdivision, subdivisions, selectedCorner]);
 
   // Event handlers
   const toggleMeasuringTape = useCallback(() => {
@@ -272,27 +342,27 @@ function LandVisualizer() {
     // Calculate square dimensions (assuming square shape)
     const sideLength = Math.sqrt(areaInSquareMeters);
     
-    // Update the default subdivision
-    setSubdivisions(prev => prev.map(subdivision => 
-      subdivision.id === 'default-square' 
-        ? {
-            ...subdivision,
-            width: sideLength,
-            height: sideLength,
-            area: areaInSquareMeters,
-            label: `${inputArea} ${areaInputUnit}`
-          }
-        : subdivision
-    ));
-    
-    // Update the units display to show the new area
-    setUnits([{ value: areaInSquareMeters, unit: 'm²' }]);
+    // Update the default subdivision and units (both trackable)
+    updateTrackableState({
+      subdivisions: subdivisions.map(subdivision => 
+        subdivision.id === 'default-square' 
+          ? {
+              ...subdivision,
+              width: sideLength,
+              height: sideLength,
+              area: areaInSquareMeters,
+              label: `${inputArea} ${areaInputUnit}`
+            }
+          : subdivision
+      ),
+      units: [{ value: areaInSquareMeters, unit: 'm²' }]
+    });
     
     // Close modal and reset values
     setShowInsertAreaModal(false);
     setAreaInputValue('');
     setAreaInputUnit('m²');
-  }, [areaInputValue, areaInputUnit, unitToSquareMeters]);
+  }, [areaInputValue, areaInputUnit, unitToSquareMeters, updateTrackableState, subdivisions]);
 
   // Add Area: Add additional area to existing total
   const handleAddArea = useCallback(() => {
@@ -312,72 +382,79 @@ function LandVisualizer() {
     // Calculate new square dimensions
     const newSideLength = Math.sqrt(newTotalArea);
     
-    // Update the default subdivision with the new total
-    setSubdivisions(prev => prev.map(subdivision => 
-      subdivision.id === 'default-square' 
-        ? {
-            ...subdivision,
-            width: newSideLength,
-            height: newSideLength,
-            area: newTotalArea,
-            label: `Total: ${newTotalArea.toFixed(0)} m²`
-          }
-        : subdivision
-    ));
-    
-    // Add to units array to keep track of individual areas
-    setUnits(prev => [...prev, { value: additionalAreaInSquareMeters, unit: 'm²' }]);
+    // Update subdivisions and units (both trackable)
+    updateTrackableState({
+      subdivisions: subdivisions.map(subdivision => 
+        subdivision.id === 'default-square' 
+          ? {
+              ...subdivision,
+              width: newSideLength,
+              height: newSideLength,
+              area: newTotalArea,
+              label: `Total: ${newTotalArea.toFixed(0)} m²`
+            }
+          : subdivision
+      ),
+      units: [...units, { value: additionalAreaInSquareMeters, unit: 'm²' }]
+    });
     
     // Close modal and reset values
     setShowAddAreaModal(false);
     setAreaInputValue('');
     setAreaInputUnit('m²');
-  }, [areaInputValue, areaInputUnit, unitToSquareMeters, subdivisions]);
+  }, [areaInputValue, areaInputUnit, unitToSquareMeters, subdivisions, units, updateTrackableState]);
 
   // Handle preset selection
   const handlePresetSelect = useCallback((preset) => {
     const { area, dimensions, name } = preset;
     
-    // Update the default subdivision with preset dimensions and area
-    setSubdivisions(prev => prev.map(subdivision => 
-      subdivision.id === 'default-square' 
-        ? {
-            ...subdivision,
-            width: dimensions.width,
-            height: dimensions.length,
-            area: area,
-            label: name
-          }
-        : subdivision
-    ));
-    
-    // Update units to show the preset area
-    setUnits([{ value: area, unit: 'm²' }]);
+    // Update subdivisions and units (both trackable)
+    updateTrackableState({
+      subdivisions: subdivisions.map(subdivision => 
+        subdivision.id === 'default-square' 
+          ? {
+              ...subdivision,
+              width: dimensions.width,
+              height: dimensions.length,
+              area: area,
+              label: name
+            }
+          : subdivision
+      ),
+      units: [{ value: area, unit: 'm²' }]
+    });
     
     // Close preset selector
     setShowPresetSelector(false);
-  }, []);
+  }, [updateTrackableState, subdivisions]);
 
-  // Layer management functions
+  // Layer management functions with undo/redo support
   const handleUpdateSubdivision = useCallback((layerId, updates) => {
-    setSubdivisions(prev => prev.map(subdivision => 
-      subdivision.id === layerId 
-        ? { ...subdivision, ...updates }
-        : subdivision
-    ));
-  }, []);
+    updateTrackableState({
+      subdivisions: subdivisions.map(subdivision => 
+        subdivision.id === layerId 
+          ? { ...subdivision, ...updates }
+          : subdivision
+      )
+    });
+  }, [updateTrackableState, subdivisions]);
 
   const handleDeleteSubdivision = useCallback((layerId) => {
-    setSubdivisions(prev => prev.filter(subdivision => subdivision.id !== layerId));
-    // Clear selection if deleted layer was selected
-    if (selectedSubdivision?.id === layerId) {
-      setSelectedSubdivision(null);
-    }
-  }, [selectedSubdivision]);
+    const newSubdivisions = subdivisions.filter(subdivision => subdivision.id !== layerId);
+    const newSelectedSubdivision = selectedSubdivision?.id === layerId ? null : selectedSubdivision;
+    
+    updateTrackableState({
+      subdivisions: newSubdivisions,
+      selectedSubdivision: newSelectedSubdivision
+    });
+  }, [updateTrackableState, subdivisions, selectedSubdivision]);
 
   const handleSelectSubdivision = useCallback((subdivision) => {
-    setSelectedSubdivision(subdivision);
-  }, []);
+    // Selection changes are not typically undoable, but we'll make them undoable for consistency
+    updateTrackableState({
+      selectedSubdivision: subdivision
+    });
+  }, [updateTrackableState]);
 
 
   // Add measurement functions
@@ -432,12 +509,13 @@ function LandVisualizer() {
         type: 'polyline'
       };
       
-      const newSubdivisions = [...subdivisions, newSubdivision];
-      setSubdivisions(newSubdivisions);
+      updateTrackableState({
+        subdivisions: [...subdivisions, newSubdivision]
+      });
     }
     setPolylinePoints([]);
     setDrawingMode(null);
-  }, [polylinePoints, subdivisions]);
+  }, [polylinePoints, subdivisions, updateTrackableState]);
 
   const addPolylinePoint = useCallback((x, z) => {
     // Check if clicking on an existing point to close the shape
@@ -461,7 +539,7 @@ function LandVisualizer() {
     setBearings(prev => [...prev, { ...bearing, id: Date.now() }]);
   }, []);
 
-  // Corner management functions
+  // Corner management functions with undo/redo support
   const addCornerToDefaultSubdivision = useCallback(() => {
     const defaultSub = subdivisions.find(s => s.id === 'default-square');
     if (!defaultSub || !selectedCorner) return;
@@ -491,46 +569,60 @@ function LandVisualizer() {
       ...corners.slice(nextIndex)
     ];
     
-    setSubdivisions(prev => prev.map(sub => 
-      sub.id === 'default-square' 
-        ? { ...sub, corners: newCorners }
-        : sub
-    ));
+    updateTrackableState({
+      subdivisions: subdivisions.map(sub => 
+        sub.id === 'default-square' 
+          ? { ...sub, corners: newCorners }
+          : sub
+      )
+    });
     
-    // Clear selection
-    setSelectedCorner(null);
-  }, [subdivisions, selectedCorner]);
+    // Auto-select the newly added corner for continued editing
+    setSelectedCorner(newCorner);
+  }, [updateTrackableState, subdivisions, selectedCorner]);
 
   const deleteCornerFromDefaultSubdivision = useCallback(() => {
     const defaultSub = subdivisions.find(s => s.id === 'default-square');
     if (!defaultSub || !selectedCorner || defaultSub.corners.length <= 3) return;
 
+    const selectedCornerIndex = defaultSub.corners.findIndex(c => c.id === selectedCorner.id);
     const newCorners = defaultSub.corners.filter(corner => corner.id !== selectedCorner.id);
     
-    setSubdivisions(prev => prev.map(sub => 
-      sub.id === 'default-square' 
-        ? { ...sub, corners: newCorners }
-        : sub
-    ));
+    updateTrackableState({
+      subdivisions: subdivisions.map(sub => 
+        sub.id === 'default-square' 
+          ? { ...sub, corners: newCorners }
+          : sub
+      )
+    });
     
-    // Clear selection
-    setSelectedCorner(null);
-  }, [subdivisions, selectedCorner]);
+    // Smart corner selection after deletion: maintain Corner Controls accessibility
+    if (newCorners.length > 0) {
+      // Select the corner at the same index, or the last corner if we deleted the last one
+      const nextSelectedIndex = Math.min(selectedCornerIndex, newCorners.length - 1);
+      setSelectedCorner(newCorners[nextSelectedIndex]);
+    } else {
+      setSelectedCorner(null);
+    }
+  }, [updateTrackableState, subdivisions, selectedCorner]);
 
   const updateCornerPosition = useCallback((cornerId, newPosition) => {
-    setSubdivisions(prev => prev.map(sub => 
-      sub.id === 'default-square' 
-        ? { 
-            ...sub, 
-            corners: sub.corners.map(corner => 
-              corner.id === cornerId 
-                ? { ...corner, x: newPosition.x, z: newPosition.z }
-                : corner
-            )
-          }
-        : sub
-    ));
-  }, []);
+    // Use grouped updates for real-time corner dragging to create single undo point
+    updateTrackableStateGrouped({
+      subdivisions: subdivisions.map(sub => 
+        sub.id === 'default-square' 
+          ? { 
+              ...sub, 
+              corners: sub.corners.map(corner => 
+                corner.id === cornerId 
+                  ? { ...corner, x: newPosition.x, z: newPosition.z }
+                  : corner
+              )
+            }
+          : sub
+      )
+    });
+  }, [updateTrackableStateGrouped, subdivisions]);
 
   // Keyboard shortcuts for corner management
   useEffect(() => {
@@ -722,15 +814,17 @@ function LandVisualizer() {
         
         // Use startTransition to batch all state updates together
         startTransition(() => {
-          // Clear all drawing states first
+          // Clear all drawing states first (non-trackable state)
           setDrawingPreview(null);
           setIsDrawing(false);
           setDrawingStart(null);
           setDrawingCurrent(null);
           setDrawingMode(null);
           
-          // Then add the new subdivision
-          setSubdivisions(prev => [...prev, newSubdivision]);
+          // Add the new subdivision (trackable state)
+          updateTrackableState({
+            subdivisions: [...subdivisions, newSubdivision]
+          });
         });
         
         // Additional safeguard: Clear preview again after a short delay to handle any race conditions
@@ -748,7 +842,7 @@ function LandVisualizer() {
     setDrawingStart(null);
     setDrawingCurrent(null);
     setDrawingPreview(null);
-  }, [drawingMode, drawingCurrent, drawingStart, isDrawing, subdivisions.length]);
+  }, [drawingMode, drawingCurrent, drawingStart, isDrawing, subdivisions, updateTrackableState]);
 
   // Clean OrbitControls - no left-click functionality, no auto-focus
   const CleanOrbitControls = () => {
@@ -1407,10 +1501,10 @@ Professional survey integration supports data import from total stations, GPS un
           togglePresetSelector={() => setShowPresetSelector(prev => !prev)}
           onShowEnterDimensions={() => setShowManualInput(true)}
           activePropertiesTool={activeTool}
-          onUndo={() => console.log('Undo')}
-          onRedo={() => console.log('Redo')}
-          canUndo={false}
-          canRedo={false}
+          onUndo={undo}
+          onRedo={redo}
+          canUndo={canUndo}
+          canRedo={canRedo}
           selectedSubdivision={selectedSubdivision}
           onAddCorner={addCornerToDefaultSubdivision}
           onDeleteCorner={deleteCornerFromDefaultSubdivision}
@@ -1584,6 +1678,27 @@ Professional survey integration supports data import from total stations, GPS un
           darkMode={darkMode}
         />
       )}
+
+      {/* Keyboard Navigation */}
+      <KeyboardNavigation
+        darkMode={darkMode}
+        toggleMeasuringTape={() => setShowMeasuringTape(prev => !prev)}
+        toggleAreaCalculator={() => setShowAreaCalculator(prev => !prev)}
+        toggleCompassBearing={toggleCompassBearing}
+        toggleTerrain={() => setTerrainEnabled(prev => !prev)}
+        setDrawingMode={handleDrawingModeChange}
+        drawingMode={drawingMode}
+        toggleDarkMode={toggleDarkMode}
+        exportToExcel={() => console.log('Export to Excel')}
+        undo={undo}
+        redo={redo}
+        deleteSelected={() => {
+          if (selectedSubdivision) {
+            handleDeleteSubdivision(selectedSubdivision.id || selectedSubdivision);
+          }
+        }}
+        setUnits={setUnits}
+      />
     </div>
   );
 }

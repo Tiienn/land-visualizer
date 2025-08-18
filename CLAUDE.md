@@ -304,7 +304,11 @@ Centralized conversion factors to square meters:
 ### Performance Considerations
 
 - **Modular Architecture**: Components split for better code organization and maintenance
-- **Enhanced Rendering**: OptimizedRenderer component for improved 3D performance
+- **Enhanced Rendering**: OptimizedRenderer component with GPU-instanced point rendering
+- **Point Marker System**: Professional AutoCAD-style point rendering with screen-space optimization
+  - GPU-accelerated point rendering for 10,000+ points
+  - Adaptive point sizing based on camera distance
+  - Multiple marker styles (cross, circle, square, diamond)
 - **Event Handling**: Enhanced event system for better user interactions
 - **Camera Controls**: Advanced camera controller for smooth navigation
 - **Error Boundaries**: Graceful fallbacks for WebGL compatibility issues
@@ -313,12 +317,20 @@ Centralized conversion factors to square meters:
 - Comparison object rendering capped at 50 items
 - Efficient React re-rendering with proper key usage
 - Three.js object pooling through @react-three/fiber
+- Intelligent point culling and level-of-detail (LOD) management
 
 ### Professional Features
 
 This application is designed as a professional land measurement and visualization tool featuring:
 - **Surveying Tools**: Professional-grade measurement and bearing calculation
-- **CAD-like Interface**: Precision drawing with corner editing and dimension lines
+- **CAD-like Interface**: Precision drawing with AutoCAD-style point markers
+  - Multiple point styles (cross, circle, square, diamond)
+  - Screen-space optimized rendering
+  - GPU-accelerated point system
+- **Precision Point Rendering**: 
+  - 10,000+ points at 60 FPS
+  - Adaptive point sizing
+  - Multi-level point selection
 - **Multi-format Export**: Excel, PDF, DXF, and QR code sharing capabilities
 - **Legal Documentation**: Metes and bounds descriptions for legal compliance
 - **Coordinate Systems**: Support for professional surveying coordinate systems
