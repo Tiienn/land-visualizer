@@ -16,3 +16,38 @@
 .animate-slide-in {
   animation: slide-in 0.3s ease-out;
 }
+
+/* Light Mode Text Color Safeguards */
+/* Ensure text is always visible in light mode */
+.light-mode-safeguards {
+  /* Sidebar content text colors */
+  h1, h2, h3, h4, h5, h6 {
+    color: #1f2937; /* text-gray-800 equivalent */
+  }
+  
+  p, span, div, label {
+    color: #374151; /* text-gray-700 equivalent */
+  }
+  
+  /* Specific overrides for panels */
+  .left-sidebar-content,
+  .right-sidebar-content,
+  .panel-content {
+    color: #1f2937;
+  }
+  
+  .left-sidebar-content h3,
+  .right-sidebar-content h3 {
+    color: #111827 !important; /* text-gray-900 equivalent */
+  }
+  
+  /* Search inputs and form elements */
+  input[type="text"], input[type="search"], textarea {
+    color: #111827; /* text-gray-900 equivalent */
+  }
+  
+  /* Button text when needed */
+  button:not(.bg-blue-500):not(.bg-blue-600):not(.bg-green-500):not(.bg-green-600):not(.bg-red-500):not(.bg-red-600) {
+    color: #374151;
+  }
+}

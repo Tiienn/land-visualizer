@@ -7,6 +7,7 @@
 export const unitToSquareMeters = {
   'm²': 1,
   'ft²': 0.092903,
+  'yd²': 0.836127, // Square yards
   'hectares': 10000,
   'acres': 4046.86,
   'arpent': 3418.89, // Traditional French unit

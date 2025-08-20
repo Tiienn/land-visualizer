@@ -13,14 +13,19 @@ import LeftSidebar from './components/LeftSidebar';
 import PropertiesPanel from './components/PropertiesPanel';
 import AreaPresetSelector from './components/AreaPresetSelector';
 import { ToastContainer } from './components/Toast';
+import { defaultComparisons } from './services/landCalculations';
 import EnhancedSubdivision from './components/EnhancedSubdivision';
 import InteractiveCorners from './components/InteractiveCorners';
 import KeyboardNavigation from './components/KeyboardShortcuts';
+import EnterDimensionsModal from './components/EnterDimensionsModal';
 
 // Import enhanced performance components
 import EnhancedCameraController from './components/EnhancedCameraController';
 import EnhancedEventHandler from './components/EnhancedEventHandler';
 import OptimizedRenderer from './components/OptimizedRenderer';
+
+// Import 3D comparison objects
+import ComparisonObjectsGroup from './components/ComparisonObjectsGroup';
 
 // Import undo/redo functionality
 import useUndoRedo from './hooks/useUndoRedo';
@@ -180,7 +185,6 @@ function LandVisualizer() {
   
   // UI state
   const [showAreaCalculator, setShowAreaCalculator] = useState(false);
-  const [showCompassBearing, setShowCompassBearing] = useState(false);
   const [showPresetSelector, setShowPresetSelector] = useState(false);
   const [showAreaConfiguration, setShowAreaConfiguration] = useState(false);
   const [showInsertAreaDropdown, setShowInsertAreaDropdown] = useState(false);
@@ -304,10 +308,6 @@ function LandVisualizer() {
   }, [drawingMode, selectedSubdivision, subdivisions, selectedCorner]);
 
   // Event handlers
-  const toggleCompassBearing = useCallback(() => {
-    setShowCompassBearing(prev => !prev);
-    setActiveTool(prev => prev === 'compass' ? null : 'compass');
-  }, []);
 
   const toggleDarkMode = useCallback(() => {
     setDarkMode(prev => !prev);
@@ -355,11 +355,15 @@ function LandVisualizer() {
       units: [{ value: areaInSquareMeters, unit: 'm²' }]
     });
     
+    // Auto-trigger Unit Metrics panel
+    setActiveTool('unit-metrics');
+    setIsPropertiesPanelExpanded(true);
+    
     // Close modal and reset values
     setShowInsertAreaModal(false);
     setAreaInputValue('');
     setAreaInputUnit('m²');
-  }, [areaInputValue, areaInputUnit, unitToSquareMeters, updateTrackableState, subdivisions]);
+  }, [areaInputValue, areaInputUnit, unitToSquareMeters, updateTrackableState, subdivisions, setActiveTool, setIsPropertiesPanelExpanded]);
 
   // Add Area: Add additional area to existing total
   const handleAddArea = useCallback(() => {
@@ -434,6 +438,75 @@ function LandVisualizer() {
     // Close preset selector
     setShowPresetSelector(false);
   }, [updateTrackableState, subdivisions]);
+
+  // Handle preview from dimensions modal
+  const handlePreviewFromDimensions = useCallback((previewData) => {
+    if (previewData === null) {
+      // Clear preview
+      setDrawingPreview(null);
+      return;
+    }
+    
+    // Set the preview data - this will be rendered in the 3D scene
+    setDrawingPreview({
+      ...previewData,
+      id: 'dimensions-preview'
+    });
+  }, []);
+
+  // Handle creating subdivision from dimensions modal
+  const handleCreateSubdivisionFromDimensions = useCallback((dimensionData) => {
+    const { shape, dimensions, name, area } = dimensionData;
+    
+    // Convert area from square meters to appropriate scale for 3D scene
+    const sceneArea = area; // Area is already in square meters
+    
+    // Calculate dimensions for the subdivision based on shape
+    let width, height;
+    if (shape === 'rectangle') {
+      // Convert linear dimensions to meters and use them directly
+      const linearFactor = dimensions.linearUnit === 'm' ? 1 : (dimensions.linearUnit === 'ft' ? 0.3048 : 0.9144);
+      width = parseFloat(dimensions.width) * linearFactor;
+      height = parseFloat(dimensions.height) * linearFactor;
+    } else if (shape === 'square') {
+      // For squares, width and height are the same
+      const linearFactor = dimensions.linearUnit === 'm' ? 1 : (dimensions.linearUnit === 'ft' ? 0.3048 : 0.9144);
+      const sideLength = parseFloat(dimensions.width) * linearFactor;
+      width = sideLength;
+      height = sideLength;
+    } else if (shape === 'circle') {
+      // For circles, create a square bounding box
+      const linearFactor = dimensions.linearUnit === 'm' ? 1 : (dimensions.linearUnit === 'ft' ? 0.3048 : 0.9144);
+      const radius = parseFloat(dimensions.radius) * linearFactor;
+      width = radius * 2;
+      height = radius * 2;
+    }
+
+    const newSubdivision = {
+      id: `subdivision-${Date.now()}`,
+      type: shape,
+      position: { x: 0, z: 0 }, // Will be positioned via click-to-place
+      width,
+      height,
+      radius: shape === 'circle' ? parseFloat(dimensions.radius) * (dimensions.linearUnit === 'm' ? 1 : (dimensions.linearUnit === 'ft' ? 0.3048 : 0.9144)) : undefined,
+      area: sceneArea,
+      label: name,
+      color: `hsl(${(subdivisions.length * 137.5) % 360}, 70%, 50%)`,
+      created: new Date().toISOString(),
+      editable: true,
+      fromDimensions: true, // Flag to indicate this was created from dimensions
+      originalDimensions: dimensions // Store original dimension data
+    };
+
+    // Add to subdivisions using trackable state
+    updateTrackableState({
+      subdivisions: [...subdivisions, newSubdivision]
+    });
+    
+    // TODO: Implement click-to-place functionality
+    // For now, just position at center
+    console.log('Created subdivision from dimensions:', newSubdivision);
+  }, [subdivisions, updateTrackableState]);
 
   // Layer management functions with undo/redo support
   const handleUpdateSubdivision = useCallback((layerId, updates) => {
@@ -1087,6 +1160,17 @@ function LandVisualizer() {
           </group>
         )}
 
+        {/* Visual Comparison Objects */}
+        <ComparisonObjectsGroup
+          selectedComparison={selectedComparison}
+          totalAreaSquareMeters={units.reduce((total, unit) => 
+            total + (parseFloat(unit.value) || 0) * unitToSquareMeters[unit.unit], 0
+          )}
+          maxObjects={50}
+          darkMode={darkMode}
+          showLabel={true}
+          scale={1.0}
+        />
 
         {/* Clean OrbitControls - no conflicts with static mesh */}
         <CleanOrbitControls />
@@ -1374,7 +1458,7 @@ Professional survey integration supports data import from total stations, GPS un
 
   return (
     <div className={`min-h-screen flex flex-col transition-colors duration-300 ${
-      darkMode ? 'bg-gray-900' : 'bg-slate-50'
+      darkMode ? 'bg-gray-900' : 'bg-slate-50 light-mode-safeguards'
     }`}>
       {/* Header */}
       <header 
@@ -1493,8 +1577,6 @@ Professional survey integration supports data import from total stations, GPS un
           toggleAreaCalculator={() => setShowAreaCalculator(prev => !prev)}
           terrainEnabled={terrainEnabled}
           toggleTerrain={() => setTerrainEnabled(prev => !prev)}
-          showCompassBearing={showCompassBearing}
-          toggleCompassBearing={toggleCompassBearing}
           exportToExcel={() => console.log('Export to Excel')}
           showAreaConfiguration={showAreaConfiguration}
           toggleAreaConfiguration={() => setShowAreaConfiguration(prev => !prev)}
@@ -1545,6 +1627,14 @@ Professional survey integration supports data import from total stations, GPS un
         setManualDimensions={setManualDimensions}
         activeTool={activeTool}
         setActiveTool={setActiveTool}
+        // Enhanced Visual Comparison props
+        comparisonOptions={defaultComparisons}
+        selectedComparison={selectedComparison}
+        onComparisonSelect={setSelectedComparison}
+        totalAreaSquareMeters={units.reduce((total, unit) => 
+          total + (parseFloat(unit.value) || 0) * unitToSquareMeters[unit.unit], 0
+        )}
+        inputUnit={units.length > 0 ? units[units.length - 1]?.unit : 'm²'}
         // Layer management props
         onUpdateSubdivision={handleUpdateSubdivision}
         onDeleteSubdivision={handleDeleteSubdivision}
@@ -1556,8 +1646,6 @@ Professional survey integration supports data import from total stations, GPS un
         darkMode={darkMode}
         activeTool={activeTool}
         onPropertiesPanelExpansionChange={setIsPropertiesPanelExpanded}
-        compassBearingActive={showCompassBearing}
-        toggleCompassBearing={toggleCompassBearing}
         bearings={bearings}
         addBearing={addBearing}
         terrainEnabled={terrainEnabled}
@@ -1575,6 +1663,7 @@ Professional survey integration supports data import from total stations, GPS un
         drawingMode={drawingMode}
         manualDimensions={manualDimensions}
         setManualDimensions={setManualDimensions}
+        units={units}
       />
 
       {/* Contextual Function Box - appears below ribbon when active */}
@@ -1672,6 +1761,7 @@ Professional survey integration supports data import from total stations, GPS un
       {/* Toast Container */}
       <ToastContainer darkMode={darkMode} />
 
+
       {/* Area Preset Selector Modal */}
       {showPresetSelector && (
         <AreaPresetSelector
@@ -1681,11 +1771,19 @@ Professional survey integration supports data import from total stations, GPS un
         />
       )}
 
+      {/* Enter Dimensions Modal */}
+      <EnterDimensionsModal
+        isOpen={showManualInput}
+        onClose={() => setShowManualInput(false)}
+        onCreateSubdivision={handleCreateSubdivisionFromDimensions}
+        onPreview={handlePreviewFromDimensions}
+        darkMode={darkMode}
+      />
+
       {/* Keyboard Navigation */}
       <KeyboardNavigation
         darkMode={darkMode}
         toggleAreaCalculator={() => setShowAreaCalculator(prev => !prev)}
-        toggleCompassBearing={toggleCompassBearing}
         toggleTerrain={() => setTerrainEnabled(prev => !prev)}
         setDrawingMode={handleDrawingModeChange}
         drawingMode={drawingMode}

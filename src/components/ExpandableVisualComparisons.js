@@ -1,5 +1,11 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Eye, ChevronRight, ChevronDown, Target, Plus } from 'lucide-react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { Eye, ChevronRight, ChevronDown, Target, Plus, Info, BookOpen } from 'lucide-react';
+import { 
+  getContextualComparisons, 
+  getTraditionalUnitInfo, 
+  calculateComparisonQuantity,
+  TRADITIONAL_UNITS 
+} from '../services/landCalculations';
 
 const ExpandableVisualComparisons = ({
   darkMode,
@@ -8,6 +14,11 @@ const ExpandableVisualComparisons = ({
   onComparisonSelect,
   customComparisons = [],
   onAddCustomComparison,
+  // Enhanced properties for traditional unit support
+  totalAreaSquareMeters = 0,
+  inputUnit = 'm²',
+  showTraditionalInfo = false,
+  onTraditionalInfoToggle,
   // Position and styling
   position = 'left', // 'left' or 'right'
   className = ''
@@ -15,7 +26,36 @@ const ExpandableVisualComparisons = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [expandTimeout, setExpandTimeout] = useState(null);
+  const [showEducationalTooltip, setShowEducationalTooltip] = useState(false);
   const menuRef = useRef(null);
+
+  // Enhanced comparison system with traditional unit support
+  const isTraditionalUnit = useMemo(() => 
+    TRADITIONAL_UNITS.includes(inputUnit), 
+    [inputUnit]
+  );
+
+  const contextualComparisons = useMemo(() => {
+    if (totalAreaSquareMeters > 0) {
+      return getContextualComparisons(totalAreaSquareMeters, inputUnit, 8) || [];
+    }
+    return comparisonOptions || [];
+  }, [totalAreaSquareMeters, inputUnit, comparisonOptions]);
+
+  const traditionalUnitInfo = useMemo(() => 
+    isTraditionalUnit ? getTraditionalUnitInfo(inputUnit) : null, 
+    [isTraditionalUnit, inputUnit]
+  );
+
+  // Calculate quantity displays for each comparison
+  const enhancedComparisons = useMemo(() => {
+    return contextualComparisons.map(comparison => ({
+      ...comparison,
+      quantityDisplay: totalAreaSquareMeters > 0 
+        ? calculateComparisonQuantity(totalAreaSquareMeters, comparison.area)
+        : null
+    }));
+  }, [contextualComparisons, totalAreaSquareMeters]);
 
   // Handle mouse enter with slight delay
   const handleMouseEnter = () => {
@@ -76,8 +116,8 @@ const ExpandableVisualComparisons = ({
     // setIsExpanded(false);
   };
 
-  // Group comparisons by category for better organization
-  const groupedComparisons = comparisonOptions.reduce((groups, item) => {
+  // Group enhanced comparisons by category for better organization
+  const groupedComparisons = enhancedComparisons.reduce((groups, item) => {
     const category = item.category || 'General';
     if (!groups[category]) {
       groups[category] = [];
@@ -157,15 +197,59 @@ const ExpandableVisualComparisons = ({
           p-4 border-b
           ${darkMode ? 'border-gray-700 bg-gradient-to-r from-gray-700 to-gray-800' : 'border-gray-200 bg-gradient-to-r from-slate-50 to-slate-100'}
         `}>
-          <div className="flex items-center space-x-2">
-            <Target className={`w-5 h-5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
-            <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
-              Visual Comparisons
-            </h3>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-2">
+              <Target className={`w-5 h-5 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`} />
+              <h3 className={`font-semibold ${darkMode ? 'text-white' : 'text-gray-900'}`}>
+                Visual Comparisons
+              </h3>
+              {isTraditionalUnit && (
+                <div className="flex items-center space-x-1">
+                  <BookOpen className={`w-4 h-4 ${darkMode ? 'text-amber-400' : 'text-amber-600'}`} />
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full ${darkMode ? 'bg-amber-900 text-amber-200' : 'bg-amber-100 text-amber-800'}`}>
+                    Traditional
+                  </span>
+                </div>
+              )}
+            </div>
+            {traditionalUnitInfo && (
+              <button
+                onClick={() => setShowEducationalTooltip(!showEducationalTooltip)}
+                className={`p-1 rounded-full transition-colors ${
+                  darkMode 
+                    ? 'hover:bg-gray-600 text-gray-400 hover:text-gray-200' 
+                    : 'hover:bg-gray-200 text-gray-600 hover:text-gray-800'
+                }`}
+                title="Learn about traditional units"
+              >
+                <Info className="w-4 h-4" />
+              </button>
+            )}
           </div>
           <p className={`text-xs mt-1 ${darkMode ? 'text-gray-400' : 'text-gray-600'}`}>
-            Select objects to visualize land scale
+            {isTraditionalUnit 
+              ? `Objects sized for ${traditionalUnitInfo?.name || inputUnit} measurements`
+              : 'Select objects to visualize land scale'
+            }
           </p>
+          
+          {/* Traditional Unit Educational Tooltip */}
+          {showEducationalTooltip && traditionalUnitInfo && (
+            <div className={`
+              mt-3 p-3 rounded-lg border text-xs
+              ${darkMode 
+                ? 'bg-gray-800 border-gray-600 text-gray-300' 
+                : 'bg-blue-50 border-blue-200 text-gray-700'
+              }
+            `}>
+              <div className="font-medium mb-1">{traditionalUnitInfo.name}</div>
+              <p className="mb-2">{traditionalUnitInfo.description}</p>
+              <div className="text-xs opacity-75">
+                <div><strong>Historical:</strong> {traditionalUnitInfo.historicalContext}</div>
+                <div className="mt-1"><strong>Modern equivalent:</strong> {traditionalUnitInfo.modernEquivalent}</div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Content */}
@@ -188,14 +272,14 @@ const ExpandableVisualComparisons = ({
                     onClick={() => handleComparisonClick(comparison)}
                     className={`
                       w-full flex items-center space-x-3 p-2 rounded-lg text-left
-                      transition-all duration-150
+                      transition-all duration-150 border-2
                       ${selectedComparison?.id === comparison.id
                         ? darkMode
-                          ? 'bg-blue-600 text-white shadow-md'
-                          : 'bg-blue-100 text-blue-900 shadow-md'
+                          ? 'bg-blue-600 text-white shadow-md border-blue-400'
+                          : 'bg-blue-500 text-white shadow-lg border-blue-600'
                         : darkMode
-                          ? 'hover:bg-gray-700 text-gray-300 hover:text-white'
-                          : 'hover:bg-gray-50 text-gray-700 hover:text-gray-900'
+                          ? 'hover:bg-gray-700 text-gray-300 hover:text-white border-transparent hover:border-gray-600'
+                          : 'hover:bg-gray-50 text-gray-700 hover:text-gray-900 border-transparent hover:border-gray-200'
                       }
                     `}
                   >
@@ -217,14 +301,42 @@ const ExpandableVisualComparisons = ({
                       <div className="font-medium text-sm truncate">
                         {comparison.name}
                       </div>
-                      <div className={`
-                        text-xs truncate
-                        ${selectedComparison?.id === comparison.id
-                          ? 'text-white/70'
-                          : darkMode ? 'text-gray-400' : 'text-gray-500'
-                        }
-                      `}>
-                        {comparison.area.toLocaleString()} m²
+                      <div className="space-y-0.5">
+                        <div className={`
+                          text-xs truncate
+                          ${selectedComparison?.id === comparison.id
+                            ? 'text-white/80'
+                            : darkMode ? 'text-gray-400' : 'text-gray-500'
+                          }
+                        `}>
+                          {comparison.area.toLocaleString()} m²
+                        </div>
+                        {/* Quantity display for enhanced comparisons */}
+                        {comparison.quantityDisplay && (
+                          <div className={`
+                            text-xs font-medium
+                            ${selectedComparison?.id === comparison.id
+                              ? 'text-white'
+                              : comparison.quantityDisplay.type === 'multiple' 
+                                ? darkMode ? 'text-green-400' : 'text-green-600'
+                                : darkMode ? 'text-blue-400' : 'text-blue-600'
+                            }
+                          `}>
+                            {comparison.quantityDisplay.text} {comparison.name}
+                          </div>
+                        )}
+                        {/* Traditional context for traditional objects */}
+                        {comparison.context === 'Traditional' && comparison.traditionalContext && (
+                          <div className={`
+                            text-xs italic truncate
+                            ${selectedComparison?.id === comparison.id
+                              ? 'text-white/70'
+                              : darkMode ? 'text-gray-500' : 'text-gray-400'
+                            }
+                          `}>
+                            {comparison.traditionalContext}
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -272,7 +384,7 @@ const ExpandableVisualComparisons = ({
           )}
         </div>
 
-        {/* Quick Stats Footer */}
+        {/* Enhanced Stats Footer */}
         {selectedComparison && (
           <div className={`
             p-3 border-t text-xs
@@ -286,6 +398,24 @@ const ExpandableVisualComparisons = ({
               <span>Area:</span>
               <span>{selectedComparison.area.toLocaleString()} m²</span>
             </div>
+            {totalAreaSquareMeters > 0 && (
+              <div className={`flex justify-between mt-1 ${darkMode ? 'text-blue-400' : 'text-blue-600'}`}>
+                <span>Your land equals:</span>
+                <span className="font-medium">
+                  {(() => {
+                    const quantity = calculateComparisonQuantity(totalAreaSquareMeters, selectedComparison.area);
+                    return `${quantity.text} ${selectedComparison.name}${quantity.quantity > 1 ? 's' : ''}`;
+                  })()}
+                </span>
+              </div>
+            )}
+            {isTraditionalUnit && selectedComparison.traditionalContext && (
+              <div className={`mt-2 pt-2 border-t text-xs italic ${
+                darkMode ? 'border-gray-600 text-gray-400' : 'border-gray-300 text-gray-500'
+              }`}>
+                {selectedComparison.traditionalContext}
+              </div>
+            )}
           </div>
         )}
       </div>

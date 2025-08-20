@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Settings, Ruler, Mountain, Compass, ChevronLeft, ChevronRight, Edit, Square as SquareIcon, MousePointer, Edit3 } from 'lucide-react';
-import CompassBearing from './CompassBearing';
+import { Settings, Ruler, Mountain, ChevronLeft, ChevronRight, Edit, Square as SquareIcon, MousePointer, Edit3, Calculator } from 'lucide-react';
 import { TerrainControls } from './TerrainElevation';
+import UnitMetrics from './UnitMetrics';
 
 const PropertiesPanel = ({
   darkMode,
@@ -12,12 +12,6 @@ const PropertiesPanel = ({
   // Panel expansion callback
   onPropertiesPanelExpansionChange,
   
-  // Compass props
-  compassBearingActive,
-  toggleCompassBearing,
-  bearings,
-  addBearing,
-  deleteBearing,
   clearAllBearings,
   
   // Terrain props
@@ -40,32 +34,41 @@ const PropertiesPanel = ({
   isPropertiesPanelExpanded,
   
   // Drawing mode info
-  drawingMode
+  drawingMode,
+  
+  // Unit Metrics props
+  units = []
 }) => {
   const [activeSection, setActiveSection] = useState(null);
 
-  // Update active section when activeTool changes or drawing mode is active
+  // Auto-open section when activeTool changes (but don't override manual user selection)
+  const [hasUserManuallySelectedSection, setHasUserManuallySelectedSection] = useState(false);
+  
   useEffect(() => {
-    if (activeTool && activeTool !== activeSection) {
+    // Only auto-set if user hasn't manually selected a section yet
+    if (activeTool && !hasUserManuallySelectedSection) {
       setActiveSection(activeTool);
       // Notify parent about expansion state
       if (onPropertiesPanelExpansionChange) {
         onPropertiesPanelExpansionChange(true);
       }
-    } else if (drawingMode && activeSection !== 'settings') {
-      // Auto-open Properties when drawing mode is active (regardless of activeTool)
+    } else if (drawingMode && activeSection !== 'settings' && !hasUserManuallySelectedSection) {
+      // Auto-open Properties when drawing mode is active (only if user hasn't manually selected)
       setActiveSection('settings');
       if (onPropertiesPanelExpansionChange) {
         onPropertiesPanelExpansionChange(true);
       }
     }
     // Don't auto-close when activeTool becomes null - let user close manually
-  }, [activeTool, drawingMode, onPropertiesPanelExpansionChange, activeSection]);
+  }, [activeTool, drawingMode, onPropertiesPanelExpansionChange, hasUserManuallySelectedSection]);
 
   // Handle section change
   const handleSectionChange = (sectionId) => {
     const newActiveSection = activeSection === sectionId ? null : sectionId;
     setActiveSection(newActiveSection);
+    
+    // Mark that user has manually selected a section
+    setHasUserManuallySelectedSection(true);
     
     // Notify parent about expansion state
     if (onPropertiesPanelExpansionChange) {
@@ -76,10 +79,10 @@ const PropertiesPanel = ({
   // Define property sections similar to left sidebar
   const propertySections = [
     {
-      id: 'compass',
-      label: 'Compass',
-      icon: Compass,
-      description: 'Bearing & compass tools'
+      id: 'unit-metrics',
+      label: 'Unit Metrics',
+      icon: Calculator,
+      description: 'Area conversions'
     },
     {
       id: 'terrain',
@@ -105,17 +108,16 @@ const PropertiesPanel = ({
     const currentSection = activeSection || activeTool;
     
     switch (currentSection) {
-      case 'compass':
+      case 'unit-metrics':
         return (
-          <CompassBearing
-            bearings={bearings}
-            onAddBearing={addBearing}
-            onDeleteBearing={deleteBearing}
-            onClearAll={clearAllBearings}
-            darkMode={darkMode}
-            isActive={compassBearingActive}
-            onToggle={toggleCompassBearing}
-          />
+          <div className={`p-4 rounded-xl shadow-sm border ${
+            darkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-slate-200'
+          }`}>
+            <UnitMetrics 
+              darkMode={darkMode}
+              units={units}
+            />
+          </div>
         );
       
       case 'terrain':
@@ -414,8 +416,6 @@ const PropertiesPanel = ({
 
   const getToolIcon = () => {
     switch (activeTool) {
-      case 'compass':
-        return <Compass className="w-5 h-5" />;
       case 'terrain':
         return <Mountain className="w-5 h-5" />;
       case 'dimensions':
@@ -427,8 +427,6 @@ const PropertiesPanel = ({
 
   const getToolTitle = () => {
     switch (activeTool) {
-      case 'compass':
-        return 'Compass & Bearing';
       case 'terrain':
         return 'Terrain Elevation';
       case 'dimensions':
@@ -458,8 +456,8 @@ const PropertiesPanel = ({
           {/* Right Content Panel */}
           {isPropertiesPanelExpanded && (
             <div className={`
-              flex-1 border-r overflow-y-auto
-              ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-100 bg-white'}
+              flex-1 border-r overflow-y-auto right-sidebar-content
+              ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-100 bg-white light-mode-safeguards'}
             `}>
               {/* Header */}
               <div className={`

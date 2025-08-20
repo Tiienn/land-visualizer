@@ -24,19 +24,29 @@ import {
   SkipForward,
   SkipBack,
   MoreVertical,
-  GripVertical
+  GripVertical,
+  Info,
+  BookOpen
 } from 'lucide-react';
 import UnitConverter from './UnitConverter';
+import { 
+  getContextualComparisons, 
+  getTraditionalUnitInfo, 
+  calculateComparisonQuantity,
+  TRADITIONAL_UNITS 
+} from '../services/landCalculations';
 
 const LeftSidebar = ({
   darkMode,
-  // Visual Comparisons props
+  // Visual Comparisons props (enhanced)
   comparisonOptions = [],
   selectedComparison,
   onComparisonSelect,
   customComparisons = [],
   onAddCustomComparison,
   onRemoveCustomComparison,
+  totalAreaSquareMeters = 0,
+  inputUnit = 'm²',
   // Unit Converter props
   unitConversions = {},
   // Sidebar expansion callback
@@ -49,10 +59,33 @@ const LeftSidebar = ({
   onUpdateSubdivision,
   onDeleteSubdivision,
   selectedSubdivision,
-  onSelectSubdivision
+  onSelectSubdivision,
+  // Additional props that might be passed from App.js
+  units,
+  setUnits,
+  setSubdivisions,
+  showAreaConfiguration,
+  setShowAreaConfiguration,
+  showInsertAreaDropdown,
+  setShowInsertAreaDropdown,
+  showPresetSelector,
+  setShowPresetSelector,
+  showManualInput,
+  setShowManualInput,
+  manualDimensions,
+  setManualDimensions,
+  activeTool,
+  setActiveTool,
+  drawingMode,
+  onDrawingModeChange
 }) => {
   const [activeSection, setActiveSection] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showEducationalTooltip, setShowEducationalTooltip] = useState(false);
+  // Initialize all categories as collapsed by default
+  const [collapsedCategories, setCollapsedCategories] = useState(new Set([
+    'Sports', 'Modern', 'Monuments', 'Room', 'Traditional Buildings', 'Agriculture', 'Artisan', 'Custom'
+  ]));
   
   // Layer editing state
   const [editingLayer, setEditingLayer] = useState(null);
@@ -62,6 +95,28 @@ const LeftSidebar = ({
   // Drag and drop state for layer reordering
   const [draggedLayer, setDraggedLayer] = useState(null);
   const [dragOverLayer, setDragOverLayer] = useState(null);
+
+  // Enhanced comparison system with traditional unit support
+  const isTraditionalUnit = TRADITIONAL_UNITS.includes(inputUnit);
+  
+  const contextualComparisons = totalAreaSquareMeters > 0 
+    ? getContextualComparisons(totalAreaSquareMeters, inputUnit, 25)
+    : comparisonOptions;
+  
+  const traditionalUnitInfo = isTraditionalUnit ? getTraditionalUnitInfo(inputUnit) : null;
+
+  // Toggle category collapse state
+  const toggleCategory = (category) => {
+    setCollapsedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(category)) {
+        newSet.delete(category);
+      } else {
+        newSet.add(category);
+      }
+      return newSet;
+    });
+  };
 
   // Handle section change and notify parent
   const handleSectionChange = (sectionId) => {
@@ -83,13 +138,21 @@ const LeftSidebar = ({
     }
   };
 
-  // Group comparisons by category for better organization
-  const groupedComparisons = comparisonOptions.reduce((groups, item) => {
+  // Group enhanced comparisons by category for better organization
+  const groupedComparisons = contextualComparisons.reduce((groups, item) => {
+    // Add quantity display for each comparison
+    const enhancedItem = {
+      ...item,
+      quantityDisplay: totalAreaSquareMeters > 0 
+        ? calculateComparisonQuantity(totalAreaSquareMeters, item.area)
+        : null
+    };
+    
     const category = item.category || 'General';
     if (!groups[category]) {
       groups[category] = [];
     }
-    groups[category].push(item);
+    groups[category].push(enhancedItem);
     return groups;
   }, {});
 
@@ -386,8 +449,8 @@ const LeftSidebar = ({
           {/* Right Content Panel */}
           {isLeftSidebarExpanded && (
             <div className={`
-              flex-1 border-l overflow-y-auto
-              ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-100 bg-white'}
+              flex-1 border-l overflow-y-auto left-sidebar-content
+              ${darkMode ? 'border-gray-800 bg-gray-950' : 'border-gray-100 bg-white light-mode-safeguards'}
             `}>
               {/* Header with Search */}
               <div className={`
@@ -427,61 +490,174 @@ const LeftSidebar = ({
                 {/* Elements/Comparisons Section */}
                 {activeSection === 'comparisons' && (
                   <div>
+                    {/* Enhanced Header with Traditional Unit Support */}
+                    {isTraditionalUnit && (
+                      <div className={`mb-4 p-3 rounded-lg border ${
+                        darkMode 
+                          ? 'bg-amber-900/20 border-amber-700 text-amber-200' 
+                          : 'bg-amber-50 border-amber-200 text-amber-800'
+                      }`}>
+                        <div className="flex items-center justify-between mb-2">
+                          <div className="flex items-center space-x-2">
+                            <BookOpen className="w-4 h-4" />
+                            <span className="text-sm font-medium">Traditional Unit Mode</span>
+                          </div>
+                          {traditionalUnitInfo && (
+                            <button
+                              onClick={() => setShowEducationalTooltip(!showEducationalTooltip)}
+                              className={`p-1 rounded-full transition-colors ${
+                                darkMode 
+                                  ? 'hover:bg-amber-800 text-amber-300 hover:text-amber-100' 
+                                  : 'hover:bg-amber-200 text-amber-600 hover:text-amber-800'
+                              }`}
+                              title="Learn about traditional units"
+                            >
+                              <Info className="w-4 h-4" />
+                            </button>
+                          )}
+                        </div>
+                        <p className="text-xs">
+                          Objects sized for {traditionalUnitInfo?.name || inputUnit} measurements
+                        </p>
+                        
+                        {/* Educational Tooltip */}
+                        {showEducationalTooltip && traditionalUnitInfo && (
+                          <div className={`mt-3 p-3 rounded-lg border text-xs ${
+                            darkMode 
+                              ? 'bg-gray-800 border-gray-600 text-gray-300' 
+                              : 'bg-blue-50 border-blue-200 text-gray-700'
+                          }`}>
+                            <div className="font-medium mb-1">{traditionalUnitInfo.name}</div>
+                            <p className="mb-2">{traditionalUnitInfo.description}</p>
+                            <div className="text-xs opacity-75">
+                              <div><strong>Historical:</strong> {traditionalUnitInfo.historicalContext}</div>
+                              <div className="mt-1"><strong>Modern equivalent:</strong> {traditionalUnitInfo.modernEquivalent}</div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Canva-style Grid Layout */}
                     <div className="space-y-6">
-                      {Object.entries(groupedComparisons).map(([category, items]) => (
+                      {(() => {
+                        // Define category order as requested
+                        const categoryOrder = ['Sports', 'Modern', 'Monuments', 'Room', 'Traditional Buildings', 'Agriculture', 'Artisan', 'Custom'];
+                        
+                        return Object.entries(groupedComparisons)
+                          .map(([category, items]) => {
+                            // Filter items based on search term
+                            const filteredItems = items.filter(item => 
+                              searchTerm === '' || item.name.toLowerCase().includes(searchTerm.toLowerCase())
+                            );
+                            return [category, filteredItems];
+                          })
+                          .filter(([category, filteredItems]) => filteredItems.length > 0) // Only show categories with matching items
+                          .sort(([categoryA], [categoryB]) => {
+                            // Sort categories according to the defined order
+                            const indexA = categoryOrder.indexOf(categoryA);
+                            const indexB = categoryOrder.indexOf(categoryB);
+                            
+                            // Categories not in the order list go to the end
+                            if (indexA === -1 && indexB === -1) return categoryA.localeCompare(categoryB);
+                            if (indexA === -1) return 1;
+                            if (indexB === -1) return -1;
+                            
+                            return indexA - indexB;
+                          });
+                      })().map(([category, filteredItems]) => (
                         <div key={category}>
                           {/* Category Header */}
-                          <div className={`
-                            text-sm font-semibold mb-3 flex items-center justify-between
-                            ${darkMode ? 'text-gray-300' : 'text-gray-700'}
-                          `}>
-                            <span>{category}</span>
+                          <button
+                            onClick={() => toggleCategory(category)}
+                            className={`
+                              w-full text-sm font-semibold mb-3 flex items-center justify-between
+                              transition-colors duration-150 rounded-lg p-2
+                              ${darkMode 
+                                ? 'text-gray-300 hover:text-gray-100 hover:bg-gray-800' 
+                                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100'
+                              }
+                            `}
+                          >
+                            <div className="flex items-center space-x-2">
+                              {collapsedCategories.has(category) ? (
+                                <ChevronRight size={16} />
+                              ) : (
+                                <ChevronDown size={16} />
+                              )}
+                              <span>{category}</span>
+                            </div>
                             <span className={`text-xs ${darkMode ? 'text-gray-500' : 'text-gray-400'}`}>
-                              {items.length}
+                              {filteredItems.length}
                             </span>
-                          </div>
+                          </button>
 
-                          {/* Grid of Items */}
-                          <div className="grid grid-cols-2 gap-2">
-                            {items
-                              .filter(item => searchTerm === '' || item.name.toLowerCase().includes(searchTerm.toLowerCase()))
-                              .map((comparison) => (
+                          {/* List of Items - Only show if not collapsed */}
+                          {!collapsedCategories.has(category) && (
+                            <div className="space-y-2">
+                            {filteredItems.map((comparison) => (
                               <button
                                 key={comparison.id}
                                 onClick={() => onComparisonSelect(comparison)}
                                 className={`
-                                  relative group aspect-square rounded-xl border-2 transition-all duration-200
-                                  flex flex-col items-center justify-center p-3 hover:scale-105
+                                  relative group w-full rounded-lg border-2 transition-all duration-200
+                                  flex items-center p-3 hover:scale-[1.02]
                                   ${selectedComparison?.id === comparison.id
-                                    ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20'
+                                    ? darkMode
+                                      ? 'border-blue-400 bg-blue-900 text-blue-200'
+                                      : 'border-blue-300 bg-blue-100 text-blue-700'
                                     : darkMode
-                                      ? 'border-gray-700 hover:border-gray-600 bg-gray-900'
+                                      ? 'border-gray-700 hover:border-gray-600 bg-gray-900 hover:bg-gray-800'
                                       : 'border-gray-200 hover:border-gray-300 bg-gray-50 hover:bg-gray-100'
                                   }
                                 `}
                               >
-                                {/* Large Icon */}
-                                <div className="text-2xl mb-2">
+                                {/* Icon */}
+                                <div className="text-xl mr-3 flex-shrink-0">
                                   {comparison.icon}
                                 </div>
                                 
-                                {/* Name */}
-                                <div className={`text-xs font-medium text-center leading-tight ${
-                                  selectedComparison?.id === comparison.id
-                                    ? 'text-violet-700 dark:text-violet-300'
-                                    : darkMode ? 'text-gray-300' : 'text-gray-700'
-                                }`}>
-                                  {comparison.name}
-                                </div>
-                                
-                                {/* Area */}
-                                <div className={`text-xs mt-1 ${
-                                  selectedComparison?.id === comparison.id
-                                    ? 'text-violet-600 dark:text-violet-400'
-                                    : darkMode ? 'text-gray-500' : 'text-gray-500'
-                                }`}>
-                                  {comparison.area.toLocaleString()} m²
+                                {/* Content */}
+                                <div className="flex-1 text-left">
+                                  {/* Name */}
+                                  <div className={`text-sm font-semibold leading-tight mb-1 ${
+                                    selectedComparison?.id === comparison.id
+                                      ? darkMode ? 'text-blue-200' : 'text-blue-700'
+                                      : darkMode ? 'text-gray-200' : 'text-gray-800'
+                                  }`}>
+                                    {comparison.name}
+                                  </div>
+                                  
+                                  {/* Area */}
+                                  <div className={`text-xs mb-1 ${
+                                    selectedComparison?.id === comparison.id
+                                      ? darkMode ? 'text-blue-300' : 'text-blue-600'
+                                      : darkMode ? 'text-gray-400' : 'text-gray-600'
+                                  }`}>
+                                    {comparison.area.toLocaleString()} m² • {comparison.description}
+                                  </div>
+
+                                  {/* Enhanced: Quantity Display */}
+                                  {comparison.quantityDisplay && (
+                                    <div className={`text-xs font-medium ${
+                                      selectedComparison?.id === comparison.id
+                                        ? darkMode ? 'text-blue-200' : 'text-blue-700'
+                                        : comparison.quantityDisplay.type === 'multiple' 
+                                          ? (darkMode ? 'text-green-400' : 'text-green-600')
+                                          : (darkMode ? 'text-blue-400' : 'text-blue-600')
+                                    }`}>
+                                      {comparison.quantityDisplay.text} {comparison.name}
+                                    </div>
+                                  )}
+
+                                  {/* Enhanced: Traditional Context */}
+                                  {comparison.context === 'Traditional' && comparison.traditionalContext && (
+                                    <div className={`text-xs mt-1 italic ${
+                                      darkMode ? 'text-gray-500' : 'text-gray-500'
+                                    }`}>
+                                      {comparison.traditionalContext}
+                                    </div>
+                                  )}
                                 </div>
                                 
                                 {/* Delete button for custom items */}
@@ -492,7 +668,7 @@ const LeftSidebar = ({
                                       onRemoveCustomComparison(comparison.id);
                                     }}
                                     className={`
-                                      absolute top-1 right-1 w-6 h-6 rounded-full
+                                      w-6 h-6 rounded-full ml-2 flex-shrink-0
                                       opacity-0 group-hover:opacity-100 transition-opacity
                                       flex items-center justify-center
                                       ${darkMode
@@ -502,17 +678,18 @@ const LeftSidebar = ({
                                     `}
                                     title="Delete"
                                   >
-                                    <Trash2 size={10} />
+                                    <Trash2 size={12} />
                                   </button>
                                 )}
                                 
                                 {/* Selection indicator */}
                                 {selectedComparison?.id === comparison.id && (
-                                  <div className="absolute top-2 left-2 w-2 h-2 bg-violet-500 rounded-full" />
+                                  <div className="absolute left-2 top-1/2 transform -translate-y-1/2 w-1 h-8 bg-violet-500 rounded-r-full" />
                                 )}
                               </button>
                             ))}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       ))}
 
@@ -529,23 +706,23 @@ const LeftSidebar = ({
                       )}
                     </div>
                     
-                    {/* Canva-style Add Button */}
+                    {/* List-style Add Button */}
                     {onAddCustomComparison && (
-                      <div className="mt-6">
+                      <div className="mt-4">
                         <button
                           onClick={onAddCustomComparison}
                           className={`
-                            w-full aspect-square rounded-xl border-2 border-dashed transition-all duration-200
-                            flex flex-col items-center justify-center p-4 hover:scale-105
+                            w-full rounded-lg border-2 border-dashed transition-all duration-200
+                            flex items-center justify-center p-3 hover:scale-[1.02]
                             ${darkMode
                               ? 'border-gray-600 text-gray-400 hover:border-violet-400 hover:text-violet-400 hover:bg-gray-800'
                               : 'border-gray-300 text-gray-500 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50'
                             }
                           `}
                         >
-                          <Plus className="w-8 h-8 mb-2" />
-                          <span className="text-xs font-medium text-center">
-                            Add custom<br />object
+                          <Plus className="w-5 h-5 mr-2" />
+                          <span className="text-sm font-medium">
+                            Add custom object
                           </span>
                         </button>
                       </div>

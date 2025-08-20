@@ -271,7 +271,7 @@ export const EnhancedSubdivision = React.memo(({
 
   // Render based on subdivision type
   const renderSubdivision = () => {
-    if (subdivision.type === 'rectangle') {
+    if (subdivision.type === 'rectangle' || subdivision.type === 'square') {
       return (
         <>
           {/* Rectangle plane */}
@@ -303,6 +303,58 @@ export const EnhancedSubdivision = React.memo(({
               [subdivision.position.x - subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), subdivision.position.z + subdivision.height/2],
               [subdivision.position.x - subdivision.width/2, 0.003 + ((subdivision.order || 0) * 0.01), subdivision.position.z - subdivision.height/2]
             ]}
+            color={visualProps.borderColor}
+            lineWidth={visualProps.borderWidth}
+          />
+        </>
+      );
+    } else if (subdivision.type === 'circle') {
+      // Create a circle using a circular plane
+      const radius = subdivision.radius || subdivision.width / 2; // Use radius or fallback to width/2
+      
+      // Create circle geometry
+      const createCircleGeometry = () => {
+        return new THREE.CircleGeometry(radius, 32); // 32 segments for smooth circle
+      };
+
+      // Create circle border points
+      const createCircleBorderPoints = () => {
+        const points = [];
+        const segments = 64; // More segments for smoother border
+        for (let i = 0; i <= segments; i++) {
+          const angle = (i / segments) * Math.PI * 2;
+          const x = subdivision.position.x + Math.cos(angle) * radius;
+          const z = subdivision.position.z + Math.sin(angle) * radius;
+          points.push([x, 0.003 + ((subdivision.order || 0) * 0.01), z]);
+        }
+        return points;
+      };
+
+      return (
+        <>
+          {/* Circle mesh */}
+          <mesh 
+            ref={meshRef}
+            geometry={createCircleGeometry()}
+            position={[subdivision.position.x, 0.002 + ((subdivision.order || 0) * 0.01), subdivision.position.z]}
+            rotation={[-Math.PI / 2, 0, 0]} // Rotate to lie flat like the plane
+            onClick={subdivision.id === 'default-square' && drawingMode === 'select' ? undefined : handleSubdivisionClick}
+            onPointerEnter={subdivision.id === 'default-square' && drawingMode === 'select' ? undefined : handlePointerEnter}
+            onPointerLeave={subdivision.id === 'default-square' && drawingMode === 'select' ? undefined : handlePointerLeave}
+            onPointerDown={subdivision.id === 'default-square' && drawingMode === 'select' ? undefined : handlePointerDown}
+            onMouseDown={subdivision.id === 'default-square' && drawingMode === 'select' ? undefined : handlePointerDown}
+          >
+            <meshLambertMaterial 
+              color={subdivision.color} 
+              transparent 
+              opacity={visualProps.opacity}
+            />
+          </mesh>
+          
+          {/* Circle border */}
+          <Line
+            ref={lineRef}
+            points={createCircleBorderPoints()}
             color={visualProps.borderColor}
             lineWidth={visualProps.borderWidth}
           />

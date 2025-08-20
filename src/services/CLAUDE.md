@@ -1,5 +1,34 @@
 # Services Directory: Professional Surveying Tools
 
+## 🤖 Claude Flow v2.0.0 Alpha Integration
+
+### **AI-Powered Service Development**
+- **Precision Unit Converter Agent**: Specialized agent for high-precision land measurement conversions
+- **Neural Pattern Recognition**: Continuous learning from conversion accuracy patterns
+- **Performance Optimization**: AI-driven algorithm optimization for surveying calculations
+- **Professional Validation**: Automated compliance checking with surveying standards
+
+### **Available AI Commands for Services**
+```bash
+# Unit conversion optimization
+npx claude-flow@alpha precision-unit-converter "optimize conversion accuracy" --claude
+
+# Professional surveying enhancement
+npx claude-flow@alpha swarm "implement geodetic calculations" --claude
+
+# Performance analysis
+npx claude-flow@alpha sparc-architect "design calculation service" --claude
+
+# Testing coordination
+npx claude-flow@alpha sparc-tdd "create conversion test suite" --claude
+```
+
+### **AI Agent Specializations**
+- **`precision-unit-converter`**: High-precision unit conversions for land measurements
+- **`perf-analyzer`**: Performance optimization for calculation algorithms
+- **`data-ml-model`**: Machine learning for prediction and optimization
+- **`backend-dev`**: Service architecture and API design
+
 ## Recent Architectural Enhancements
 
 ### 🚀 Unit Conversion System Upgrade

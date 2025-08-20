@@ -8,11 +8,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Planned
-- DXF import functionality
-- Shapefile import support
-- Advanced coordinate system transformations
+- Enhanced neural pattern recognition for AI development workflows
+- Advanced GitHub integration with automated PR management
+- Real-time swarm coordination for multi-developer projects
 - Mobile touch gesture optimization
 - Dark mode theme implementation
+
+## [2.1.0] - 2025-08-20
+
+### Added - Claude Flow v2.0.0 Alpha Integration
+
+#### 🤖 **AI-Powered Development Infrastructure**
+- **Claude Flow v2.0.0 Alpha** integration with hive-mind intelligence
+- **64 Specialized Agents** for automated development workflows
+- **SPARC Methodology** implementation (Specification, Pseudocode, Architecture, Refinement, Completion)
+- **Neural Pattern Recognition** with continuous learning from successful operations
+- **Cross-session Memory** with SQLite persistence (`.swarm/memory.db` and `.hive-mind/hive.db`)
+- **Advanced Hooks System** with automated pre/post operation workflows
+
+#### 🧠 **Hive-Mind Coordination**
+- **Queen-led AI coordination** with specialized worker agents
+- **Mesh, hierarchical, and adaptive** coordination strategies
+- **Consensus mechanisms** for complex development decisions
+- **Real-time performance monitoring** and bottleneck analysis
+- **Automated agent spawning** based on task complexity
+- **Fault tolerance** with self-healing workflows
+
+#### 📋 **Enhanced Agent System**
+- **Core Agents**: coder, reviewer, tester, planner, researcher
+- **Swarm Coordination**: hierarchical-coordinator, mesh-coordinator, adaptive-coordinator
+- **GitHub Integration**: pr-manager, code-review-swarm, issue-tracker, release-manager
+- **SPARC Methodology**: specification, pseudocode, architecture, refinement
+- **Performance**: perf-analyzer, memory-coordinator, task-orchestrator
+- **Specialized**: backend-dev, mobile-dev, ml-developer, cicd-engineer
+
+#### 🚀 **Development Commands**
+- **Slash Commands**: `/sparc`, `/claude-flow-help`, `/claude-flow-memory`, `/claude-flow-swarm`
+- **AI Coordination**: `npx claude-flow@alpha swarm "objective" --claude`
+- **Hive-Mind**: `npx claude-flow@alpha hive-mind spawn "task" --claude`
+- **SPARC Workflows**: `npx claude-flow@alpha sparc tdd "feature"`
+- **Memory Management**: `npx claude-flow@alpha memory stats/query/store`
+
+#### 📁 **New Configuration Files**
+- `.claude/settings.json` - Enhanced hooks and MCP server configuration
+- `.mcp.json` - MCP server definitions for enhanced coordination
+- `.hive-mind/config.json` - Hive-mind system configuration
+- `.swarm/memory.db` - SQLite database for cross-session memory
+- `.hive-mind/hive.db` - Collective intelligence database
+- `.roo` and `.roomodes` - SPARC methodology configuration files
+
+#### 🔧 **Enhanced Development Workflows**
+- **Automated Code Review** with specialized review agents
+- **Performance Optimization** with GPU-aware Three.js analysis
+- **Testing Coordination** with TDD-focused agent workflows
+- **Documentation Generation** with AI-powered technical writing
+- **Architecture Validation** with system design agents
+- **GitHub Integration** with automated PR management and issue tracking
+
+### Changed
+- **Updated CLAUDE.md** with complete Claude Flow integration guide
+- **Enhanced project documentation** to reflect AI-powered development capabilities
+- **Improved development commands** with concurrent execution patterns
+- **Updated README.md** with Claude Flow features and quick start guide
 
 ## [2.0.0] - 2025-08-17
 

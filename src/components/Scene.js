@@ -7,12 +7,9 @@ import * as THREE from 'three';
 import EnhancedSubdivision from './EnhancedSubdivision';
 import InteractiveCorners from './InteractiveCorners';
 import IrregularPolygon3D from './IrregularPolygon3D';
-import CompassBearing from './CompassBearing';
-import BearingLine3D from './BearingLine3D';
 import TerrainElevation from './TerrainElevation';
 import DimensionLines from './DimensionLines';
 import AreaCalculator from './AreaCalculator';
-import SimpleCompass from './SimpleCompass';
 import ExpandableVisualComparisons from './ExpandableVisualComparisons';
 
 /**
@@ -31,10 +28,8 @@ export function Scene({
   totalAreaSquareMeters,
   selectedComparison,
   measurementData,
-  bearingData,
   showMeasuringTape,
   showAreaCalculator,
-  showCompassBearing,
   showDimensionLines,
   showExpandableComparisons,
   comparisonFilter,
@@ -46,7 +41,6 @@ export function Scene({
   onPointerMove,
   onPointerUp,
   onMeasurementUpdate,
-  onBearingUpdate,
   onUpdateCorner,
   onSelectCorner,
   onSelectEdge,
@@ -289,23 +283,6 @@ export function Scene({
       )}
 
 
-      {/* Compass and Bearing */}
-      {showCompassBearing && (
-        <CompassBearing
-          onBearingUpdate={onBearingUpdate}
-          darkMode={darkMode}
-        />
-      )}
-
-      {bearingData.startPoint && bearingData.endPoint && (
-        <BearingLine3D
-          startPoint={bearingData.startPoint}
-          endPoint={bearingData.endPoint}
-          bearing={bearingData.bearing}
-          distance={bearingData.distance}
-          darkMode={darkMode}
-        />
-      )}
 
       {/* Area Calculator */}
       {showAreaCalculator && (

@@ -5,7 +5,6 @@ import {
   Edit3, 
   Ruler,
   Mountain,
-  Compass,
   FileDown,
   Plus,
   ChevronDown,
@@ -38,10 +37,6 @@ const Ribbon = ({
   // Terrain
   terrainEnabled,
   toggleTerrain,
-  
-  // Compass
-  showCompassBearing,
-  toggleCompassBearing,
   
   // Export
   exportToExcel,
@@ -240,20 +235,6 @@ const Ribbon = ({
       ]
     },
     {
-      id: 'compass',
-      label: 'Compass & Bearing',
-      tools: [
-        {
-          id: 'compass-bearing',
-          label: 'Compass',
-          icon: Compass,
-          active: showCompassBearing,
-          action: toggleCompassBearing,
-          description: 'Measure directions and bearings'
-        }
-      ]
-    },
-    {
       id: 'export',
       label: 'Export',
       tools: [
@@ -395,7 +376,6 @@ const Ribbon = ({
           <span className="flex gap-4">
             {showAreaCalculator && <span>🧮 Calculating</span>}
             {terrainEnabled && <span>🏔️ Terrain</span>}
-            {showCompassBearing && <span>🧭 Compass</span>}
           </span>
         </div>
       </div>

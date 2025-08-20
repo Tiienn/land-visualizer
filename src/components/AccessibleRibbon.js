@@ -5,7 +5,6 @@ import {
   Edit3, 
   Ruler,
   Mountain,
-  Compass,
   FileDown,
   Plus,
   ChevronDown,
@@ -34,8 +33,6 @@ const AccessibleRibbon = ({
   toggleAreaCalculator,
   terrainEnabled,
   toggleTerrain,
-  showCompassBearing,
-  toggleCompassBearing,
   exportToExcel,
   selectedSubdivision,
   showAreaConfiguration,
@@ -264,19 +261,6 @@ const AccessibleRibbon = ({
           shortcut: 'T'
         },
         {
-          id: 'compass',
-          label: 'Compass',
-          icon: Compass,
-          active: showCompassBearing,
-          action: () => {
-            toggleCompassBearing();
-            announceAction(`Compass bearing ${showCompassBearing ? 'hidden' : 'shown'}`);
-          },
-          description: 'Show/hide compass bearing',
-          ariaLabel: 'Toggle compass bearing display',
-          shortcut: 'C'
-        },
-        {
           id: 'left-sidebar',
           label: 'Left Panel',
           icon: ChevronLeft,
@@ -422,11 +406,6 @@ const AccessibleRibbon = ({
             toggleTerrain();
             announceAction('Terrain toggled');
             break;
-          case 'c':
-            event.preventDefault();
-            toggleCompassBearing();
-            announceAction('Compass toggled');
-            break;
           case 'delete':
             if (!shouldDisableDelete) {
               event.preventDefault();
@@ -503,7 +482,7 @@ const AccessibleRibbon = ({
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [
     drawingMode, setDrawingMode, toggleMeasuringTape, toggleDimensions,
-    toggleTerrain, toggleCompassBearing, onShowInsertArea, addUnit,
+    toggleTerrain, onShowInsertArea, addUnit,
     togglePresetSelector, onShowEnterDimensions, exportToExcel,
     canUndo, canRedo, onUndo, onRedo, shouldDisableDelete, onDeleteCorner,
     onAddCorner, onToggleLeftSidebar, onToggleRightSidebar
