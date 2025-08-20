@@ -27,10 +27,6 @@ const Ribbon = ({
   drawingMode,
   setDrawingMode,
   
-  // Measuring Tools
-  showMeasuringTape,
-  toggleMeasuringTape,
-  
   // Dimensions
   showDimensions,
   toggleDimensions,
@@ -167,14 +163,6 @@ const Ribbon = ({
       id: 'tools',
       label: 'Tools',
       tools: [
-        {
-          id: 'measuring-tape',
-          label: 'Measuring Tape',
-          icon: Ruler,
-          active: showMeasuringTape,
-          action: toggleMeasuringTape,
-          description: 'Measure distances between points'
-        },
         {
           id: 'dimensions',
           label: 'Dimensions',
@@ -405,7 +393,6 @@ const Ribbon = ({
       `}>
         <div className="flex justify-between items-center">
           <span className="flex gap-4">
-            {showMeasuringTape && <span>📏 Measuring</span>}
             {showAreaCalculator && <span>🧮 Calculating</span>}
             {terrainEnabled && <span>🏔️ Terrain</span>}
             {showCompassBearing && <span>🧭 Compass</span>}

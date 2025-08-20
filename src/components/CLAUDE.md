@@ -7,13 +7,14 @@ This directory contains all React components for the Land Visualizer application
 ### **Main UI Structure**
 - **`Ribbon.js`** - Main toolbar with organized tool sections: Area Configuration, Drawing Tools, Measurement Tools, Corner Controls, View Controls, and Export
 - **`AccessibleRibbon.js`** - Enhanced accessible version with keyboard navigation and ARIA support
-- **`LeftSidebar.js`** - Left panel containing area inputs, unit converters, and configuration controls
-- **`PropertiesPanel.js`** - Right panel for editing selected objects and subdivision properties
-- **`LayerPanel.js`** - Layer management interface with visibility controls
+- **`LeftSidebar.js`** - Left panel containing area inputs, layer management, unit converters, and configuration controls
+- **`PropertiesPanel.js`** - Right panel for editing selected objects with advanced property controls
+- **`LayerPanel.js`** - Layer management interface with visibility controls and drag-and-drop organization
 
 ### **3D Visualization Core**
-- **`EnhancedSubdivision.js`** - Main subdivision rendering component with labels and borders
-- **`InteractiveCorners.js`** - Corner editing system allowing drag-and-drop corner manipulation
+- **`Scene.js`** - Main 3D scene component managing all 3D rendering, lighting, and scene organization
+- **`EnhancedSubdivision.js`** - Main subdivision rendering component with labels, borders, and smooth dragging
+- **`InteractiveCorners.js`** - Enhanced corner editing system with intuitive drag-and-drop corner manipulation
 - **`EnhancedCameraController.js`** - Advanced 3D camera controls with smooth movement
 - **`OptimizedRenderer.js`** - Performance-optimized Three.js rendering system
 - **`EnhancedEventHandler.js`** - Enhanced pointer event handling for 3D interactions
@@ -33,11 +34,10 @@ This directory contains all React components for the Land Visualizer application
   - Entry Points: `ErrorBoundary`, `ThreeJSErrorBoundary`, `WebGLCheck`
 
 ### **Drawing & Measurement Tools**
-- **`MeasuringTape.js`** - Distance measurement tool with click-to-measure functionality
-- **`MeasuringLine3D.js`** - 3D line measurement with elevation support
 - **`IrregularPolygon3D.js`** - Irregular polygon drawing with area calculation
 - **`DimensionLines.js`** - Dimension annotation system for subdivisions
 - **`AreaCalculator.js`** - Area calculation utilities and display components
+- **`AreaInputModal.js`** - Modal interface for area input and configuration
 
 ### **Surveying & Navigation**
 - **`CompassBearing.js`** - Bearing calculation and display component
@@ -170,3 +170,24 @@ import { FocusProvider } from './components/FocusManagement';
 - Test responsive behavior across viewports
 - Verify high contrast mode compatibility
 - Check reduced motion preferences
+
+## Recent Updates (2025-08-20)
+
+### Component Architecture Changes
+- **Scene.js Added**: New centralized 3D scene management component that orchestrates all 3D rendering
+- **Removed Components**: MeasuringTape.js and MeasuringLine3D.js have been deleted in favor of integrated measurement tools
+- **Enhanced Components**: 
+  - InteractiveCorners.js improved with smooth dragging functionality
+  - PropertiesPanel.js enhanced with advanced property controls
+  - EnhancedSubdivision.js updated with better interaction handling
+
+### New Features
+- **Polyline Drawing**: Support for creating irregular subdivisions with polyline mode
+- **Layer Management**: Comprehensive layer system with drag-and-drop organization
+- **Corner Editing**: Dedicated corner control tools in the ribbon interface
+- **Area Input Modal**: New modal interface for area configuration
+
+### Important Notes
+- **Measurement Tools**: Distance measurement functionality is now integrated into Scene.js rather than using separate components
+- **3D Scene Management**: All 3D rendering should go through Scene.js for consistency
+- **Accessibility First**: Always prefer AccessibleRibbon over standard Ribbon component

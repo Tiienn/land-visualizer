@@ -53,7 +53,6 @@ const SHORTCUTS = {
 // Hook for keyboard shortcuts  
 const useKeyboardShortcuts = ({
   // Tool toggles
-  toggleMeasuringTape,
   toggleAreaCalculator,
   toggleCompassBearing,
   toggleTerrain,
@@ -104,9 +103,6 @@ const useKeyboardShortcuts = ({
 
     switch (key) {
       // Tool toggles
-      case 'KeyM':
-        if (!ctrl && !alt) toggleMeasuringTape?.();
-        break;
       case 'KeyA':
         if (!ctrl && !alt) {
           toggleAreaCalculator?.();
@@ -217,7 +213,7 @@ const useKeyboardShortcuts = ({
       event.stopPropagation();
     }
   }, [
-    toggleMeasuringTape, toggleAreaCalculator, toggleCompassBearing, toggleTerrain,
+    toggleAreaCalculator, toggleCompassBearing, toggleTerrain,
     setDrawingMode, drawingMode, toggleDarkMode, exportToExcel, undo, redo, deleteSelected, setUnits, isInputFocused
   ]);
 
@@ -266,7 +262,7 @@ const KeyboardShortcutsHelp = ({ isOpen, onClose, darkMode }) => {
     {
       title: "Measurement Tools",
       description: "Access measurement tools quickly",
-      tip: "Use 'M' for measuring tape, 'A' for area calculator, 'C' for compass bearing"
+      tip: "Use 'A' for area calculator, 'C' for compass bearing"
     }
   ];
 
@@ -523,7 +519,6 @@ const KeyboardShortcutsHelp = ({ isOpen, onClose, darkMode }) => {
 const KeyboardNavigation = ({ 
   darkMode,
   // All the callback functions needed for shortcuts
-  toggleMeasuringTape,
   toggleAreaCalculator,
   toggleCompassBearing,
   toggleTerrain,
@@ -583,7 +578,6 @@ const KeyboardNavigation = ({
 
   // Initialize keyboard shortcuts
   useKeyboardShortcuts({
-    toggleMeasuringTape,
     toggleAreaCalculator,
     toggleCompassBearing,
     toggleTerrain,

@@ -63,12 +63,15 @@ export class PointRenderingEngine {
     
     // Point style constants
     this.POINT_STYLES = {
-      CROSS: 0.0,      // + shape
-      CIRCLE: 1.0,     // ○ shape
-      X_MARKER: 2.0,   // × shape
-      PLUS: 3.0,       // + shape (thicker)
-      SQUARE: 4.0,     // □ shape
-      DIAMOND: 5.0     // ◊ shape
+      CROSS: 0.0,           // + shape
+      CIRCLE: 1.0,          // ○ shape
+      X_MARKER: 2.0,        // × shape
+      PLUS: 3.0,            // + shape (thicker)
+      SQUARE: 4.0,          // □ shape
+      DIAMOND: 5.0,         // ◊ shape
+      HANDLE_CORNER: 6.0,   // Large circle for corner handles
+      HANDLE_EDGE: 7.0,     // Rectangle for edge handles
+      HANDLE_ROTATION: 8.0  // Circle with rotation icon
     };
     
     this.POINT_STATES = {
@@ -104,16 +107,15 @@ export class PointRenderingEngine {
         vState = instanceState;
         vUv = uv;
         
-        // Calculate screen-space size for adaptive sizing
+        // Calculate world-space size for corner markers (no distance attenuation)
         vec4 worldPosition = modelMatrix * vec4(instancePosition, 1.0);
         vec4 viewPosition = viewMatrix * worldPosition;
         
-        // Screen-space scaling: maintain consistent pixel size
-        float distance = length(viewPosition.xyz);
-        float screenScale = instanceScale * globalScale / (distance * 0.1 + 1.0);
+        // Fixed world-space scaling: maintain consistent world size  
+        float screenScale = instanceScale * globalScale * 2.0; // Much larger scale multiplier
         
-        // Clamp scale to reasonable limits
-        screenScale = clamp(screenScale, 0.5, 4.0);
+        // Allow much larger scales for corner markers
+        screenScale = clamp(screenScale, 0.5, 50.0); // Increased max scale
         
         // State-based size adjustments
         if (vState == 1.0) screenScale *= 1.2; // Hovered
@@ -193,9 +195,22 @@ export class PointRenderingEngine {
         } else if (vStyle < 4.5) {
           // SQUARE
           alpha = sdSquare(centeredUv, 0.5);
-        } else {
+        } else if (vStyle < 5.5) {
           // DIAMOND
           alpha = sdDiamond(centeredUv, 0.6);
+        } else if (vStyle < 6.5) {
+          // HANDLE_CORNER - Large white circle with border
+          float outerCircle = sdCircle(centeredUv, 0.7);
+          float innerCircle = 1.0 - smoothstep(0.5, 0.55, length(centeredUv));
+          alpha = max(outerCircle, innerCircle);
+        } else if (vStyle < 7.5) {
+          // HANDLE_EDGE - Rectangle handle
+          alpha = sdSquare(centeredUv, 0.4);
+        } else {
+          // HANDLE_ROTATION - Circle with rotation indication
+          float outerCircle = sdCircle(centeredUv, 0.6);
+          float innerDot = 1.0 - smoothstep(0.15, 0.2, length(centeredUv));
+          alpha = max(outerCircle, innerDot);
         }
         
         if (alpha < 0.1) discard;

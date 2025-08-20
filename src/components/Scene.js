@@ -6,8 +6,6 @@ import * as THREE from 'three';
 // Import scene components
 import EnhancedSubdivision from './EnhancedSubdivision';
 import InteractiveCorners from './InteractiveCorners';
-import MeasuringTape from './MeasuringTape';
-import MeasuringLine3D from './MeasuringLine3D';
 import IrregularPolygon3D from './IrregularPolygon3D';
 import CompassBearing from './CompassBearing';
 import BearingLine3D from './BearingLine3D';
@@ -249,6 +247,7 @@ export function Scene({
             onSelect={onSubdivisionSelect}
             onUpdate={onSubdivisionUpdate}
             darkMode={darkMode}
+            drawingMode={drawingMode}
           />
           
           {/* Interactive Corners */}
@@ -263,7 +262,7 @@ export function Scene({
             selectedCorner={selectedCorner}
             selectedEdge={selectedEdge}
             darkMode={darkMode}
-            showCorners={selectedSubdivision?.id === subdivision.id}
+            showCorners={drawingMode === 'select' && subdivision.id !== 'default-square' && subdivision.type === 'rectangle'}
             drawingMode={drawingMode}
           />
         </group>
@@ -289,14 +288,6 @@ export function Scene({
         />
       )}
 
-      {measurementData.startPoint && measurementData.endPoint && (
-        <MeasuringLine3D
-          startPoint={measurementData.startPoint}
-          endPoint={measurementData.endPoint}
-          distance={measurementData.distance}
-          darkMode={darkMode}
-        />
-      )}
 
       {/* Compass and Bearing */}
       {showCompassBearing && (

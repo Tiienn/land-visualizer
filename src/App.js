@@ -179,7 +179,6 @@ function LandVisualizer() {
   const [selectedComparison, setSelectedComparison] = useState(null);
   
   // UI state
-  const [showMeasuringTape, setShowMeasuringTape] = useState(false);
   const [showAreaCalculator, setShowAreaCalculator] = useState(false);
   const [showCompassBearing, setShowCompassBearing] = useState(false);
   const [showPresetSelector, setShowPresetSelector] = useState(false);
@@ -222,8 +221,6 @@ function LandVisualizer() {
   const [functionBoxData, setFunctionBoxData] = useState(null);
   
   // Measuring state
-  const [tapeMeasurements, setTapeMeasurements] = useState([]);
-  const [selectedTapeMeasurement, setSelectedTapeMeasurement] = useState(null);
   const [bearings, setBearings] = useState([]);
   
   // Terrain state
@@ -307,11 +304,6 @@ function LandVisualizer() {
   }, [drawingMode, selectedSubdivision, subdivisions, selectedCorner]);
 
   // Event handlers
-  const toggleMeasuringTape = useCallback(() => {
-    setShowMeasuringTape(prev => !prev);
-    setActiveTool(prev => prev === 'measuring' ? null : 'measuring');
-  }, []);
-
   const toggleCompassBearing = useCallback(() => {
     setShowCompassBearing(prev => !prev);
     setActiveTool(prev => prev === 'compass' ? null : 'compass');
@@ -348,8 +340,13 @@ function LandVisualizer() {
         subdivision.id === 'default-square' 
           ? {
               ...subdivision,
-              width: sideLength,
-              height: sideLength,
+              // Update corners for square shape based on new area
+              corners: [
+                { id: 'corner-1', x: -sideLength/2, z: -sideLength/2 }, // Bottom-left
+                { id: 'corner-2', x: sideLength/2, z: -sideLength/2 },  // Bottom-right
+                { id: 'corner-3', x: sideLength/2, z: sideLength/2 },   // Top-right
+                { id: 'corner-4', x: -sideLength/2, z: sideLength/2 }   // Top-left
+              ],
               area: areaInSquareMeters,
               label: `${inputArea} ${areaInputUnit}`
             }
@@ -388,8 +385,13 @@ function LandVisualizer() {
         subdivision.id === 'default-square' 
           ? {
               ...subdivision,
-              width: newSideLength,
-              height: newSideLength,
+              // Update corners for square shape based on new total area
+              corners: [
+                { id: 'corner-1', x: -newSideLength/2, z: -newSideLength/2 }, // Bottom-left
+                { id: 'corner-2', x: newSideLength/2, z: -newSideLength/2 },  // Bottom-right
+                { id: 'corner-3', x: newSideLength/2, z: newSideLength/2 },   // Top-right
+                { id: 'corner-4', x: -newSideLength/2, z: newSideLength/2 }   // Top-left
+              ],
               area: newTotalArea,
               label: `Total: ${newTotalArea.toFixed(0)} m²`
             }
@@ -414,8 +416,13 @@ function LandVisualizer() {
         subdivision.id === 'default-square' 
           ? {
               ...subdivision,
-              width: dimensions.width,
-              height: dimensions.length,
+              // Update corners for rectangle shape based on preset dimensions
+              corners: [
+                { id: 'corner-1', x: -dimensions.width/2, z: -dimensions.length/2 }, // Bottom-left
+                { id: 'corner-2', x: dimensions.width/2, z: -dimensions.length/2 },  // Bottom-right
+                { id: 'corner-3', x: dimensions.width/2, z: dimensions.length/2 },   // Top-right
+                { id: 'corner-4', x: -dimensions.width/2, z: dimensions.length/2 }   // Top-left
+              ],
               area: area,
               label: name
             }
@@ -458,20 +465,6 @@ function LandVisualizer() {
 
 
   // Add measurement functions
-  const addTapeMeasurement = useCallback((measurement) => {
-    setTapeMeasurements(prev => [...prev, { ...measurement, id: Date.now() }]);
-  }, []);
-
-  const deleteTapeMeasurement = useCallback((id) => {
-    setTapeMeasurements(prev => prev.filter(m => m.id !== id));
-    if (selectedTapeMeasurement?.id === id) {
-      setSelectedTapeMeasurement(null);
-    }
-  }, [selectedTapeMeasurement]);
-
-  const selectTapeMeasurement = useCallback((measurement) => {
-    setSelectedTapeMeasurement(measurement);
-  }, []);
 
   // Polyline drawing functions
   const finishPolylineDrawing = useCallback(() => {
@@ -720,8 +713,11 @@ function LandVisualizer() {
 
   // Enhanced drawing handlers with performance optimization
   const handlePointerDown = useCallback((event) => {
+    console.log('=== RECTANGLE DRAWING DEBUG ===');
+    console.log('handlePointerDown called', { drawingMode, event });
     
     if (!drawingMode || drawingMode === 'select') {
+      console.log('Drawing cancelled - wrong mode', { drawingMode });
       return;
     }
     
@@ -812,6 +808,11 @@ function LandVisualizer() {
           order: maxOrder + 1 // New layers appear on top
         };
         
+        console.log('=== CREATING NEW RECTANGLE SUBDIVISION ===');
+        console.log('New subdivision:', newSubdivision);
+        console.log('Subdivision type:', newSubdivision.type);
+        console.log('Current subdivisions count:', subdivisions.length);
+        
         // Use startTransition to batch all state updates together
         startTransition(() => {
           // Clear all drawing states first (non-trackable state)
@@ -825,6 +826,8 @@ function LandVisualizer() {
           updateTrackableState({
             subdivisions: [...subdivisions, newSubdivision]
           });
+          
+          console.log('Subdivision added to state, new count should be:', subdivisions.length + 1);
         });
         
         // Additional safeguard: Clear preview again after a short delay to handle any race conditions
@@ -890,7 +893,11 @@ function LandVisualizer() {
   };
 
   // Infinite Canvas 3D Scene Component - Optimized
-  const Scene = () => {
+  const Scene = ({ 
+    onPointerDown, 
+    onPointerMove, 
+    onPointerUp 
+  }) => {
     const selectedComparisonData = comparisonOptions.find(c => c.id === selectedComparison);
     const { camera } = useThree();
     
@@ -1013,21 +1020,21 @@ function LandVisualizer() {
               if (event.nativeEvent.button === 0) {
                 event.stopPropagation();
                 event.nativeEvent.stopPropagation();
-                handlePointerDown(event);
+                onPointerDown(event);
               }
             }}
             onPointerMove={(event) => {
               if (isDrawing) {
                 event.stopPropagation();
                 event.nativeEvent.stopPropagation();
-                handlePointerMove(event);
+                onPointerMove(event);
               }
             }}
             onPointerUp={(event) => {
               if (isDrawing && event.nativeEvent.button === 0) {
                 event.stopPropagation();
                 event.nativeEvent.stopPropagation();
-                handlePointerUp(event);
+                onPointerUp(event);
               }
             }}
           >
@@ -1046,7 +1053,7 @@ function LandVisualizer() {
               if (event.nativeEvent.button === 0) {
                 event.stopPropagation();
                 event.nativeEvent.stopPropagation();
-                handlePointerDown(event);
+                onPointerDown(event);
               }
             }}
           >
@@ -1480,8 +1487,6 @@ Professional survey integration supports data import from total stations, GPS un
           darkMode={darkMode}
           drawingMode={drawingMode}
           setDrawingMode={handleDrawingModeChange}
-          showMeasuringTape={showMeasuringTape}
-          toggleMeasuringTape={toggleMeasuringTape}
           showDimensions={showDimensions}
           toggleDimensions={toggleDimensions}
           showAreaCalculator={showAreaCalculator}
@@ -1551,13 +1556,6 @@ Professional survey integration supports data import from total stations, GPS un
         darkMode={darkMode}
         activeTool={activeTool}
         onPropertiesPanelExpansionChange={setIsPropertiesPanelExpanded}
-        measuringTapeActive={showMeasuringTape}
-        toggleMeasuringTape={toggleMeasuringTape}
-        tapeMeasurements={tapeMeasurements}
-        addTapeMeasurement={addTapeMeasurement}
-        deleteTapeMeasurement={deleteTapeMeasurement}
-        selectedTapeMeasurement={selectedTapeMeasurement}
-        selectTapeMeasurement={selectTapeMeasurement}
         compassBearingActive={showCompassBearing}
         toggleCompassBearing={toggleCompassBearing}
         bearings={bearings}
@@ -1617,7 +1615,11 @@ Professional survey integration supports data import from total stations, GPS un
             performance={{ min: 0.5 }} // Minimum performance threshold
             gl={{ preserveDrawingBuffer: true }}
           >
-            <Scene />
+            <Scene 
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove} 
+              onPointerUp={handlePointerUp}
+            />
           </Canvas>
         </div>
       </div>
@@ -1682,7 +1684,6 @@ Professional survey integration supports data import from total stations, GPS un
       {/* Keyboard Navigation */}
       <KeyboardNavigation
         darkMode={darkMode}
-        toggleMeasuringTape={() => setShowMeasuringTape(prev => !prev)}
         toggleAreaCalculator={() => setShowAreaCalculator(prev => !prev)}
         toggleCompassBearing={toggleCompassBearing}
         toggleTerrain={() => setTerrainEnabled(prev => !prev)}

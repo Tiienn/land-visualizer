@@ -76,7 +76,7 @@ Invoke the 'design-review' agent for thorough design validation when:
 Each major directory contains its own CLAUDE.md file with detailed documentation:
 
 - **`src/components/`** - React components ([see CLAUDE.md](src/components/CLAUDE.md))
-  - Entry Points: AccessibleRibbon, ErrorBoundary, AccessibilityUtils, ScreenReaderSupport, FocusManagement
+  - Entry Points: AccessibleRibbon, ErrorBoundary, AccessibilityUtils, ScreenReaderSupport, FocusManagement, Scene
 - **`src/services/`** - Business logic and utilities ([see CLAUDE.md](src/services/CLAUDE.md))
   - Entry Points: professionalImportExport, landCalculations, areaPresets
 - **`src/hooks/`** - Custom React hooks ([see CLAUDE.md](src/hooks/CLAUDE.md))
@@ -85,6 +85,8 @@ Each major directory contains its own CLAUDE.md file with detailed documentation
   - Entry Points: design-principles.md, style-guide.md
 - **`src/styles/`** - CSS design system ([see CLAUDE.md](src/styles/CLAUDE.md))
   - Entry Points: variables.css (complete design token system)
+- **`src/points/`** - Point rendering system for professional CAD-like visualization
+  - Entry Points: PointRenderer, MarkerGeometries, ScreenSpaceOptimization
 
 ### **Configuration & Build Files**
 - **`package.json`** - Project dependencies, scripts, and metadata
@@ -92,6 +94,7 @@ Each major directory contains its own CLAUDE.md file with detailed documentation
 - **`public/manifest.json`** - PWA configuration
 - **`.claude/`** - Claude Code configuration
   - **`agents/design-review.md`** - Design review agent configuration
+  - **`agents/qa-testing-specialist.md`** - QA testing specialist agent
   - **`commands/`** - Custom commands (lyra, analyze-codebase, update-claudemd, ultrathink)
 
 ### **Documentation Files**
@@ -100,6 +103,7 @@ Each major directory contains its own CLAUDE.md file with detailed documentation
 - **`IMPLEMENTATION_GUIDE.md`** - Accessibility implementation guide
 - **`PAYPAL_SETUP.md`** - PayPal integration documentation
 - **`SEO_FIXES_SUMMARY.md`** - SEO optimization summary
+- **`CHANGELOG.md`** - Detailed change history
 
 ## Architecture Overview
 
@@ -120,17 +124,17 @@ This is a 3D land visualization application built with React and Three.js that a
 
 #### Core Application
 - **App.js**: Main application entry point with routing and core state management
-- **LandVisualizer**: Primary component managing state and UI (referenced in App.js)
+- **Scene.js**: Main 3D scene component managing all 3D rendering, lighting, and scene organization
 
 #### UI Components
 - **Ribbon.js**: Top toolbar with organized tool sections (Area Configuration, Drawing Tools, Measurement Tools, Corner Controls, View Controls, Export)
 - **AccessibleRibbon.js**: Enhanced accessible version with keyboard navigation and ARIA labels
-- **LeftSidebar.js**: Left panel with area inputs and controls
-- **PropertiesPanel.js**: Right panel for editing selected objects
+- **LeftSidebar.js**: Left panel with area inputs, layer management, and controls
+- **PropertiesPanel.js**: Right panel for editing selected objects with advanced property controls
 - **LayerPanel.js**: Layer management and visibility controls
 - **Toast.js**: Notification system for user feedback
 
-#### Accessibility Components (NEW)
+#### Accessibility Components
 - **AccessibilityUtils.js**: Core accessibility utilities, components, and hooks
 - **AccessibleThreeJSControls.js**: Keyboard navigation for 3D scene with WASD controls
 - **ScreenReaderSupport.js**: Comprehensive screen reader announcements and support
@@ -138,18 +142,18 @@ This is a 3D land visualization application built with React and Three.js that a
 - **ErrorBoundary.js**: Error boundaries with WebGL compatibility checks
 
 #### 3D Visualization Components
-- **EnhancedSubdivision.js**: Advanced subdivision rendering with editable labels
-- **InteractiveCorners.js**: Corner editing system for subdivisions
+- **Scene.js**: Centralized 3D scene management component
+- **EnhancedSubdivision.js**: Advanced subdivision rendering with editable labels and smooth dragging
+- **InteractiveCorners.js**: Enhanced corner editing system for subdivisions with intuitive drag-and-drop
 - **EnhancedCameraController.js**: Advanced 3D camera controls
 - **OptimizedRenderer.js**: Performance-optimized rendering system
 - **EnhancedEventHandler.js**: Enhanced pointer and interaction handling
 
-#### Measurement & Drawing Tools
-- **MeasuringTape.js**: Distance measurement tool
-- **MeasuringLine3D.js**: 3D line measurement component
+#### Drawing & Measurement Tools
 - **IrregularPolygon3D.js**: Irregular shape drawing and area calculation
 - **DimensionLines.js**: Dimension annotation system
 - **AreaCalculator.js**: Area calculation utilities
+- **AreaInputModal.js**: Modal interface for area input
 
 #### Surveying & Navigation
 - **CompassBearing.js**: Bearing calculation and display
@@ -157,7 +161,7 @@ This is a 3D land visualization application built with React and Three.js that a
 - **SimpleCompass.js**: Compass widget for navigation
 - **TerrainElevation.js**: Elevation and terrain features
 
-#### Professional Services (NEW)
+#### Professional Services
 - **professionalImportExport.js**: Professional surveying data import/export service
   - DXF export with AutoCAD compatibility
   - CSV/GeoJSON import with coordinate system support
@@ -201,7 +205,7 @@ This is a 3D land visualization application built with React and Three.js that a
 - **React Scripts** for build tooling
 - **Web Vitals** for performance monitoring
 
-### Accessibility Features (NEW)
+### Accessibility Features
 
 #### Keyboard Navigation
 - **WASD Controls**: Navigate 3D camera with keyboard
@@ -227,7 +231,7 @@ The application uses React's built-in state management with modular component st
 - `units`: Array of area values with their respective units
 - `subdivisions`: Array of drawn land subdivisions with position, size, and metadata
 - `selectedComparison`: Currently selected comparison object for visualization
-- `drawingMode`: Controls interaction mode ('rectangle', 'polygon', 'select', 'measure', or null)
+- `drawingMode`: Controls interaction mode ('rectangle', 'polygon', 'polyline', 'select', 'measure', or null)
 - `selectedObject`: Currently selected subdivision or object for editing
 - `layers`: Layer visibility and management state
 - `cameraState`: 3D camera position and orientation
@@ -245,13 +249,14 @@ Configuration is encoded in URL parameters using Base64 encoding:
 
 ### 3D Rendering Architecture
 
-The 3D scene structure:
+The 3D scene structure (managed by Scene.js):
 - **Ground plane**: Large grass-colored base
 - **Grid**: Reference grid with 5m cells and 25m sections
 - **Main area**: Blue transparent plane representing the total land area
 - **Subdivisions**: Colored planes with borders and labels
 - **Comparison objects**: Overlaid reference objects for size comparison
 - **Drawing plane**: Invisible interaction surface for subdivision creation
+- **Interactive corners**: Draggable corner handles for subdivision editing
 
 ### Drawing & Measurement System
 
@@ -259,16 +264,15 @@ The 3D scene structure:
 Interactive drawing uses Three.js raycasting:
 - Pointer events on invisible plane above the land
 - Real-time preview during drawing
-- Support for rectangles and irregular polygons
+- Support for rectangles, polylines, and irregular polygons
 - Minimum area threshold to prevent tiny subdivisions
 - Automatic subdivision labeling and color assignment
-- Corner editing system for precise adjustments
+- Enhanced corner editing system with smooth dragging
 
-#### Measurement Tools
-Professional surveying capabilities:
-- Distance measurement with measuring tape tool
+#### Professional Features
+- Distance measurement capabilities removed in favor of integrated tools
 - Bearing calculation and compass navigation
-- 3D line measurements with elevation
+- 3D scene management centralized in Scene.js
 - Dimension annotations and labels
 - Area calculations for irregular shapes
 - Terrain elevation mapping
@@ -280,7 +284,7 @@ Centralized conversion factors to square meters:
 - Traditional units: arpent, perche, toise
 - All calculations normalized to square meters internally
 
-### Professional Import/Export Features (NEW)
+### Professional Import/Export Features
 
 #### Supported Import Formats
 - **CSV**: Coordinate data with automatic column detection
@@ -342,7 +346,25 @@ This application is designed as a professional land measurement and visualizatio
 - **Traditional Units**: Support for both metric and traditional land measurement units
 - **Professional Documentation**: Comprehensive context files and implementation guides
 
-## Recent Updates (Updated: 2025-08-17)
+## Recent Updates (Updated: 2025-08-20)
+
+### Component Architecture Improvements
+- **Scene.js Component**: Created centralized 3D scene management component that orchestrates all 3D rendering
+- **Removed Deprecated Components**: Deleted MeasuringLine3D.js and MeasuringTape.js in favor of integrated measurement tools
+- **Enhanced Corner Editing**: Improved InteractiveCorners.js with smooth dragging and better user feedback
+
+### UI/UX Enhancements
+- **Polyline Drawing**: Implemented polyline drawing mode for creating irregular subdivisions
+- **Enhanced Properties Panel**: Improved property editing interface with advanced controls
+- **Subdivision Interactions**: Fixed subdivision interaction issues and improved selection behavior
+- **Corner Controls**: Added dedicated corner control section in ribbon interface
+
+### Recent Commit History
+- **bc443b0**: Add comprehensive accessibility implementation and professional development infrastructure
+- **3545405**: Reorganize ribbon UI: move corner controls to dedicated section
+- **ada3ba1**: Implement corner editing system for default subdivision with smooth dragging
+- **98938ab**: Implement polyline drawing and fix subdivision interaction issues
+- **241eda6**: Implement comprehensive layer management system with smooth drag functionality
 
 ### Major Accessibility Implementation
 - **Complete Accessibility Overhaul**: Added comprehensive WCAG 2.1 AA compliance
@@ -362,11 +384,6 @@ This application is designed as a professional land measurement and visualizatio
 - **Context Documentation**: Design principles and style guide in `/context/` folder
 - **Visual Consistency**: Standardized color palette and typography system
 
-### UI/UX Improvements
-- **Ribbon Reorganization**: Moved corner editing tools (Add Corner, Delete Corner) from Drawing Tools to dedicated Corner Controls section
-- **Tool Organization**: Improved logical grouping of related functionality in the ribbon interface
-- **Icon Consistency**: Used proper corner control icons (CornerDownRight, CornerUpLeft) for corner editing tools
-
 ### Development Infrastructure
 - **Command System**: Added `/lyra`, `/analyze-codebase`, `/update-claudemd`, `/ultrathink` commands
 - **Agent System**: Design review agent and QA testing specialist for comprehensive validation
@@ -377,10 +394,16 @@ This application is designed as a professional land measurement and visualizatio
   - `src/context/` - Design principles and style guide documentation
   - `src/styles/` - CSS variables and design system
   - `src/services/professionalImportExport.js` - Professional surveying services
+  - `src/points/` - Professional CAD-style point rendering system
   - `.claude/agents/` - Specialized review agents
   - `.claude/commands/` - Development workflow commands
 
 ## Important Notes for Developers
+
+### Component Changes
+- **Use Scene.js** for all 3D scene rendering instead of inline scene code
+- **Measurement Tools**: MeasuringLine3D.js and MeasuringTape.js have been removed - use integrated measurement features in Scene.js
+- **Corner Editing**: Use InteractiveCorners.js for subdivision corner manipulation
 
 ### Accessibility Requirements
 - Always use the accessibility components from `src/components/AccessibilityUtils.js`
@@ -403,3 +426,10 @@ This application is designed as a professional land measurement and visualizatio
 - Run design review agent before finalizing UI changes
 - Test with Playwright MCP tools for visual validation
 - Validate accessibility with screen readers (NVDA, JAWS, VoiceOver)
+
+### Current Development Status
+The application is in active development with recent focus on:
+- Improving subdivision interaction and editing capabilities
+- Enhancing the properties panel for better user control
+- Refining the polyline drawing feature for irregular shapes
+- Optimizing the 3D scene rendering architecture

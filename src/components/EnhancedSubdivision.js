@@ -31,8 +31,18 @@ export const EnhancedSubdivision = React.memo(({
 
   // Handle subdivision selection - only works in normal mode and select mode  
   const handleSubdivisionClick = useCallback((event) => {
+    console.log('=== SUBDIVISION CLICK DEBUG ===');
+    console.log('Subdivision ID:', subdivision.id);
+    console.log('Drawing Mode:', drawingMode);
+    console.log('Is Dragging:', isDragging);
+    console.log('Mouse Down:', mouseDown);
+    console.log('Event:', event);
+    
     // Don't handle click if we just finished dragging or are currently dragging
-    if (isDragging || mouseDown) return;
+    if (isDragging || mouseDown) {
+      console.log('Returning early due to dragging/mouseDown');
+      return;
+    }
     
     // Only handle selection when NOT in drawing mode (rectangle, polyline, etc.)
     if (!drawingMode || drawingMode === 'select') {

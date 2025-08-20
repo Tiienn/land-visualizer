@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Settings, Ruler, Mountain, Compass, ChevronLeft, ChevronRight, Edit, Square as SquareIcon, MousePointer, Edit3 } from 'lucide-react';
-import MeasuringTape from './MeasuringTape';
 import CompassBearing from './CompassBearing';
 import { TerrainControls } from './TerrainElevation';
 
@@ -12,15 +11,6 @@ const PropertiesPanel = ({
   
   // Panel expansion callback
   onPropertiesPanelExpansionChange,
-  
-  // Measuring Tape props
-  measuringTapeActive,
-  toggleMeasuringTape,
-  tapeMeasurements,
-  addTapeMeasurement,
-  deleteTapeMeasurement,
-  selectedTapeMeasurement,
-  selectTapeMeasurement,
   
   // Compass props
   compassBearingActive,
@@ -86,12 +76,6 @@ const PropertiesPanel = ({
   // Define property sections similar to left sidebar
   const propertySections = [
     {
-      id: 'measuring',
-      label: 'Measuring',
-      icon: Ruler,
-      description: 'Measuring tape tools'
-    },
-    {
       id: 'compass',
       label: 'Compass',
       icon: Compass,
@@ -121,20 +105,6 @@ const PropertiesPanel = ({
     const currentSection = activeSection || activeTool;
     
     switch (currentSection) {
-      case 'measuring':
-        return (
-          <MeasuringTape
-            measurements={tapeMeasurements}
-            onAddMeasurement={addTapeMeasurement}
-            onDeleteMeasurement={deleteTapeMeasurement}
-            selectedMeasurement={selectedTapeMeasurement}
-            onSelectMeasurement={selectTapeMeasurement}
-            darkMode={darkMode}
-            isActive={measuringTapeActive}
-            onToggle={toggleMeasuringTape}
-          />
-        );
-      
       case 'compass':
         return (
           <CompassBearing
@@ -444,8 +414,6 @@ const PropertiesPanel = ({
 
   const getToolIcon = () => {
     switch (activeTool) {
-      case 'measuring':
-        return <Ruler className="w-5 h-5" />;
       case 'compass':
         return <Compass className="w-5 h-5" />;
       case 'terrain':
@@ -459,8 +427,6 @@ const PropertiesPanel = ({
 
   const getToolTitle = () => {
     switch (activeTool) {
-      case 'measuring':
-        return 'Measuring Tape';
       case 'compass':
         return 'Compass & Bearing';
       case 'terrain':
