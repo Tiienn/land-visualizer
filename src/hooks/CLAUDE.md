@@ -1,4 +1,4 @@
-# Hooks Directory: Advanced State Management
+# Hooks Directory: Intuitive State Management
 
 ## 🤖 Claude Flow v2.0.0 Alpha Integration
 

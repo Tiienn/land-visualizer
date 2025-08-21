@@ -1,177 +1,124 @@
-# Land Visualizer - Professional 3D Land Visualization Tool
+# Land Visualizer - Visual Land Size Calculator & Planner
 
-**Powered by Claude Flow v2.0.0 Alpha with Hive-Mind Intelligence**
+**Instantly visualize and understand any property size - no technical skills required.**
 
-A professional 3D land visualization application built with React Three Fiber that enables precise land measurement, subdivision design, and surveying workflows. Enhanced with Claude Flow's advanced AI coordination for intelligent development.
+**Powered by Claude Flow v2.0.0 Alpha with Intelligent AI Development**
 
-## 🎯 Key Features
+## 🌍 What is Land Visualizer?
 
-- **3D Land Visualization**: Interactive React Three Fiber scenes with professional-grade rendering
-- **Precision Surveying Tools**: Distance measurement, bearing calculation, and area computation
-- **Subdivision Design**: Draw irregular polygons with corner editing and real-time calculations
-- **Professional Export**: Excel, PDF, DXF, and QR code sharing capabilities
-- **Unit Conversion**: Support for metric, imperial, and traditional surveying units
-- **Visual Comparisons**: Contextual size references with familiar objects
-- **Full Accessibility**: WCAG 2.1 AA compliance with keyboard navigation and screen reader support
-- **AI-Powered Development**: Claude Flow hive-mind coordination with 64+ specialized agents
+Land Visualizer transforms abstract land measurements into clear, visual representations that anyone can understand. Whether you're buying property, planning a development, or simply curious about land dimensions, our intuitive web platform makes it easy to grasp exactly how big any area really is.
 
-## 🤖 Claude Flow Integration
+## ✨ Key Features
 
-This project is enhanced with **Claude Flow v2.0.0 Alpha** featuring:
+### For Everyone
+- **Smart Area Input**: Enter your land size in any unit - we'll handle the conversion
+- **Visual Comparisons**: See your land compared to soccer fields, houses, parking spaces, and more
+- **Custom Shape Drawing**: Sketch your actual property boundaries with simple click-and-drag tools
+- **Instant Visualization**: Watch your land come to life in interactive 3D
+- **Zero Learning Curve**: No CAD knowledge or software installation needed
+- **Works Everywhere**: Perfect on desktop, tablet, and mobile devices
 
-- **Hive-Mind Intelligence**: Queen-led AI coordination with specialized worker agents
-- **SPARC Methodology**: Systematic development with Specification, Pseudocode, Architecture, Refinement, Completion
-- **64 Specialized Agents**: Automated code review, testing, architecture, and performance optimization
-- **Neural Learning**: Continuous improvement from successful operations
-- **Advanced Hooks**: Automated pre/post operation workflows
-- **Memory Persistence**: Cross-session context with SQLite databases
-
-### Quick AI Coordination
-
-```bash
-# Start intelligent development swarm
-npx claude-flow@alpha swarm "enhance 3D rendering performance" --claude
-
-# Launch hive-mind for complex features
-npx claude-flow@alpha hive-mind spawn "implement terrain elevation" --claude
-
-# Use SPARC methodology for new features
-npx claude-flow@alpha sparc tdd "add measurement grid system"
-```
-
-## 🚀 Development Commands
-
-### `npm start`
-
-Starts the development server with hot reloading.
-Open [http://localhost:3000](http://localhost:3000) to view the land visualizer.
-
-**Features include:**
-- Interactive 3D land visualization
-- Real-time subdivision drawing
-- Professional measurement tools
-- Visual size comparisons
-- Export capabilities
-
-### `npm test`
-
-Runs the comprehensive test suite including:
-- Component unit tests
-- 3D rendering tests
-- Calculation accuracy tests
-- Accessibility compliance tests
-- Integration tests
-
-### `npm run build`
-
-Builds the optimized production bundle with:
-- Three.js optimization
-- Code splitting for better performance
-- Progressive Web App capabilities
-- SEO optimization
-- Accessibility enhancements
-
-## 🧠 AI Development Commands
-
-### Claude Flow Integration
-
-```bash
-# Initialize hive-mind coordination
-npx claude-flow@alpha hive-mind spawn "project objective" --claude
-
-# Quick task coordination
-npx claude-flow@alpha swarm "implement feature" --claude
-
-# SPARC methodology workflows
-npx claude-flow@alpha sparc tdd "feature description"
-
-# Memory and session management
-npx claude-flow@alpha memory stats
-npx claude-flow@alpha memory query "search term"
-```
-
-### Available SPARC Commands
-
-- `/sparc` - Complete SPARC methodology workflow
-- `/sparc-architect` - System architecture design
-- `/sparc-code` - Implementation with best practices
-- `/sparc-tdd` - Test-driven development
-- `/sparc-security-review` - Security analysis
-- `/sparc-docs-writer` - Documentation generation
-
-## 📚 Documentation
-
-### Core Documentation
-- **[CLAUDE.md](./CLAUDE.md)** - Main development guidance with Claude Flow integration
-- **[IMPLEMENTATION_GUIDE.md](./IMPLEMENTATION_GUIDE.md)** - Accessibility implementation guide
-- **[CHANGELOG.md](./CHANGELOG.md)** - Detailed change history
-- **[PAYPAL_SETUP.md](./PAYPAL_SETUP.md)** - PayPal integration documentation
-
-### Component Documentation
-- **[src/components/CLAUDE.md](./src/components/CLAUDE.md)** - React component guidelines
-- **[src/services/CLAUDE.md](./src/services/CLAUDE.md)** - Business logic and utilities
-- **[src/hooks/CLAUDE.md](./src/hooks/CLAUDE.md)** - Custom React hooks
-- **[src/context/CLAUDE.md](./src/context/CLAUDE.md)** - Design system documentation
-
-### Architecture
-
-**Technology Stack:**
-- **Frontend**: React 19, React Three Fiber, Three.js
-- **Styling**: Tailwind CSS with custom design system
-- **3D Graphics**: @react-three/fiber, @react-three/drei
-- **Export**: jsPDF, XLSX, QR code generation
-- **AI Coordination**: Claude Flow v2.0.0 Alpha with hive-mind intelligence
-
-**Key Components:**
-- **Scene.js**: Centralized 3D scene management
-- **AccessibleRibbon.js**: Keyboard-navigable toolbar
-- **EnhancedSubdivision.js**: Interactive subdivision editing
-- **ExpandableVisualComparisons.js**: Size comparison system
-- **professionalImportExport.js**: Professional surveying data handling
-
-## 🛠️ Professional Features
-
-- **Surveying Tools**: Professional-grade measurement and bearing calculation
-- **CAD-like Interface**: Precision drawing with AutoCAD-style point markers
-- **Multi-format Export**: Excel, PDF, DXF, and QR code sharing
-- **Legal Documentation**: Metes and bounds descriptions
-- **Coordinate Systems**: WGS84, UTM, State Plane support
-- **Traditional Units**: Support for perches, roods, chains, toises, arpent
-- **Full Accessibility**: WCAG 2.1 AA compliant
-
-## 🤖 AI-Powered Development
-
-**64 Specialized Agents Available:**
-- **Core**: coder, reviewer, tester, planner, researcher
-- **Swarm**: hierarchical-coordinator, mesh-coordinator, adaptive-coordinator
-- **GitHub**: pr-manager, code-review-swarm, issue-tracker, release-manager
-- **SPARC**: specification, pseudocode, architecture, refinement
-- **Performance**: perf-analyzer, memory-coordinator, task-orchestrator
-
-**Automated Workflows:**
-- Pre/post operation hooks for quality assurance
-- Neural pattern learning from successful operations
-- Cross-session memory with SQLite persistence
-- Real-time performance monitoring and optimization
+### Professional Capabilities
+- **Accurate Measurements**: Reliable calculations for planning purposes
+- **Multiple Export Options**: Save as PDF, Excel, or share via QR code
+- **Unit Flexibility**: Switch between metric and imperial with one click
+- **Full Accessibility**: WCAG 2.1 AA compliant for inclusive design
+- **3D Exploration**: Walk through your property in immersive 3D
 
 ## 🚀 Getting Started
 
-1. **Clone and install:**
-   ```bash
-   npm install
-   npm start
-   ```
+### Quick Start (No Installation)
+Visit our live demo at [your-domain.com] to start visualizing land immediately.
 
-2. **Initialize Claude Flow (optional):**
-   ```bash
-   npx claude-flow@alpha init --force
-   ```
+### Local Development
+```bash
+# Clone and install
+git clone https://github.com/yourusername/land-visualizer.git
+cd land-visualizer
+npm install
 
-3. **Start development with AI coordination:**
-   ```bash
-   npx claude-flow@alpha hive-mind spawn "enhance land visualizer" --claude
-   ```
+# Start the application
+npm start
+```
+
+Open [http://localhost:3000](http://localhost:3000) to start visualizing!
+
+## 💡 Perfect For
+
+- **Property Buyers**: Understand exactly what you're purchasing before viewing
+- **Homeowners**: Plan landscaping, additions, or outdoor projects with confidence
+- **Real Estate Agents**: Create clear visualizations that help clients understand property sizes
+- **Small Developers**: Quick feasibility checks without expensive software
+- **Students & Educators**: Interactive teaching tool for understanding area and scale
+
+## 🎯 How It Works
+
+1. **Enter Your Land Size**: Type in any measurement (2000 m², 0.5 acres, etc.)
+2. **Choose Your Shape**: Draw a custom boundary or select from presets
+3. **Add Comparisons**: See how many tennis courts or houses fit on your land
+4. **Explore in 3D**: Walk through your property from any angle
+5. **Save and Share**: Export your visualization for presentations or discussions
+
+## 🛠️ Technology
+
+Built with modern web technologies for the best user experience:
+- **React 19**: Lightning-fast, responsive interface
+- **Three.js**: Smooth 3D graphics that work in any browser
+- **Mobile-First Design**: Perfect experience on all devices
+- **Accessibility-First**: Usable by everyone, including keyboard and screen reader users
+
+## 🤖 AI-Enhanced Development
+
+This project leverages **Claude Flow v2.0.0 Alpha** for intelligent development:
+
+### For Developers
+- **60+ Specialized AI Agents**: Automated testing, code review, and optimization
+- **SPARC Methodology**: Systematic development workflow
+- **Intelligent Coordination**: AI-powered feature implementation
+- **Continuous Learning**: Neural patterns improve from successful operations
+
+### Quick AI Commands (For Contributors)
+```bash
+# Enhance user experience
+npx claude-flow@alpha swarm "improve mobile responsiveness" --claude
+
+# Add new features
+npx claude-flow@alpha sparc tdd "add area comparison presets"
+
+# Optimize performance
+npx claude-flow@alpha hive-mind spawn "optimize 3D rendering" --claude
+```
+
+## 📚 Documentation
+
+### For Users
+- **[Getting Started Guide](./docs/getting-started.md)** - Learn the basics in 5 minutes
+- **[Visual Comparisons Guide](./docs/comparisons.md)** - Understanding size references
+- **[Export Options](./docs/export.md)** - Saving and sharing your visualizations
+
+### For Developers
+- **[CLAUDE.md](./CLAUDE.md)** - Development guidelines and AI coordination
+- **[Technical Architecture](./docs/architecture.md)** - System design and components
+- **[Contributing Guide](./CONTRIBUTING.md)** - How to contribute to the project
+
+## 🌟 Coming Soon
+
+- **3D Building Library**: Drag-and-drop houses, sheds, and structures
+- **Document Scanner**: Upload site plans for automatic digitization
+- **Advanced Planning Tools**: Test different layout configurations
+- **Collaboration Features**: Share and edit projects with others
+- **Historical Overlays**: See how land use has changed over time
+
+## 🤝 Contributing
+
+We welcome contributions! Whether you're fixing bugs, adding features, or improving documentation, check out our [Contributing Guide](./CONTRIBUTING.md) to get started.
 
 ## 📄 License
 
-MIT License - Professional land visualization tool with AI-powered development capabilities.
+MIT License - Free to use for personal and commercial projects.
+
+---
+
+**Start visualizing your land in seconds - no downloads, no tutorials, just clarity.**
+
+[Live Demo](https://your-domain.com) | [Documentation](./docs) | [Report an Issue](https://github.com/yourusername/land-visualizer/issues)

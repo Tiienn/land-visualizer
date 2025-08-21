@@ -120,21 +120,24 @@ const LeftSidebar = ({
 
   // Handle section change and notify parent
   const handleSectionChange = (sectionId) => {
-    const newActiveSection = activeSection === sectionId ? null : sectionId;
-    setActiveSection(newActiveSection);
+    // Prevent infinite loops by checking if the section is actually changing
+    if (activeSection === sectionId) {
+      // If clicking the same section, just toggle it off
+      setActiveSection(null);
+      return;
+    }
     
-    // Auto-expand sidebar when a section is selected, collapse when deselected
-    if (newActiveSection && !isLeftSidebarExpanded) {
-      // Expand when selecting a new section
-      onToggleLeftSidebar();
-    } else if (!newActiveSection && isLeftSidebarExpanded) {
-      // Collapse when deselecting (re-clicking same icon)
+    // Set the new active section
+    setActiveSection(sectionId);
+    
+    // Only expand sidebar if it's not already expanded
+    if (sectionId && !isLeftSidebarExpanded) {
       onToggleLeftSidebar();
     }
     
-    // Notify parent about expansion state
+    // Notify parent about expansion state if callback exists
     if (onSidebarExpansionChange) {
-      onSidebarExpansionChange(newActiveSection !== null);
+      onSidebarExpansionChange(sectionId !== null);
     }
   };
 

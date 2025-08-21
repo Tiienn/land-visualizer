@@ -18,6 +18,9 @@ import EnhancedSubdivision from './components/EnhancedSubdivision';
 import InteractiveCorners from './components/InteractiveCorners';
 import KeyboardNavigation from './components/KeyboardShortcuts';
 import EnterDimensionsModal from './components/EnterDimensionsModal';
+import { useWebGLCheck, WebGLFallback } from './components/WebGLCheck';
+import AdaptiveScene from './components/AdaptiveScene';
+import TestScene from './components/TestScene';
 
 // Import enhanced performance components
 import EnhancedCameraController from './components/EnhancedCameraController';
@@ -92,6 +95,9 @@ function useSEO(meta) {
 
 // Main Land Visualizer Component
 function LandVisualizer() {
+  // Check WebGL support
+  const webglStatus = useWebGLCheck();
+  
   // SEO and expandable content state
   const [isExpanded, setIsExpanded] = useState(false);
   
@@ -229,7 +235,7 @@ function LandVisualizer() {
   
   // Terrain state
   const [terrainEnabled, setTerrainEnabled] = useState(false);
-  const [terrainPreset, setTerrainPreset] = useState('hills');
+  const [terrainPreset, setTerrainPreset] = useState('flat');
   const [terrainOpacity, setTerrainOpacity] = useState(0.5);
   
   // Performance monitoring state
@@ -1685,31 +1691,61 @@ Professional survey integration supports data import from total stations, GPS un
         isPropertiesPanelExpanded ? 'mr-80' : 'mr-20'
       } transition-all duration-200`}>
         <div className="h-[80vh] min-h-[600px]">
-          {/* 3D Canvas */}
-          <Canvas
-            camera={{ 
-              position: [50, 50, 50], 
-              fov: 50,
-              near: 0.1,
-              far: 2000,
-              up: [0, 1, 0] // Ensure consistent up direction
-            }}
-            style={{ 
-              width: '100%',
-              height: '70vh',
-              background: darkMode ? '#1e293b' : '#87ceeb',
-              pointerEvents: 'auto'
-            }}
-            dpr={[1, 2]} // Limit device pixel ratio for consistent performance
-            performance={{ min: 0.5 }} // Minimum performance threshold
-            gl={{ preserveDrawingBuffer: true }}
-          >
-            <Scene 
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove} 
-              onPointerUp={handlePointerUp}
-            />
-          </Canvas>
+          {/* 3D Canvas or Fallback */}
+          {webglStatus && !webglStatus.supported ? (
+            <WebGLFallback darkMode={darkMode} />
+          ) : (
+            <Canvas
+              camera={{ 
+                position: [0, 80, 80], 
+                fov: 50,
+                near: 0.1,
+                far: 2000,
+                up: [0, 1, 0] // Ensure consistent up direction
+              }}
+              style={{ 
+                width: '100%',
+                height: '70vh',
+                background: darkMode ? '#1e293b' : '#87ceeb',
+                pointerEvents: 'auto'
+              }}
+              dpr={[0.5, 1]} // Lower DPR for older hardware
+              performance={{ 
+                min: 0.3, // Lower minimum for older hardware
+                max: 1,
+                current: 0.5 // Start at medium quality
+              }}
+              gl={{ 
+                preserveDrawingBuffer: true,
+                antialias: false, // Disable antialiasing for better performance
+                powerPreference: 'low-power' // Use integrated GPU if available
+              }}
+              shadows={false} // Disable shadows for better performance
+            >
+              <AdaptiveScene 
+                subdivisions={subdivisions}
+                selectedSubdivision={selectedSubdivision}
+                drawingMode={drawingMode}
+                polylinePoints={polylinePoints}
+                darkMode={darkMode}
+                terrainEnabled={terrainEnabled}
+                selectedComparison={selectedComparison}
+                units={units}
+                onSubdivisionUpdate={handleUpdateSubdivision}
+                onSubdivisionSelect={handleSelectSubdivision}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
+                onUpdateCorner={updateCornerPosition}
+                onSelectCorner={setSelectedCorner}
+                onSelectEdge={setSelectedEdge}
+                selectedCorner={selectedCorner}
+                selectedEdge={selectedEdge}
+                showDimensions={showDimensions}
+                debugPerformance={true}
+              />
+            </Canvas>
+          )}
         </div>
       </div>
 

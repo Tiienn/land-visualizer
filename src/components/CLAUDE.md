@@ -1,6 +1,6 @@
 # Components Directory
 
-This directory contains all React components for the Land Visualizer application, organized by functionality and accessibility features.
+This directory contains all React components for the Land Visualizer application - an intuitive visual land size calculator that makes property dimensions easy to understand for everyone.
 
 ## Entry Points & Core Components
 
