@@ -1,11 +1,19 @@
 # Hooks Directory: Intuitive State Management
 
-## 🤖 Claude Flow v2.0.0 Alpha Integration
+## 🚀 Latest Updates (2025-08-21)
 
-### **AI-Powered Hook Development**
-- **Specialized Performance Agents**: `perf-analyzer` and `memory-coordinator` for hook optimization
-- **State Management AI**: Neural pattern recognition for efficient state patterns
-- **Testing Coordination**: Automated test generation with `tester` and `tdd-london-swarm` agents
+### **New Performance Monitoring Hook**
+- **`usePerformanceMonitor.js`**: Real-time performance tracking for adaptive rendering system
+- **Hardware Detection**: Automatic device capability assessment
+- **FPS Monitoring**: Continuous frame rate tracking with optimization recommendations
+- **Memory Management**: Real-time memory usage monitoring and optimization
+
+## 🤖 Claude Flow v2.1.0 - Agent System Operational
+
+### **AI-Powered Hook Development (Now Operational)**
+- **Specialized Performance Agents**: 233+ agents including `performance-monitor` and `memory-coordinator` 
+- **State Management AI**: Advanced neural pattern recognition for efficient state patterns
+- **Real-time Optimization**: Continuous performance monitoring and automatic optimization
 - **Cross-session Learning**: Hook patterns and optimizations remembered across development sessions
 
 ### **Available AI Commands for Hooks**
@@ -43,7 +51,19 @@ npx claude-flow@alpha perf-analyzer "analyze hook memory usage" --claude
   - Minimized re-renders
   - Functional state updates
 
-### 📊 New Hooks Overview
+### 📊 Hooks Overview (Updated)
+
+#### usePerformanceMonitor (NEW)
+- Real-time FPS and memory monitoring
+- Hardware capability detection  
+- Adaptive rendering recommendations
+- Performance optimization alerts
+
+#### useUndoRedo (NEW)
+- Comprehensive undo/redo state management
+- 100-step history tracking
+- Optimized state serialization
+- Memory-efficient state storage
 
 #### useAppState
 - Manages global application state
