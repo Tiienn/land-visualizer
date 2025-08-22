@@ -5,7 +5,9 @@
       "mcp__claude-flow",
       "Bash(claude mcp:*)",
       "Bash(npm install:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(npm start)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }

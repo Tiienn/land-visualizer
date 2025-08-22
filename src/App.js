@@ -792,11 +792,12 @@ function LandVisualizer() {
 
   // Enhanced drawing handlers with performance optimization
   const handlePointerDown = useCallback((event) => {
-    console.log('=== RECTANGLE DRAWING DEBUG ===');
-    console.log('handlePointerDown called', { drawingMode, event });
+    // Only log drawing debug when actually in drawing mode
+    if (drawingMode && drawingMode !== 'select') {
+      console.log('🎨 Drawing:', drawingMode, 'at', event.point);
+    }
     
     if (!drawingMode || drawingMode === 'select') {
-      console.log('Drawing cancelled - wrong mode', { drawingMode });
       return;
     }
     

@@ -108,7 +108,11 @@ class PerformanceAnalyzer {
       const vendor = debugInfo ? gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) : 'Unknown';
       const renderer = debugInfo ? gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) : 'Unknown';
       
-      console.log('🔍 GPU Detection:', { vendor, renderer });
+      // Only log GPU detection once per session
+      if (!window.gpuDetectionLogged) {
+        console.log('🔍 GPU Detection:', { vendor, renderer });
+        window.gpuDetectionLogged = true;
+      }
       
       // Classify GPU with better fallback logic
       let tier = 'legacy'; // Default to legacy instead of unknown
@@ -116,7 +120,10 @@ class PerformanceAnalyzer {
       
       // Check for your specific GPU first
       if (renderer.includes('GeForce GT 630') || renderer.includes('GT 630')) {
-        console.log('✅ Detected GeForce GT 630 - Legacy tier');
+        if (!window.gpuTierLogged) {
+          console.log('✅ Detected GeForce GT 630 - Legacy tier');
+          window.gpuTierLogged = true;
+        }
         return { tier: 'legacy', score: -15, vendor, renderer };
       }
       
@@ -367,8 +374,8 @@ export const usePerformanceMonitor = (options = {}) => {
   useFrame((state, delta) => {
     analyzerRef.current.recordFrame(delta);
     
-    // Update metrics every 60 frames (roughly 1 second)
-    if (analyzerRef.current.frameCount % 60 === 0) {
+    // Update metrics every 180 frames (roughly 3 seconds) to reduce GPU stress
+    if (analyzerRef.current.frameCount % 180 === 0) {
       updateMetrics();
     }
   });

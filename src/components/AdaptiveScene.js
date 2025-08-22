@@ -6,6 +6,7 @@ import TerrainElevation from './TerrainElevation';
 import EnhancedSubdivision from './EnhancedSubdivision';
 import InteractiveCorners from './InteractiveCorners';
 import ComparisonObjectsGroup from './ComparisonObjectsGroup';
+import { SimpleScene } from './SimpleScene';
 
 /**
  * Adaptive Scene Component
@@ -159,7 +160,26 @@ export function AdaptiveScene({
     }, 0);
   }, [units]);
   
-  console.log(`🎭 AdaptiveScene: ${currentLevel} mode (Score: ${score.toFixed(0)}, GPU: ${metrics?.gpu.tier})`);
+  // Only log performance changes, not every render
+  const perfRef = React.useRef({ lastLevel: '', lastScore: 0 });
+  if (perfRef.current.lastLevel !== currentLevel || Math.abs(perfRef.current.lastScore - score) > 5) {
+    console.log(`🎭 AdaptiveScene: ${currentLevel} mode (Score: ${score.toFixed(0)}, GPU: ${metrics?.gpu.tier})`);
+    perfRef.current.lastLevel = currentLevel;
+    perfRef.current.lastScore = score;
+  }
+  
+  // Switch to SimpleScene for PERFORMANCE or EMERGENCY mode (legacy GPUs)
+  if (currentLevel === 'PERFORMANCE' || currentLevel === 'EMERGENCY') {
+    return (
+      <SimpleScene 
+        subdivisions={subdivisions}
+        darkMode={darkMode}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+      />
+    );
+  }
   
   return (
     <>

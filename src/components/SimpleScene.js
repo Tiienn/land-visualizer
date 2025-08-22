@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef } from 'react';
 import { OrbitControls, Grid } from '@react-three/drei';
 import * as THREE from 'three';
 
@@ -13,7 +13,12 @@ export function SimpleScene({
   onPointerMove,
   onPointerUp
 }) {
-  console.log('SimpleScene rendering with', subdivisions.length, 'subdivisions');
+  // Only log on first render or significant changes
+  const logRef = useRef({ lastCount: -1 });
+  if (logRef.current.lastCount !== subdivisions.length) {
+    console.log('🎨 SimpleScene: Rendering', subdivisions.length, 'subdivisions');
+    logRef.current.lastCount = subdivisions.length;
+  }
   
   // Get the default subdivision (main land area)
   const defaultSubdivision = useMemo(() => {
@@ -70,8 +75,19 @@ export function SimpleScene({
   return (
     <>
       {/* Simple lighting */}
-      <ambientLight intensity={0.6} />
-      <directionalLight position={[50, 50, 25]} intensity={0.8} />
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[50, 50, 25]} intensity={1.0} />
+      
+      {/* Always visible test objects for debugging */}
+      <mesh position={[10, 2, 10]}>
+        <boxGeometry args={[2, 2, 2]} />
+        <meshBasicMaterial color="#FF0000" />
+      </mesh>
+      
+      <mesh position={[-10, 1, -10]}>
+        <sphereGeometry args={[1.5]} />
+        <meshBasicMaterial color="#00FF00" />
+      </mesh>
       
       {/* Ground plane */}
       <mesh position={[0, -0.1, 0]} rotation={[-Math.PI / 2, 0, 0]}>
@@ -130,19 +146,23 @@ export function SimpleScene({
         <meshBasicMaterial transparent opacity={0} />
       </mesh>
       
-      {/* Camera controls */}
+      {/* Camera controls - match full scene behavior */}
       <OrbitControls
         enablePan={true}
         enableZoom={true}
         enableRotate={true}
-        maxDistance={200}
-        minDistance={5}
+        maxPolarAngle={Math.PI * 0.495}
+        minPolarAngle={0.1}
+        maxDistance={500}
+        minDistance={10}
         target={[0, 0, 0]}
         mouseButtons={{
           LEFT: THREE.MOUSE.NONE,
           MIDDLE: THREE.MOUSE.PAN,
           RIGHT: THREE.MOUSE.ROTATE
         }}
+        enableDamping={false}
+        dampingFactor={0.25}
       />
     </>
   );
